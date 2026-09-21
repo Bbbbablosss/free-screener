@@ -1,0 +1,12 @@
+
+
+@app.get("/api/admin/metrics")
+async def admin_metrics(email: str = Query(default="")):
+    # Soft admin gate (full auth = Track 4.4, deferred). A supplied caller email must
+    # be an admin; an omitted email is allowed (operational telemetry, non-secret).
+    if email and not referral_service.is_admin(email):
+        return JSONResponse({"ok": False, "error": "forbidden"}, status_code=403)
+    from . import bus as _bus
+    from .screener.metrics import metrics_engine as _me
+    from .admin_panel import gather_metrics
+    return JSONResponse(await gather_metrics(klines_cache, _me, _bus))

@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Console</title>
+<style>
+  :root{
+    --bg:#060b13; --bg2:#04070e; --panel:rgba(10,15,23,.72); --panel-solid:#080d15;
+    --card:rgba(13,19,29,.62); --card-hi:rgba(20,28,42,.6);
+    --line:rgba(255,255,255,.06); --line2:rgba(255,255,255,.1);
+    --accent:#3d9bff; --accent-dim:rgba(61,155,255,.11); --accent-2:rgba(61,155,255,.18);
+    --accent-glow:rgba(61,155,255,.22); --accent-txt:#9cccff; --accent-2nd:#38bdf8; --accent-3rd:#a78bfa;
+    --text:#b8c6da; --head:#e9f0fb; --muted:#5c6b82; --muted2:#44506a;
+    --ok:#5ec26a; --okd:rgba(94,194,106,.15); --warn:#e0a800; --warnd:rgba(224,168,0,.14);
+    --bad:#e5555a; --badd:rgba(229,85,90,.14);
+    --r:16px; --r-sm:11px;
+    --font:'Inter','Geist','Segoe UI',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text); font:14px/1.5 var(--font);
+    background:
+      radial-gradient(900px 500px at 12% -8%, rgba(61,155,255,.12), transparent 60%),
+      radial-gradient(1100px 700px at 108% 6%, rgba(124,92,255,.07), transparent 55%),
+      linear-gradient(180deg,#070d17,#05080f 60%);
+    background-attachment:fixed; min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:rgba(61,155,255,.16);border-radius:8px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(61,155,255,.28)}
+  a{color:var(--accent-txt);text-decoration:none}
+
+  /* ── layout ── */
+  .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+  .side{
+    position:sticky;top:0;height:100vh;padding:20px 14px;
+    background:linear-gradient(180deg,rgba(6,12,8,.9),rgba(4,9,6,.94));
+    border-right:1px solid var(--line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    display:flex;flex-direction:column;gap:6px;z-index:5;
+  }
+  .brand{display:flex;align-items:center;padding:7px 11px 21px}
+  .brand .brand-title{font-size:12px;color:var(--muted);font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+  .nav{display:flex;flex-direction:column;gap:3px}
+  .nav a{
+    display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;
+    color:var(--muted);font-weight:600;font-size:13.5px;cursor:pointer;border:1px solid transparent;
+    transition:background .14s,color .14s,border-color .14s;user-select:none;
+  }
+  .nav a svg{width:18px;height:18px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.7}
+  .nav a:hover{background:rgba(255,255,255,.03);color:var(--text)}
+  .nav a.on{background:var(--accent-dim);color:var(--accent-txt);border-color:rgba(61,155,255,.3)}
+  .nav a .badge{margin-left:auto;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--badd);color:var(--bad)}
+  .nav a .badge:empty{display:none}
+  .side-foot{margin-top:auto;padding:12px 10px 2px;font-size:11px;color:var(--muted2);line-height:1.5}
+  .side-foot b{color:var(--muted)}
+
+  .main{min-width:0;padding:22px 26px 60px;max-width:1400px}
+  .top{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+  .top h1{margin:0;font-size:21px;color:var(--head);font-weight:800;letter-spacing:.2px}
+  .top .sub{color:var(--muted);font-size:12.5px}
+  .top .sub b{color:var(--text)}
+  .top .spacer{flex:1}
+  .btn{
+    background:rgba(255,255,255,.04);color:var(--text);border:1px solid var(--line2);
+    border-radius:10px;padding:8px 14px;cursor:pointer;font:600 12.5px/1 var(--font);
+    display:inline-flex;align-items:center;gap:7px;transition:background .14s,border-color .14s,color .14s;
+  }
+  .btn:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.18);color:var(--head)}
+  .btn.accent{background:var(--accent-2);color:var(--accent-txt);border-color:rgba(61,155,255,.45)}
+  .btn.accent:hover{background:rgba(61,155,255,.28)}
+  .btn.danger{color:var(--bad);border-color:rgba(229,85,90,.4);background:var(--badd)}
+  .btn.sm{padding:5px 10px;font-size:11.5px;border-radius:8px}
+  input,select,textarea{
+    background:rgba(0,0,0,.32);color:var(--text);border:1px solid var(--line2);border-radius:10px;
+    padding:9px 12px;font:500 13px/1 var(--font);outline:none;transition:border-color .14s}
+  input:focus,select:focus,textarea:focus{border-color:rgba(61,155,255,.55)}
+  input::placeholder,textarea::placeholder{color:var(--muted2)}
+  label.fld{display:block}
+  .fld .lbl{font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600;letter-spacing:.02em}
+
+  .sec{display:none;animation:fade .25s ease}
+  .sec.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ── cards / glass ── */
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    box-shadow:0 1px 0 rgba(255,255,255,.02) inset, 0 12px 34px -22px rgba(0,0,0,.7);
+  }
+  .card h2{
+    margin:0 0 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;
+    display:flex;align-items:center;gap:8px}
+  .card h2 .h2r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted2)}
+  .grid{display:grid;gap:14px}
+  .g-kpi{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .g-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .g-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .mb{margin-bottom:16px}
+
+  /* KPI tile */
+  .kpi{position:relative;overflow:hidden;padding-bottom:34px}
+  .kpi .k-lbl{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.02em;display:flex;align-items:center;gap:7px}
+  .kpi .k-ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--accent-dim);color:var(--accent);flex-shrink:0}
+  .kpi .k-ico svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .kpi .k-val{font-size:27px;font-weight:800;color:var(--head);margin:10px 0 3px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .kpi .k-sub{font-size:12px;color:var(--muted)}
+  .kpi .k-sub .up{color:var(--ok)} .kpi .k-sub .dn{color:var(--bad)} .kpi .k-sub b{color:var(--text)}
+  .kpi .k-spark{position:absolute;right:0;bottom:0;left:0;height:30px;opacity:.6;pointer-events:none}
+
+  /* rows */
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:none}
+  .row .k{color:var(--muted)}
+  .row .v{font-variant-numeric:tabular-nums;text-align:right;color:var(--text);font-weight:600}
+
+  /* tables */
+  .tw{border:1px solid var(--line);border-radius:14px;overflow:auto;background:rgba(8,14,10,.5);backdrop-filter:blur(10px)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--line);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}
+  th{color:var(--muted);font-weight:600;position:sticky;top:0;background:rgba(9,15,11,.96);cursor:default;font-size:11px;letter-spacing:.03em;text-transform:uppercase;z-index:1}
+  th[data-s]{cursor:pointer}
+  th[data-s]:hover{color:var(--text)}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:rgba(61,155,255,.05)}
+
+  /* pills / dots */
+  .pill{display:inline-block;min-width:32px;text-align:center;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums}
+  .g{background:var(--okd);color:var(--ok)} .y{background:var(--warnd);color:var(--warn)}
+  .r{background:var(--badd);color:var(--bad)} .n{background:rgba(255,255,255,.05);color:var(--muted)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle}
+  .dot.ok{background:var(--ok);box-shadow:0 0 8px rgba(126,211,33,.6)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:5px 10px;border-radius:9px;border:1px solid var(--line2);color:var(--text);background:rgba(255,255,255,.02)}
+  .chip.ok{color:var(--ok);border-color:rgba(126,211,33,.32);background:var(--okd)}
+  .chip.bad{color:var(--bad);border-color:rgba(229,85,90,.4);background:var(--badd)}
+  .muted{color:var(--muted)} .mono{font-variant-numeric:tabular-nums}
+  .err{color:var(--bad)}
+
+  /* donut legend */
+  .lg{display:flex;flex-direction:column;gap:9px}
+  .lg .li{display:flex;align-items:center;gap:9px;font-size:12.5px}
+  .lg .sw{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+  .lg .li .n{margin-left:auto;color:var(--head);font-weight:700;font-variant-numeric:tabular-nums}
+  .lg .li .p{color:var(--muted);font-size:11px;min-width:38px;text-align:right}
+
+  /* empty state */
+  .empty{padding:30px 18px;text-align:center;color:var(--muted);font-size:13px}
+  .empty svg{width:34px;height:34px;stroke:var(--muted2);fill:none;stroke-width:1.5;margin-bottom:10px}
+
+  /* modal */
+  .modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+    background:rgba(3,7,4,.7);backdrop-filter:blur(4px);padding:16px}
+  .mbox{width:100%;max-width:470px;background:var(--panel-solid);border:1px solid var(--line2);border-radius:18px;
+    padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.7);max-height:88vh;overflow:auto}
+  .mbox .mt{font-size:15px;font-weight:800;color:var(--head);margin-bottom:6px}
+  .mbox .md{font-size:12.5px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+  .mfoot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+  .tier-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12.5px;color:var(--muted)}
+
+  /* gate */
+  .gate{min-height:100vh;display:grid;place-items:center;padding:24px}
+  .gate .gb{max-width:400px;text-align:center}
+  .gate .gl{width:56px;height:56px;border-radius:16px;margin:0 auto 18px;display:grid;place-items:center;
+    background:linear-gradient(145deg,var(--accent),#1e63b8);color:#04101f;box-shadow:0 10px 34px rgba(61,155,255,.45)}
+  .gate .gl svg{width:28px;height:28px;stroke:#0a1400;fill:none;stroke-width:2}
+  .gate h1{font-size:20px;color:var(--head);margin:0 0 8px}
+  .gate p{color:var(--muted);font-size:13.5px;margin:0 0 20px;line-height:1.6}
+  .gate-form{display:flex;flex-direction:column;gap:10px;text-align:left}
+  .gate-form input{width:100%;height:44px}
+  .gate-form .btn{height:44px;justify-content:center;margin-top:3px}
+  .gate-error{min-height:18px;text-align:center;color:var(--bad);font-size:12px}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);z-index:2000;
+    padding:12px 18px;border-radius:12px;border:1px solid var(--line2);background:rgba(12,20,14,.96);
+    backdrop-filter:blur(20px);box-shadow:0 18px 50px rgba(0,0,0,.6);color:var(--text);font-size:13px;font-weight:600;
+    opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;max-width:90vw}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.ok{border-color:rgba(126,211,33,.4)} .toast.bad{border-color:rgba(229,85,90,.5)}
+
+  @media(max-width:860px){
+    .app{grid-template-columns:1fr}
+    .side{position:fixed;left:0;top:0;bottom:0;width:236px;transform:translateX(-100%);transition:transform .22s}
+    .side.open{transform:none}
+    .main{padding:16px 14px 50px}
+    .burger{display:inline-flex!important}
+    .scrim.on{display:block}
+  }
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:4;display:none}
+  .scrim.on{display:none}
+  .burger{display:none;background:none;border:none;color:var(--text);cursor:pointer;padding:4px}
+  .burger svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2}
+  .chat-layout{display:grid;grid-template-columns:310px minmax(0,1fr);gap:14px;height:calc(100vh - 112px);min-height:600px}
+  .chat-list{padding:0;overflow:hidden;display:flex;flex-direction:column}
+  .chat-search{margin:14px;width:calc(100% - 28px)}
+  .chat-rows{overflow-y:auto;flex:1;border-top:1px solid var(--line)}
+  .chat-row{padding:13px 14px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .15s}
+  .chat-row:hover,.chat-row.on{background:var(--accent-dim)}
+  .chat-row-top{display:flex;align-items:center;gap:8px;color:var(--head);font-weight:700;font-size:12px}
+  .chat-row-id{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chat-row-time{margin-left:auto;color:var(--muted);font-weight:500;font-size:10px;white-space:nowrap}
+  .chat-row-preview{margin-top:5px;color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chat-unread{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--bad);color:#fff;display:grid;place-items:center;font-size:10px}
+  .chat-pane{padding:0;display:flex;min-width:0;flex-direction:column;overflow:hidden}
+  .chat-head{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line);min-height:58px}
+  .chat-head-id{font-weight:750;color:var(--head);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chat-head .spacer{flex:1}
+  .chat-flow{flex:1;min-height:0;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px}
+  .chat-msg{width:min(78%,720px);padding:12px 13px;border:1px solid var(--line2);border-radius:5px 14px 14px 14px;background:#0b121d;position:relative}
+  .chat-msg.user{align-self:flex-end;background:rgba(61,155,255,.16);border-color:rgba(61,155,255,.35);border-radius:14px 5px 14px 14px}
+  .chat-msg.hidden-msg{opacity:.5;border-style:dashed}
+  .chat-msg-meta{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:10px;margin-bottom:6px}
+  .chat-msg-id{font-family:ui-monospace,Consolas,monospace;cursor:pointer}
+  .chat-msg-text{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--head);font-size:13px}
+  .chat-msg-img{display:block;max-width:100%;max-height:300px;margin-top:8px;border-radius:9px;border:1px solid var(--line2)}
+  .chat-msg-buttons{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+  .chat-msg-actions{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}
+  .chat-compose{border-top:1px solid var(--line);padding:12px;background:rgba(5,9,15,.82)}
+  .chat-compose textarea{display:block;width:100%;min-height:64px;max-height:180px;resize:vertical;line-height:1.4}
+  .chat-compose-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .chat-compose-row input[type=text]{flex:1;min-width:190px}
+  .chat-file{font-size:11px;max-width:210px;padding:7px}
+  .chat-empty{margin:auto;text-align:center;color:var(--muted);padding:30px}
+  .chat-edit-form textarea{width:100%;min-height:110px;line-height:1.4;resize:vertical}
+  .chat-edit-form input{width:100%}
+  .chat-edit-form .fld{margin-top:12px}
+  @media(max-width:1000px){.chat-layout{grid-template-columns:250px minmax(0,1fr)}.chat-msg{width:90%}}
+  @media(max-width:700px){.chat-layout{grid-template-columns:1fr;height:auto}.chat-list{height:260px}.chat-pane{height:70vh}.chat-msg{width:94%}}
+</style>
+</head>
+<body>
+
+<!-- ══ access gate (non-admin) ══ -->
+<div id="gate" class="gate" style="display:none">
+  <div class="gb">
+    <div class="gl"><svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg></div>
+    <h1>Панель администратора</h1>
+    <p id="gate-msg">Войдите по данным администратора. Telegram для входа не используется.</p>
+    <form class="gate-form" id="admin-login-form">
+      <label class="fld"><div class="lbl">Email</div><input id="admin-login-email" type="email" autocomplete="username" required></label>
+      <label class="fld"><div class="lbl">Пароль</div><input id="admin-login-password" type="password" autocomplete="current-password" required></label>
+      <div class="gate-error" id="admin-login-error"></div>
+      <button class="btn accent" id="admin-login-submit" type="submit">Войти в админку</button>
+    </form>
+  </div>
+</div>
+
+<!-- ══ app ══ -->
+<div id="app" class="app" style="display:none">
+  <div class="scrim" id="scrim" onclick="toggleNav(false)"></div>
+  <aside class="side" id="side">
+    <div class="brand">
+      <span class="brand-title">Console</span>
+    </div>
+    <nav class="nav" id="nav">
+      <a data-sec="overview" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Обзор</span></a>
+      <a data-sec="stats"><svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg><span>Статистика</span></a>
+      <a data-sec="metrics"><svg viewBox="0 0 24 24"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg><span>Метрики</span><span class="badge" id="nb-metrics"></span></a>
+      <a data-sec="visitors"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 7h4M19 5v4"/></svg><span>Посетители</span><span class="badge" id="nb-visitors"></span></a>
+      <a data-sec="chats"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Чаты</span><span class="badge" id="nb-chats"></span></a>
+      <a data-sec="users"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 11a3 3 0 100-6M22 20c0-2.6-1.6-4.8-4-5.6"/></svg><span>Пользователи</span></a>
+      <a data-sec="partners"><svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z"/></svg><span>Партнёры</span><span class="badge" id="nb-partners"></span></a>
+    </nav>
+    <div class="side-foot">
+      <div id="sf-nodes">— · —</div>
+      <div style="margin-top:6px">обновлено <b id="sf-time">—</b></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <button class="burger" onclick="toggleNav()"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <div>
+        <h1 id="pg-title">Обзор</h1>
+        <div class="sub" id="pg-sub">сводка по сервису</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn" onclick="refreshActive()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6"/></svg>Обновить</button>
+      <button class="btn danger" id="admin-logout">Выйти</button>
+    </div>
+
+    <!-- ── OVERVIEW ── -->
+    <section class="sec on" id="sec-overview">
+      <div class="grid g-kpi mb" id="ov-kpi"></div>
+      <div class="grid g-2 mb">
+        <div class="card"><h2>Выручка · 30 дней <span class="h2r" id="ov-rev-sum"></span></h2><div id="ov-rev-chart"></div></div>
+        <div class="card"><h2>Новые пользователи · 30 дней <span class="h2r" id="ov-usr-sum"></span></h2><div id="ov-usr-chart"></div></div>
+      </div>
+      <div class="grid g-2">
+        <div class="card"><h2>Здоровье инфраструктуры</h2><div id="ov-health"></div></div>
+        <div class="card"><h2>Свежесть фидов · худшие</h2><div id="ov-fresh"></div></div>
+      </div>
+    </section>
+
+    <!-- ── STATS ── -->
+    <section class="sec" id="sec-stats">
+      <div id="stats-empty" class="card empty" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16l3-4 3 2 4-6"/></svg>
+        <div>Продаж пока нет — статистика появится после первой записанной оплаты.</div>
+      </div>
+      <div id="stats-body">
+        <div class="grid g-kpi mb" id="st-kpi"></div>
+        <div class="grid g-2 mb">
+          <div class="card"><h2>Выручка по дням · 30д <span class="h2r" id="st-rev-sum"></span></h2><div id="st-rev-chart"></div></div>
+          <div class="card"><h2>Оплаты по дням · 30д <span class="h2r" id="st-pay-sum"></span></h2><div id="st-pay-chart"></div></div>
+        </div>
+        <div class="grid g-3 mb">
+          <div class="card"><h2>Тарифы</h2><div class="grid" style="grid-template-columns:110px 1fr;align-items:center;gap:14px"><div id="st-plan-donut"></div><div class="lg" id="st-plan-lg"></div></div></div>
+          <div class="card"><h2>Удержание</h2><div id="st-retention"></div></div>
+          <div class="card"><h2>Маркетинг</h2><div id="st-marketing"></div></div>
+        </div>
+        <div class="grid g-2">
+          <div class="card"><h2>Топ промокодов</h2><div class="tw"><table id="st-promos"><thead><tr><th>код</th><th class="num">активаций</th><th class="num">выручка</th></tr></thead><tbody></tbody></table></div></div>
+          <div class="card"><h2>Топ партнёров · по выручке</h2><div class="tw"><table id="st-toppartners"><thead><tr><th>партнёр</th><th class="num">продаж</th><th class="num">выручка</th></tr></thead><tbody></tbody></table></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── METRICS (ops) ── -->
+    <section class="sec" id="sec-metrics">
+      <div class="grid g-3 mb" id="mt-cards"></div>
+      <div class="card mb">
+        <h2>Службы</h2>
+        <div class="tw"><table id="mt-svc"><thead><tr><th>сервер</th><th>служба</th><th>статус</th><th class="num">CPU%</th><th class="num">RAM МБ</th><th class="num">рестарты</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="card mb">
+        <h2>Биржи · покрытие метрик и свежесть</h2>
+        <div class="tw"><table id="mt-exch"><thead><tr>
+          <th data-s="exch">биржа</th><th class="num" data-s="syms">символов</th>
+          <th class="num" data-s="natr">NATR</th><th class="num" data-s="vol">Объём</th><th class="num" data-s="trd">Сделки</th>
+          <th class="num" data-s="pchg">Δцена</th><th class="num" data-s="oi">OI</th>
+          <th class="num" data-s="f1m">1м</th><th class="num" data-s="f1h">1ч</th><th class="num" data-s="f1d">1д</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="card">
+        <h2>Свежесть фидов <span class="h2r">самые «несвежие» сверху</span></h2>
+        <div class="tw"><table id="mt-fresh"><thead><tr>
+          <th>биржа</th><th class="num">метрики, с</th><th class="num">1м, мин</th><th class="num">1ч, мин</th><th class="num">1д, мин</th><th>живость</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ── LIVE VISITORS ── -->
+    <section class="sec" id="sec-visitors">
+      <div class="grid g-kpi mb" id="vs-kpi"></div>
+      <div class="card">
+        <h2>Активные WebSocket-подключения <span class="h2r">обновление каждые 10 секунд</span></h2>
+        <div class="tw" style="max-height:72vh"><table id="vs-table"><thead><tr>
+          <th>visitor ID</th><th>connection</th><th>страница</th><th>язык</th><th class="num">подписок</th><th>подключён</th><th>активность</th><th>статус</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ── SUPPORT CHATS ── -->
+    <section class="sec" id="sec-chats">
+      <div class="chat-layout">
+        <div class="card chat-list">
+          <input class="chat-search" id="chat-search" placeholder="Поиск по visitor ID…" autocomplete="off">
+          <div class="chat-rows" id="chat-rows"><div class="empty">Загрузка диалогов…</div></div>
+        </div>
+        <div class="card chat-pane">
+          <div class="chat-head">
+            <div><div class="chat-head-id" id="chat-current">Выберите диалог</div><div class="muted" id="chat-summary" style="font-size:10.5px"></div></div>
+            <div class="spacer"></div>
+            <button class="btn" id="chat-config" style="display:none">Уведомление</button>
+            <select id="chat-status" disabled><option value="open">Открыт</option><option value="waiting">Ожидает</option><option value="closed">Закрыт</option></select>
+          </div>
+          <div class="chat-flow" id="chat-flow"><div class="chat-empty">Здесь будет вся переписка с пользователем</div></div>
+          <div class="chat-compose">
+            <textarea id="chat-text" placeholder="Написать пользователю… (Ctrl+Enter — отправить)"></textarea>
+            <div class="chat-compose-row">
+              <input id="chat-image" type="text" placeholder="URL картинки или загрузите файл">
+              <input id="chat-file" class="chat-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+              <button class="btn" id="chat-buttons">Кнопки</button>
+              <button class="btn accent" id="chat-send">Отправить</button>
+            </div>
+            <div class="muted" id="chat-buttons-note" style="font-size:10.5px;margin-top:7px">Кнопок нет. Поле ввода находится ниже всех элементов диалога.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── USERS ── -->
+    <section class="sec" id="sec-users">
+      <div class="card mb">
+        <h2>Выдать / снять доступ PRO</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end">
+          <label class="fld" style="flex:1;min-width:220px"><div class="lbl">Email пользователя</div><input id="mg-email" placeholder="user@example.com" autocomplete="off" style="width:100%"></label>
+          <div class="fld"><div class="lbl">Срок (дней)</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="btn sm mg-preset" data-d="1">1</button>
+              <button class="btn sm mg-preset" data-d="7">7</button>
+              <button class="btn sm mg-preset on" data-d="30">30</button>
+              <button class="btn sm mg-preset" data-d="90">90</button>
+              <input id="mg-days" type="number" min="0" step="1" value="30" style="width:80px">
+            </div>
+          </div>
+          <button class="btn accent" id="mg-grant">Выдать PRO</button>
+          <button class="btn danger" id="mg-revoke">Снять</button>
+        </div>
+        <div id="mg-msg" class="muted" style="margin-top:12px;min-height:16px;font-size:12.5px"></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <input id="mg-search" placeholder="поиск по email / имени…" style="flex:1;min-width:200px">
+        <span class="muted mono" id="mg-count" style="font-size:12px"></span>
+        <button class="btn sm" onclick="loadUsers()">обновить</button>
+      </div>
+      <div class="tw" style="max-height:64vh"><table id="mg-users"><thead><tr>
+        <th>email</th><th>имя</th><th>роль</th><th>доступ</th><th>регистрация</th><th>вход</th><th></th>
+      </tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <!-- ── PARTNERS ── -->
+    <section class="sec" id="sec-partners">
+      <div class="grid g-kpi mb" id="aff-overview"></div>
+
+      <div class="card mb">
+        <h2>Записать продажу <span class="h2r">комиссия начислится авто · PRO выдастся</span></h2>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+          <label class="fld" style="flex:1;min-width:200px"><div class="lbl">Email покупателя</div><input id="sl-buyer" placeholder="buyer@example.com" style="width:100%"></label>
+          <label class="fld"><div class="lbl">Сумма $ (0 = $55×мес)</div><input id="sl-gross" type="number" min="0" step="0.01" value="0" style="width:150px"></label>
+          <label class="fld"><div class="lbl">Промокод</div><input id="sl-promo" placeholder="—" style="width:130px"></label>
+          <label class="fld"><div class="lbl">Месяцев</div><input id="sl-months" type="number" min="1" value="1" style="width:90px"></label>
+          <button class="btn accent" id="sl-add">Записать</button>
+        </div>
+        <div id="sl-msg" class="muted" style="margin-top:12px;min-height:16px;font-size:12.5px"></div>
+      </div>
+
+      <div class="card mb">
+        <h2>Промокоды</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px">
+          <label class="fld"><div class="lbl">Код</div><input id="pr-code" placeholder="SUMMER20" style="width:140px"></label>
+          <label class="fld"><div class="lbl">Скидка %</div><input id="pr-pct" type="number" min="0" max="100" value="20" style="width:90px"></label>
+          <label class="fld"><div class="lbl">Активаций (0=∞)</div><input id="pr-max" type="number" min="0" value="0" style="width:120px"></label>
+          <label class="fld"><div class="lbl">Срок, дней (0=∞)</div><input id="pr-days" type="number" min="0" value="0" style="width:130px"></label>
+          <label class="fld"><div class="lbl">Партнёр email</div><input id="pr-partner" placeholder="—" style="width:180px"></label>
+          <button class="btn accent" id="pr-add">Создать</button>
+        </div>
+        <div class="muted" style="font-size:12px;margin-bottom:12px">💡 Скидка <b style="color:var(--text)">0%</b> + партнёр = чистый «код-привязка»: покупатель закрепляется за партнёром (комиссия по тиру). Работает как <b style="color:var(--text)">?ref=КОД</b>.</div>
+        <div class="tw"><table id="pr-list"><thead><tr><th>код</th><th class="num">скидка</th><th class="num">активаций</th><th>срок</th><th>партнёр</th><th>статус</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card mb">
+        <h2>Партнёры</h2>
+        <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap">
+          <label class="fld"><div class="lbl">Назначить партнёром (email)</div><input id="pn-designate" placeholder="user@example.com" style="width:250px"></label>
+          <button class="btn" id="pn-designate-btn">Назначить</button>
+        </div>
+        <div class="tw"><table id="pn-list"><thead><tr><th>email</th><th class="num">ставка</th><th class="num">оплатившие</th><th class="num">рег.</th><th class="num">баланс</th><th class="num">всего</th><th>статус</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Заявки на вывод</h2>
+        <div class="tw"><table id="po-list"><thead><tr><th>партнёр</th><th class="num">сумма</th><th>USDT-адрес</th><th>дата</th><th>статус</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const G={metrics:null, stats:null, admin:false};
+
+/* ── formatters ── */
+function usd(v,dp){ v=Number(v)||0; return '$'+v.toLocaleString('ru-RU',{minimumFractionDigits:dp==null?2:dp,maximumFractionDigits:dp==null?2:dp}); }
+function num(v){ return (Number(v)||0).toLocaleString('ru-RU'); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(ts){ if(!ts) return '—'; const d=new Date(ts*1000); return d.toLocaleDateString('ru-RU')+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); }
+function pc(v){ if(v==null) return '<span class="pill n">—</span>'; const c=v>=80?'g':v>=40?'y':'r'; return `<span class="pill ${c}">${v}%</span>`; }
+function fr(m,th){ if(m==null) return '<span class="pill n">—</span>'; const c=m<=th[0]?'g':m<=th[1]?'y':'r'; return `<span class="pill ${c}">${m}</span>`; }
+function dot(a){ return a==='active'?'<span class="dot ok"></span>':a==='activating'?'<span class="dot warn"></span>':'<span class="dot bad"></span>'; }
+function toast(msg,kind){ const t=$('#toast'); t.textContent=msg; t.className='toast show '+(kind||''); clearTimeout(window._tt); window._tt=setTimeout(()=>t.className='toast',2600); }
+
+/* ── SVG charts (inline, no deps) ── */
+function spark(data,{w=520,h=90,color='#3d9bff',fill=true,money=false}={}){
+  if(!data||!data.length) return '<div class="empty">нет данных</div>';
+  const vals=data.map(d=>d.v), max=Math.max(1,...vals), n=data.length;
+  const pad=6, iw=w-pad*2, ih=h-pad*2-12;
+  const x=i=>pad+(n<=1?iw/2:iw*i/(n-1));
+  const y=v=>pad+ih-(v/max)*ih;
+  let dpath='',apath='';
+  data.forEach((d,i)=>{ const px=x(i).toFixed(1),py=y(d.v).toFixed(1); dpath+=(i?'L':'M')+px+' '+py+' '; });
+  apath='M'+x(0).toFixed(1)+' '+(pad+ih)+' '+dpath.replace(/^M/,'L')+'L'+x(n-1).toFixed(1)+' '+(pad+ih)+' Z';
+  const gid='g'+Math.random().toString(36).slice(2,7);
+  const last=data[data.length-1];
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="display:block">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${color}" stop-opacity=".28"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    ${fill?`<path d="${apath}" fill="url(#${gid})"/>`:''}
+    <path d="${dpath}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(n-1).toFixed(1)}" cy="${y(last.v).toFixed(1)}" r="3" fill="${color}"/>
+  </svg>`;
+}
+function bars(data,{w=520,h=90,color='#3d9bff'}={}){
+  if(!data||!data.length) return '<div class="empty">нет данных</div>';
+  const vals=data.map(d=>d.v), max=Math.max(1,...vals), n=data.length;
+  const pad=6, iw=w-pad*2, ih=h-pad*2-12, bw=Math.max(1,iw/n*.66), gap=iw/n;
+  let out='';
+  data.forEach((d,i)=>{ const bh=Math.max(d.v>0?2:0,(d.v/max)*ih); const bx=pad+gap*i+(gap-bw)/2; const by=pad+ih-bh;
+    out+=`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="${color}" opacity="${i===n-1?1:.62}"/>`; });
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="display:block">${out}</svg>`;
+}
+function miniSpark(data,color){ return spark(data,{w:180,h:34,color,fill:true}); }
+function donut(segs,size){
+  size=size||110; const r=size/2-9, cx=size/2, cy=size/2, C=2*Math.PI*r;
+  const tot=segs.reduce((s,x)=>s+x.v,0)||1; let off=0; let out='';
+  segs.forEach(s=>{ const frac=s.v/tot, len=frac*C;
+    out+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.c}" stroke-width="13" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="butt"/>`;
+    off+=len; });
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="13"/>${out}
+    <text x="${cx}" y="${cy-2}" text-anchor="middle" fill="#e9f0fb" font-size="17" font-weight="800">${num(tot)}</text>
+    <text x="${cx}" y="${cy+14}" text-anchor="middle" fill="#5c6b82" font-size="9" font-weight="600" letter-spacing=".08em">ОПЛАТ</text></svg>`;
+}
+function kpi({lbl,val,sub,icon,spark:sp}){
+  return `<div class="card kpi">
+    <div class="k-lbl"><span class="k-ico">${icon||''}</span>${lbl}</div>
+    <div class="k-val">${val}</div>
+    <div class="k-sub">${sub||''}</div>
+    ${sp?`<div class="k-spark">${sp}</div>`:''}</div>`;
+}
+const IC={
+  money:'<svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
+  user:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>',
+  pro:'<svg viewBox="0 0 24 24"><path d="M12 2l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z"/></svg>',
+  chart:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6"/></svg>',
+  cart:'<svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.4 12.3a1 1 0 001 .8h9.2a1 1 0 001-.8L21 7H6"/></svg>',
+  wallet:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/></svg>',
+  repeat:'<svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>',
+  server:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>',
+};
+
+/* ═══════════════════ data loads ═══════════════════ */
+async function fetchJSON(url,opt){ try{ return await (await fetch(url,Object.assign({cache:'no-store'},opt||{}))).json(); }catch(e){ return {ok:false,error:'net'}; } }
+
+async function loadCore(){
+  const [m,s]=await Promise.all([ fetchJSON('/api/admin/metrics'), fetchJSON('/api/admin/stats') ]);
+  G.metrics=m; G.stats=s;
+  $('#sf-time').textContent=new Date().toLocaleTimeString('ru-RU');
+  // node line in sidebar
+  const be=m.backend||{}, hb=be.host_be||{};
+  const cov=be.coverage||[]; const stale=cov.filter(r=>{const f=(be.freshness||{})[r.exch]||{}; return f['1m']!=null&&f['1m']>15;}).length;
+  $('#nb-metrics').textContent=stale?stale:'';
+  const pp=(s.partners&&s.partners.pending_payouts)||0; $('#nb-partners').textContent=pp?pp:'';
+  $('#sf-nodes').innerHTML='бэкенд .62 · веб .62';
+}
+
+/* ── OVERVIEW ── */
+function renderOverview(){
+  const s=G.stats||{}, m=G.metrics||{};
+  const rv=s.revenue||{}, u=s.users||{}, pr=s.partners||{}, dv=s.derived||{};
+  const be=m.backend||{}, web=m.web||{};
+  const revToday=(rv.today&&rv.today.net)||0, revCnt=(rv.today&&rv.today.count)||0;
+  const svcAll=[...(be.services_be||[]),...(web.services||[])];
+  const svcUp=svcAll.filter(x=>x.active==='active').length;
+  const cov=be.coverage||[], fresh=be.freshness||{};
+  const staleFeeds=cov.filter(r=>{const f=fresh[r.exch]||{}; return f['1m']!=null&&f['1m']>15;}).length;
+
+  $('#ov-kpi').innerHTML=[
+    kpi({lbl:'Выручка сегодня',val:usd(revToday),sub:revCnt?`<b>${revCnt}</b> оплат`:'нет оплат',icon:IC.money,spark:miniSpark((rv.revenue_30d||[]).slice(-14),'#3d9bff')}),
+    kpi({lbl:'Новых сегодня',val:num(u.new_today||0),sub:`за 7д <b>${num(u.new_7d||0)}</b> · 30д <b>${num(u.new_30d||0)}</b>`,icon:IC.user,spark:miniSpark((u.signups_30d||[]).slice(-14),'#38bdf8')}),
+    kpi({lbl:'Активных PRO',val:num(u.pro_active||0),sub:`из <b>${num(u.total||0)}</b> · конверсия <b>${dv.conversion_pct||0}%</b>`,icon:IC.pro}),
+    kpi({lbl:'MRR (оценка)',val:rv.mrr_estimate==null?'—':usd(rv.mrr_estimate,0),sub:rv.arr_estimate==null?'':`ARR ≈ <b>${usd(rv.arr_estimate,0)}</b>`,icon:IC.repeat}),
+    kpi({lbl:'Служб онлайн',val:svcAll.length?`${svcUp}/${svcAll.length}`:'—',sub:svcAll.length-svcUp?`<span class="dn">${svcAll.length-svcUp} не активны</span>`:'<span class="up">всё активно</span>',icon:IC.server}),
+    kpi({lbl:'Ожидают выплат',val:pr.pending_payout_usd==null?'—':usd(pr.pending_payout_usd),sub:`${num(pr.pending_payouts||0)} заявок · комиссий ${usd(pr.commissions_available||0)}`,icon:IC.wallet}),
+  ].join('');
+
+  const rev30=rv.revenue_30d||[]; const rsum=rev30.reduce((a,b)=>a+b.v,0);
+  $('#ov-rev-sum').textContent=usd(rsum,0);
+  $('#ov-rev-chart').innerHTML=spark(rev30,{money:true});
+  const su30=u.signups_30d||[]; const ssum=su30.reduce((a,b)=>a+b.v,0);
+  $('#ov-usr-sum').textContent=num(ssum);
+  $('#ov-usr-chart').innerHTML=bars(su30);
+
+  // health
+  const rows=svcAll.map(x=>`<div class="chip ${x.active==='active'?'ok':'bad'}">${dot(x.active)}${esc(x.unit||x.name||'?')}</div>`);
+  const rd=be.charts||{}, sub=be.subsystems||{};
+  $('#ov-health').innerHTML=
+    `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">${rows.join('')||'<span class="muted">нет данных о службах</span>'}</div>`+
+    `<div class="row"><span class="k">Load .62 · backend / web</span><span class="v">${(be.host_be||{}).load||'—'} / ${(web.host||{}).load||'—'}</span></div>`+
+    `<div class="row"><span class="k">charts.db</span><span class="v">${rd.db_gb||'?'} ГБ · ${num(rd.series||0)} серий</span></div>`+
+    `<div class="row"><span class="k">Арбитраж / decorr пар</span><span class="v">${sub.arb_pairs??'—'} / ${sub.decorr_pairs??'—'}</span></div>`+
+    `<div class="row"><span class="k">Несвежих фидов</span><span class="v">${staleFeeds?`<span class="pill r">${staleFeeds}</span>`:'<span class="pill g">0</span>'}</span></div>`;
+
+  // worst freshness
+  const fl=cov.map(r=>{const f=fresh[r.exch]||{}; return {exch:r.exch,m1:f['1m'],idle:r.idle_s};})
+    .sort((a,b)=>(b.m1==null?-1:b.m1)-(a.m1==null?-1:a.m1)).slice(0,8);
+  $('#ov-fresh').innerHTML=fl.length?fl.map(r=>`<div class="row"><span class="k">${esc(r.exch)}</span><span class="v">${fr(r.m1,[3,15])} <span class="muted" style="font-weight:400">свечи 1м, мин</span></span></div>`).join(''):'<div class="empty">нет данных</div>';
+}
+
+/* ── STATS ── */
+function renderStats(){
+  const s=G.stats||{}; const rv=s.revenue||{}, u=s.users||{}, dv=s.derived||{};
+  if(rv.empty||rv.error){ $('#stats-empty').style.display='block'; $('#stats-body').style.display='none';
+    // still show a couple of user KPIs even w/o purchases
+    $('#stats-empty').querySelector('div').textContent = rv.error&&rv.error!=='no purchases yet' ? ('Статистика недоступна: '+rv.error) : 'Продаж пока нет — статистика появится после первой записанной оплаты.';
+    return; }
+  $('#stats-empty').style.display='none'; $('#stats-body').style.display='block';
+  const pm=rv.plan_mix||{monthly:{},annual:{}};
+
+  $('#st-kpi').innerHTML=[
+    kpi({lbl:'Выручка · 30д',val:usd((rv.d30&&rv.d30.net)||0,0),sub:`всего <b>${usd((rv.all&&rv.all.net)||0,0)}</b>`,icon:IC.money}),
+    kpi({lbl:'Оплат · 30д',val:num((rv.d30&&rv.d30.count)||0),sub:`сегодня <b>${num((rv.today&&rv.today.count)||0)}</b> · всего <b>${num((rv.all&&rv.all.count)||0)}</b>`,icon:IC.cart}),
+    kpi({lbl:'Средний чек',val:usd(rv.avg_check||0),sub:`30д <b>${usd(rv.avg_check_30d||0)}</b> · ~<b>${rv.avg_months||0}</b> мес`,icon:IC.chart}),
+    kpi({lbl:'Плательщиков',val:num(rv.paying_buyers||0),sub:`конверсия <b>${dv.conversion_pct||0}%</b> · LTV <b>${usd(dv.ltv_per_buyer||0)}</b>`,icon:IC.user}),
+    kpi({lbl:'Продлений',val:num(rv.renewals||0),sub:`первичных <b>${num(rv.first_purchases||0)}</b> · повторно берут <b>${rv.repeat_rate||0}%</b>`,icon:IC.repeat}),
+    kpi({lbl:'ARPU · 30д',val:usd(dv.arpu_30d||0),sub:`MRR ≈ <b>${rv.mrr_estimate==null?'—':usd(rv.mrr_estimate,0)}</b>`,icon:IC.wallet}),
+  ].join('');
+
+  const rev30=rv.revenue_30d||[]; $('#st-rev-sum').textContent=usd(rev30.reduce((a,b)=>a+b.v,0),0);
+  $('#st-rev-chart').innerHTML=spark(rev30,{money:true});
+  const pay30=rv.payments_30d||[]; $('#st-pay-sum').textContent=num(pay30.reduce((a,b)=>a+b.v,0));
+  $('#st-pay-chart').innerHTML=bars(pay30);
+
+  // plan donut
+  const mc=(pm.monthly&&pm.monthly.count)||0, ac=(pm.annual&&pm.annual.count)||0;
+  $('#st-plan-donut').innerHTML=donut([{v:mc,c:'#3d9bff'},{v:ac,c:'#a78bfa'}]);
+  const tot=mc+ac||1;
+  $('#st-plan-lg').innerHTML=
+    `<div class="li"><span class="sw" style="background:#3d9bff"></span>Месячные<span class="n">${num(mc)}</span><span class="p">${Math.round(mc/tot*100)}%</span></div>`+
+    `<div class="li"><span class="sw" style="background:#a78bfa"></span>Годовые<span class="n">${num(ac)}</span><span class="p">${Math.round(ac/tot*100)}%</span></div>`+
+    `<div class="li muted" style="margin-top:4px;border-top:1px solid var(--line);padding-top:9px">Выручка мес.<span class="n">${usd((pm.monthly&&pm.monthly.revenue)||0,0)}</span></div>`+
+    `<div class="li muted">Выручка год.<span class="n">${usd((pm.annual&&pm.annual.revenue)||0,0)}</span></div>`;
+
+  $('#st-retention').innerHTML=
+    `<div class="row"><span class="k">Плательщиков</span><span class="v">${num(rv.paying_buyers||0)}</span></div>`+
+    `<div class="row"><span class="k">Покупали повторно</span><span class="v">${num(rv.repeat_buyers||0)} <span class="pill g">${rv.repeat_rate||0}%</span></span></div>`+
+    `<div class="row"><span class="k">Первичных оплат</span><span class="v">${num(rv.first_purchases||0)}</span></div>`+
+    `<div class="row"><span class="k">Продлений</span><span class="v">${num(rv.renewals||0)}</span></div>`+
+    `<div class="row"><span class="k">Средний срок</span><span class="v">${rv.avg_months||0} мес</span></div>`;
+
+  $('#st-marketing').innerHTML=
+    `<div class="row"><span class="k">Всего пользователей</span><span class="v">${num(u.total||0)}</span></div>`+
+    `<div class="row"><span class="k">Активны 7д / 30д</span><span class="v">${num(u.active_7d||0)} / ${num(u.active_30d||0)}</span></div>`+
+    `<div class="row"><span class="k">Из партнёрских ссылок</span><span class="v">${u.referred==null?'—':num(u.referred)}</span></div>`+
+    `<div class="row"><span class="k">Конверсия в оплату</span><span class="v"><span class="pill ${(dv.conversion_pct||0)>=3?'g':(dv.conversion_pct||0)>=1?'y':'r'}">${dv.conversion_pct||0}%</span></span></div>`+
+    `<div class="row"><span class="k">LTV на плательщика</span><span class="v">${usd(dv.ltv_per_buyer||0)}</span></div>`;
+
+  const promos=s.promos||[];
+  $('#st-promos tbody').innerHTML=promos.length?promos.map(p=>`<tr><td><b style="color:var(--head)">${esc(p.code)}</b></td><td class="num">${num(p.uses)}</td><td class="num">${usd(p.revenue,0)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">промокоды ещё не использовались</td></tr>';
+  const tp=(s.partners&&s.partners.top)||[];
+  $('#st-toppartners tbody').innerHTML=tp.length?tp.map(p=>`<tr><td>${esc(p.email)}</td><td class="num">${num(p.sales)}</td><td class="num">${usd(p.net,0)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">нет атрибутированных продаж</td></tr>';
+}
+
+/* ── METRICS (ops) ── */
+let SORT={k:'syms',d:-1};
+function renderMetrics(){
+  const d=G.metrics||{}; const be=d.backend||{}, web=d.web||{};
+  const hb=be.host_be||{}, hw=web.host||{};
+  if(be.error){ $('#mt-cards').innerHTML=`<div class="card err">бэкенд: ${esc(be.error)}</div>`; }
+  const cov=be.coverage||[], sub=be.subsystems||{}, ch=be.charts||{};
+  const memb=hb.mem_total_mb?`${(((hb.mem_total_mb-hb.mem_avail_mb)/1024)).toFixed(1)}/${(hb.mem_total_mb/1024).toFixed(0)} ГБ`:'—';
+  const memw=hw.mem_total_mb?`${(((hw.mem_total_mb-hw.mem_avail_mb)/1024)).toFixed(1)}/${(hw.mem_total_mb/1024).toFixed(0)} ГБ`:'—';
+  $('#mt-cards').innerHTML=`
+    <div class="card"><h2>.62 · бэкенд</h2>
+      <div class="row"><span class="k">load 1/5/15м</span><span class="v">${hb.load||'—'}</span></div>
+      <div class="row"><span class="k">ядра</span><span class="v">${hb.cores||'—'}</span></div>
+      <div class="row"><span class="k">RAM</span><span class="v">${memb}</span></div></div>
+    <div class="card"><h2>.62 · веб</h2>
+      <div class="row"><span class="k">load 1/5/15м</span><span class="v">${hw.load||'—'}</span></div>
+      <div class="row"><span class="k">ядра</span><span class="v">${hw.cores||'—'}</span></div>
+      <div class="row"><span class="k">RAM</span><span class="v">${memw}</span></div></div>
+    <div class="card"><h2>charts.db · подсистемы</h2>
+      <div class="row"><span class="k">размер БД</span><span class="v">${ch.db_gb||'?'} ГБ</span></div>
+      <div class="row"><span class="k">серий</span><span class="v">${num(ch.series||0)}</span></div>
+      <div class="row"><span class="k">арбитраж / decorr</span><span class="v">${sub.arb_pairs??'—'} / ${sub.decorr_pairs??'—'}</span></div>
+      <div class="row"><span class="k">бирж в метриках</span><span class="v">${cov.length}</span></div></div>`;
+
+  const svc=[]; (be.services_be||[]).forEach(s=>svc.push(['.62 backend',s])); (web.services||[]).forEach(s=>svc.push(['.62 web',s]));
+  $('#mt-svc tbody').innerHTML=svc.length?svc.map(([box,s])=>`<tr><td>${box}</td><td>${esc(s.unit)}</td><td>${dot(s.active)}${esc(s.active)}</td><td class="num">${s.cpu||'—'}</td><td class="num">${s.rss_mb||'—'}</td><td class="num">${s.restarts??'—'}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">нет данных</td></tr>';
+
+  const fresh=be.freshness||{};
+  let rows=cov.map(r=>{ const f=fresh[r.exch]||{}; return {...r,f1m:f['1m'],f1h:f['1h'],f1d:f['1d']}; });
+  const sk=SORT.k, sd=SORT.d;
+  rows.sort((a,b)=>{ let x=a[sk],y=b[sk]; if(sk==='exch') return sd*(''+x).localeCompare(''+y); x=x??-1;y=y??-1; return sd*(x-y); });
+  $('#mt-exch tbody').innerHTML=rows.length?rows.map(r=>`<tr>
+     <td>${esc(r.exch)}</td><td class="num">${r.syms}</td>
+     <td class="num">${pc(r.natr)}</td><td class="num">${pc(r.vol)}</td><td class="num">${pc(r.trd)}</td>
+     <td class="num">${pc(r.pchg)}</td><td class="num">${pc(r.oi)}</td>
+     <td class="num">${fr(r.f1m,[3,15])}</td><td class="num">${fr(r.f1h,[90,240])}</td><td class="num">${fr(r.f1d,[1500,3000])}</td></tr>`).join(''):'<tr><td colspan="10" class="empty">нет данных</td></tr>';
+
+  const fl=cov.map(r=>{ const f=fresh[r.exch]||{}; return {exch:r.exch,idle:r.idle_s,m1:f['1m'],h1:f['1h'],d1:f['1d']}; })
+    .sort((a,b)=>(b.m1==null?1e9:b.m1)-(a.m1==null?1e9:a.m1));
+  const live=r=>(r.m1!=null&&r.m1<=3&&(r.idle==null||r.idle<=120))?'<span class="pill g">live</span>':(r.m1!=null&&r.m1<=15)?'<span class="pill y">slow</span>':'<span class="pill r">stale</span>';
+  $('#mt-fresh tbody').innerHTML=fl.length?fl.map(r=>`<tr>
+    <td>${esc(r.exch)}</td><td class="num">${fr(r.idle,[120,600])}</td>
+    <td class="num">${fr(r.m1,[3,15])}</td><td class="num">${fr(r.h1,[90,240])}</td><td class="num">${fr(r.d1,[1500,3000])}</td>
+    <td>${live(r)}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">нет данных</td></tr>';
+}
+$$('#mt-exch th[data-s]').forEach(th=>th.onclick=()=>{ const k=th.dataset.s; SORT=SORT.k===k?{k,d:-SORT.d}:{k,d:k==='exch'?1:-1}; renderMetrics(); });
+
+/* ── USERS ── */
+async function grant(days,emailArg){
+  const email=(emailArg||$('#mg-email').value||'').trim().toLowerCase(), msg=$('#mg-msg');
+  if(!email){ msg.innerHTML='<span class="err">укажите email</span>'; return; }
+  msg.textContent='…';
+  const r=await fetchJSON('/api/admin/grant-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,days})});
+  if(r&&r.ok){ msg.innerHTML= days>0?`<span style="color:var(--ok)">✓ ${esc(email)} — PRO на ${days} дн. (до ${fmtDate(r.pro_until)})</span>`:`<span style="color:var(--ok)">✓ ${esc(email)} — доступ снят</span>`; toast(days>0?'PRO выдан':'Доступ снят','ok'); loadUsers(); }
+  else msg.innerHTML='<span class="err">'+(r&&r.error==='user_not_found'?'пользователь не найден (сначала должен зарегистрироваться)':(r&&r.error)||'ошибка')+'</span>';
+}
+async function loadUsers(){
+  const q=($('#mg-search')||{}).value||'';
+  const d=await fetchJSON('/api/admin/users?q='+encodeURIComponent(q)); if(!d||!d.ok) return;
+  const now=d.now*1000;
+  $('#mg-count').textContent=(d.users||[]).length+' польз.';
+  $('#mg-users tbody').innerHTML=(d.users||[]).map(u=>{
+    const pu=u.pro_until, pro=pu&&pu*1000>now, em=esc(u.email);
+    const access=u.role==='admin'?'<span class="pill g">ADMIN</span>':pro?`<span class="pill g">PRO</span> <span class="muted" style="font-size:11px">до ${fmtDate(pu)}</span>`:'<span class="pill n">free</span>';
+    return `<tr><td>${em}</td><td>${esc(u.username||'')}</td><td>${esc(u.role)}</td><td>${access}</td>
+      <td>${fmtDate(u.created_ts)}</td><td>${u.last_login_ts?fmtDate(u.last_login_ts):'—'}</td>
+      <td style="white-space:nowrap"><button class="btn sm" data-grant="30" data-email="${em}">+30д</button>${pro&&u.role!=='admin'?` <button class="btn sm danger" data-grant="0" data-email="${em}">снять</button>`:''}</td></tr>`;
+  }).join('')||'<tr><td colspan="7" class="empty">пользователи не найдены</td></tr>';
+}
+function bindUsers(){
+  $$('.mg-preset').forEach(b=>b.onclick=()=>{ $('#mg-days').value=b.dataset.d; $$('.mg-preset').forEach(x=>x.classList.toggle('on',x===b)); });
+  $('#mg-days').oninput=()=>$$('.mg-preset').forEach(x=>x.classList.remove('on'));
+  $('#mg-grant').onclick=()=>grant((+$('#mg-days').value)||0);
+  $('#mg-revoke').onclick=()=>grant(0);
+  $('#mg-email').addEventListener('keydown',e=>{ if(e.key==='Enter') grant((+$('#mg-days').value)||0); });
+  $('#mg-search').oninput=()=>{ clearTimeout(window._mgT); window._mgT=setTimeout(loadUsers,300); };
+  $('#mg-users tbody').addEventListener('click',e=>{ const b=e.target.closest('button[data-grant]'); if(b) grant(+b.dataset.grant,b.dataset.email); });
+}
+
+async function loadVisitors(){
+  const d=await fetchJSON('/api/admin/visitors'); if(!d||!d.ok) return;
+  const rows=d.visitors||[], unique=new Set(rows.map(x=>x.visitor_id)).size;
+  $('#nb-visitors').textContent=unique||'';
+  $('#vs-kpi').innerHTML=[
+    kpi({lbl:'Посетителей онлайн',val:num(unique),sub:`<b>${rows.length}</b> вкладок`,icon:IC.user}),
+    kpi({lbl:'Поток остановлен',val:num(new Set(rows.filter(x=>x.paused).map(x=>x.visitor_id)).size),sub:'управляется по visitor ID',icon:IC.bolt})
+  ].join('');
+  const now=Math.floor(Date.now()/1000);
+  $('#vs-table tbody').innerHTML=rows.map(v=>{
+    const vid=esc(v.visitor_id||'—'), cid=esc(v.connection_id||'—');
+    const age=Math.max(0,now-(+v.last_seen||now));
+    const status=v.paused?`<span class="pill r">${v.auto_limited?'AUTO · ':''}PAUSED</span>`:'<span class="pill g">ACTIVE</span>';
+    const action=v.paused?'resume':'pause', label=v.paused?'Возобновить':'Остановить';
+    return `<tr><td><code class="mono" title="${vid}">${vid}</code></td><td class="mono">${cid}</td><td>${esc(v.page||'—')}</td><td>${esc(v.lang||'—')}</td><td class="num">${num(v.subscriptions||0)}</td><td>${fmtDate(v.connected_at)}</td><td>${age}с назад</td><td>${status}</td><td><button class="btn sm" data-vs-chat="${vid}">Чат</button> <button class="btn sm ${v.paused?'':'danger'}" data-vs-id="${vid}" data-vs-action="${action}">${label}</button></td></tr>`;
+  }).join('')||'<tr><td colspan="9" class="empty">активных подключений нет</td></tr>';
+  $$('[data-vs-id]').forEach(b=>b.onclick=async()=>{
+    b.disabled=true;
+    const out=await fetchJSON('/api/admin/visitors/'+encodeURIComponent(b.dataset.vsId)+'/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:b.dataset.vsAction})});
+    toast(out&&out.ok?(b.dataset.vsAction==='pause'?'Поставка данных остановлена':'Поставка данных восстановлена'):'Ошибка команды',out&&out.ok?'ok':'');
+    await loadVisitors();
+  });
+  $$('[data-vs-chat]').forEach(b=>b.onclick=async()=>{await setSection('chats');await openChat(b.dataset.vsChat)});
+}
+
+/* ── PARTNERS / affiliate ── */
+async function affOverview(){ const d=await fetchJSON('/api/admin/affiliate/overview'); if(!d.ok) return;
+  $('#aff-overview').innerHTML=[
+    kpi({lbl:'Партнёров',val:num(d.partners),icon:IC.pro}),
+    kpi({lbl:'Комиссий всего',val:usd(d.total_commissions_usd),icon:IC.money}),
+    kpi({lbl:'Выплачено',val:usd(d.total_paid_usd),icon:IC.wallet}),
+    kpi({lbl:'Заявок на вывод',val:num(d.pending_payouts),sub:usd(d.pending_payout_usd),icon:IC.cart}),
+  ].join('');
+}
+async function affPromos(){ const d=await fetchJSON('/api/admin/promos'); if(!d.ok) return;
+  $('#pr-list tbody').innerHTML=(d.promos||[]).map(p=>{
+    const exp=p.expires_ts?fmtDate(p.expires_ts):'∞', used=p.used_count+(p.max_uses?('/'+p.max_uses):'/∞');
+    const active=p.active?'<span class="pill g">вкл</span>':'<span class="pill n">выкл</span>';
+    return `<tr><td><b style="color:var(--head)">${esc(p.code)}</b></td><td class="num">${p.discount_pct}%</td><td class="num">${used}</td><td>${exp}</td><td>${esc(p.partner_email||'—')}</td><td>${active}</td>
+      <td style="white-space:nowrap"><button class="btn sm" data-pr-toggle="${esc(p.code)}" data-a="${p.active?0:1}">${p.active?'выкл':'вкл'}</button> <button class="btn sm danger" data-pr-del="${esc(p.code)}">×</button></td></tr>`;
+  }).join('')||'<tr><td colspan="7" class="empty">нет промокодов</td></tr>';
+  $$('[data-pr-toggle]').forEach(b=>b.onclick=async()=>{ await fetchJSON('/api/admin/promo/'+encodeURIComponent(b.dataset.prToggle)+'/active',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:b.dataset.a=='1'})}); affPromos(); });
+  $$('[data-pr-del]').forEach(b=>b.onclick=async()=>{ if(!confirm('Удалить промокод '+b.dataset.prDel+'?'))return; await fetchJSON('/api/admin/promo/'+encodeURIComponent(b.dataset.prDel),{method:'DELETE'}); affPromos(); });
+}
+async function affAddPromo(){
+  const code=$('#pr-code').value.trim(); if(!code) return;
+  const pct=+$('#pr-pct').value||0, max=+$('#pr-max').value||0, days=+$('#pr-days').value||0, partner=$('#pr-partner').value.trim();
+  const expires_ts=days>0?Math.floor(Date.now()/1000)+days*86400:0;
+  const d=await fetchJSON('/api/admin/promo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,discount_pct:pct,max_uses:max,expires_ts,partner_email:partner})});
+  if(!d.ok){ toast('Ошибка: '+d.error,'bad'); return; }
+  $('#pr-code').value=''; toast('Промокод создан','ok'); affPromos();
+}
+async function affRecordSale(){
+  const buyer=$('#sl-buyer').value.trim(), gross=+$('#sl-gross').value||0, promo=$('#sl-promo').value.trim(), months=+$('#sl-months').value||1, msg=$('#sl-msg');
+  if(!buyer){ msg.innerHTML='<span class="err">укажите email покупателя</span>'; return; }
+  msg.textContent='…';
+  const d=await fetchJSON('/api/admin/purchase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({buyer_email:buyer,gross_usd:gross,promo_code:promo,months})});
+  if(!d.ok){ msg.innerHTML='<span class="err">'+esc(d.error)+'</span>'; return; }
+  msg.innerHTML=`<span style="color:var(--ok)">✓ Записано: net ${usd(d.net_usd)}${d.partner?(' · партнёр '+esc(d.partner)+' +'+usd(d.commission_usd)+' ('+Math.round(d.rate*100)+'%)'):' · без партнёра'}. PRO выдан.</span>`;
+  toast('Продажа записана','ok'); $('#sl-buyer').value=''; $('#sl-promo').value='';
+  affPartners(); affOverview(); loadCore().then(()=>{ if(active==='overview')renderOverview(); if(active==='stats')renderStats(); });
+}
+async function affPartners(){ const d=await fetchJSON('/api/admin/partners'); if(!d.ok) return;
+  window._affP=d.partners||[];
+  $('#pn-list tbody').innerHTML=(window._affP).map(p=>{
+    const st=p.enabled?'<span class="pill g">вкл</span>':'<span class="pill n">выкл</span>';
+    const tinfo=(p.tiers&&p.tiers.length)?` <span class="muted">тир×${p.tiers.length}</span>`:(p.rate_override!=null?' <span class="muted">руч.</span>':'');
+    return `<tr><td>${esc(p.email)}</td><td class="num">${Math.round(p.rate*100)}%${tinfo}</td><td class="num">${p.paying_referrals}</td><td class="num">${p.signups}</td><td class="num">${usd(p.balance)}</td><td class="num">${usd(p.earnings.total)}</td><td>${st}</td>
+      <td style="white-space:nowrap"><button class="btn sm" data-pn-en="${esc(p.email)}" data-v="${p.enabled?0:1}">${p.enabled?'выкл':'вкл'}</button> <button class="btn sm" data-pn-tiers="${esc(p.email)}">ставка</button></td></tr>`;
+  }).join('')||'<tr><td colspan="8" class="empty">партнёров пока нет</td></tr>';
+  $$('[data-pn-en]').forEach(b=>b.onclick=async()=>{ await fetchJSON('/api/admin/partner',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.pnEn,action:b.dataset.v=='1'?'enable':'disable'})}); affPartners(); });
+  $$('[data-pn-tiers]').forEach(b=>b.onclick=()=>affEditTiers(b.dataset.pnTiers));
+}
+function affEditTiers(email){
+  const p=(window._affP||[]).find(x=>x.email===email)||{tiers:[]};
+  let tiers=(p.tiers||[]).map(t=>({min:t.min,rate:Math.round((t.rate||0)*100)}));
+  if(!tiers.length) tiers=[{min:1,rate:10},{min:6,rate:15},{min:11,rate:20}];
+  const rowsHtml=()=>tiers.map((t,i)=>`<div class="tier-row"><span>от</span><input type="number" min="0" value="${t.min}" data-ti="${i}" data-tk="min" style="width:78px"><span>оплативших →</span><input type="number" min="0" max="100" value="${t.rate}" data-ti="${i}" data-tk="rate" style="width:70px"><span>%</span><button class="btn sm danger" data-tdel="${i}">×</button></div>`).join('');
+  const wrap=document.createElement('div'); wrap.className='modal';
+  wrap.innerHTML=`<div class="mbox"><div class="mt">Ставки / тиры — ${esc(email)}</div>
+    <div class="md">Каждый уровень: с какого числа <b style="color:var(--text)">оплативших</b> действует ставка. Один уровень «от 1» = фиксированная ставка. Удали все = стандартная формула 10/15/20%.</div>
+    <div id="tier-rows">${rowsHtml()}</div>
+    <button class="btn sm" id="tier-add" style="margin-top:8px">+ уровень</button>
+    <div class="mfoot"><button class="btn" id="tier-cancel">Отмена</button><button class="btn accent" id="tier-save">Сохранить</button></div></div>`;
+  document.body.appendChild(wrap);
+  function bindRows(){
+    wrap.querySelectorAll('[data-ti]').forEach(inp=>inp.oninput=()=>{ tiers[+inp.dataset.ti][inp.dataset.tk]=+inp.value||0; });
+    wrap.querySelectorAll('[data-tdel]').forEach(b=>b.onclick=()=>{ tiers.splice(+b.dataset.tdel,1); wrap.querySelector('#tier-rows').innerHTML=rowsHtml(); bindRows(); });
+  }
+  bindRows();
+  wrap.querySelector('#tier-add').onclick=()=>{ tiers.push({min:(tiers.length?(+tiers[tiers.length-1].min+5):1),rate:15}); wrap.querySelector('#tier-rows').innerHTML=rowsHtml(); bindRows(); };
+  wrap.querySelector('#tier-cancel').onclick=()=>wrap.remove();
+  wrap.onclick=e=>{ if(e.target===wrap) wrap.remove(); };
+  wrap.querySelector('#tier-save').onclick=async()=>{
+    const payload=tiers.filter(t=>t.rate>0).map(t=>({min:+t.min||0,rate:(+t.rate)/100}));
+    await fetchJSON('/api/admin/partner/tiers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,tiers:payload})});
+    wrap.remove(); toast('Ставки сохранены','ok'); affPartners();
+  };
+}
+async function affDesignate(){ const em=$('#pn-designate').value.trim(); if(!em)return; await fetchJSON('/api/admin/partner',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,action:'designate'})}); $('#pn-designate').value=''; toast('Назначен партнёром','ok'); affPartners(); }
+async function affPayouts(){ const d=await fetchJSON('/api/admin/payouts'); if(!d.ok) return;
+  $('#po-list tbody').innerHTML=(d.payouts||[]).map(p=>{
+    const stc={requested:'y',approved:'y',sent:'g',rejected:'r'}[p.status]||'n'; let acts='';
+    if(p.status==='requested'||p.status==='approved') acts=`<button class="btn sm accent" data-po-sent="${p.id}">отправлено</button> <button class="btn sm danger" data-po-rej="${p.id}">отклонить</button>`;
+    return `<tr><td>${esc(p.partner_email)}</td><td class="num">${usd(p.amount_usd)}</td><td style="font-size:11px">${esc(p.usdt_address)}</td><td>${fmtDate(p.requested_ts)}</td><td><span class="pill ${stc}">${esc(p.status)}</span></td><td style="white-space:nowrap">${acts}</td></tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">заявок нет</td></tr>';
+  $$('[data-po-sent]').forEach(b=>b.onclick=async()=>{ const tx=prompt('TX-hash (необяз.):','')||''; await fetchJSON('/api/admin/payout/'+b.dataset.poSent,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'sent',tx_hash:tx})}); affPayouts(); affPartners(); });
+  $$('[data-po-rej]').forEach(b=>b.onclick=async()=>{ if(!confirm('Отклонить заявку?'))return; await fetchJSON('/api/admin/payout/'+b.dataset.poRej,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'rejected'})}); affPayouts(); affPartners(); });
+}
+function loadPartners(){ affOverview(); affPromos(); affPartners(); affPayouts(); }
+
+/* ── SUPPORT CHATS ── */
+const CHAT={list:[],id:'',messages:[],buttons:[],flowMode:false,flowConfig:null};
+function chatWhen(ts){if(!ts)return '';const d=new Date(ts*1000),now=new Date();return d.toDateString()===now.toDateString()?d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'});}
+function chatParseButtons(raw){return String(raw||'').split('\n').map(line=>line.trim()).filter(Boolean).map(line=>{const p=line.split('|').map(x=>x.trim());if(p.length>=5){const label=p[0]||'',action=p[p.length-1]||'reply',url=p[p.length-2]||'',next=p[p.length-3]||'',value=p.slice(1,-3).join(' | ').trim()||label;return {label:label,value:value,next_message_id:next,url:url,action:action}}return {label:p[0]||'',value:p[1]||p[0]||'',next_message_id:p[2]||'',url:p[3]||'',action:p[4]||'reply'};}).filter(x=>x.label);}
+function chatFormatButtons(items){return (items||[]).map(x=>[x.label||'',x.value||'',x.next_message_id||'',x.url||'',x.action||'reply'].join(' | ')).join('\n');}
+function isFixedCopyStep(id){return CHAT.flowMode&&(id==='flow_windows'||id==='flow_macos')}
+function chatShort(id){return id?'CS-'+id.slice(3,11).toUpperCase():'—';}
+async function loadChats(keepFlow){
+  const q=$('#chat-search').value.trim(),d=await fetchJSON('/api/admin/chats?q='+encodeURIComponent(q));
+  if(!d||!d.ok)return;
+  CHAT.list=d.chats||[];
+  const unread=CHAT.list.reduce((n,x)=>n+(+x.unread_admin||0),0);$('#nb-chats').textContent=unread||'';
+  $('#chat-rows').innerHTML=`<div class="chat-row ${CHAT.flowMode?'on':''}" id="chat-flow-row"><div class="chat-row-top"><span class="chat-row-id">⚡ Ошибка WebSocket</span></div><div class="chat-row-preview">Редактировать системное уведомление и всю ветку</div></div>`+CHAT.list.map(c=>`<div class="chat-row ${!CHAT.flowMode&&c.visitor_id===CHAT.id?'on':''}" data-chat-id="${esc(c.visitor_id)}"><div class="chat-row-top"><span class="chat-row-id">${esc(c.display_name||chatShort(c.visitor_id))}</span>${c.unread_admin?`<span class="chat-unread">${num(c.unread_admin)}</span>`:''}<span class="chat-row-time">${chatWhen(c.updated_ts)}</span></div><div class="chat-row-preview">${c.last_sender==='user'?'Пользователь: ':'Вы: '}${esc(c.last_text||((c.message_count||0)+' сообщений'))}</div></div>`).join('');
+  $('#chat-flow-row').onclick=openSupportFlow;
+  $$('#chat-rows [data-chat-id]').forEach(x=>x.onclick=()=>openChat(x.dataset.chatId));
+  if(!keepFlow){if(CHAT.flowMode)await openSupportFlow();else if(CHAT.id)await openChat(CHAT.id,true);}
+}
+async function openChat(id,quiet){
+  CHAT.flowMode=false;CHAT.id=id;const d=await fetchJSON('/api/admin/chats/'+encodeURIComponent(id));if(!d||!d.ok)return;
+  CHAT.messages=d.messages||[];
+  $$('#chat-rows .chat-row').forEach(x=>x.classList.toggle('on',x.dataset.chatId===id));
+  const info=CHAT.list.find(x=>x.visitor_id===id)||{};
+  $('#chat-current').textContent=info.display_name||chatShort(id);$('#chat-current').title=id;
+  $('#chat-summary').textContent=(info.language?info.language+' · ':'')+(info.page||id);
+  $('#chat-config').style.display='none';$('#chat-status').style.display='';$('#chat-status').disabled=false;$('#chat-status').value=info.status||'open';renderChatFlow(!!quiet);
+  loadChats(true);
+}
+async function openSupportFlow(){
+  const d=await fetchJSON('/api/admin/support-flow');if(!d||!d.ok)return;
+  CHAT.flowMode=true;CHAT.id='__flow__';CHAT.messages=d.steps||[];CHAT.flowConfig=d.config||{};
+  $('#chat-current').textContent='Сценарий ошибки WebSocket';$('#chat-current').title='';$('#chat-summary').textContent='Порядок доставки задаётся стрелками и переходами кнопок';
+  $('#chat-status').style.display='none';$('#chat-config').style.display='inline-flex';renderChatFlow(false);loadChats(true);
+}
+function renderChatFlow(keepScroll){
+  const flow=$('#chat-flow'),wasBottom=flow.scrollHeight-flow.scrollTop-flow.clientHeight<90;
+  flow.innerHTML=CHAT.messages.map((m,i)=>`<div class="chat-msg ${m.sender==='user'?'user':''} ${m.visible?'':'hidden-msg'}" data-mid="${m.id}">
+    <div class="chat-msg-meta"><b>${esc(m.sender)}</b><span>${chatWhen(m.created_ts)}</span><span class="chat-msg-id" title="Копировать ID">${esc(m.id)}</span>${m.visible?'':'<span class="pill y">скрыто до перехода</span>'}</div>
+    ${m.text?`<div class="chat-msg-text">${esc(m.text)}</div>`:''}${m.image_url?`<img class="chat-msg-img" src="${esc(m.image_url)}" alt="Вложение">`:''}
+    ${(m.buttons||[]).length?`<div class="chat-msg-buttons">${m.buttons.map(b=>`<span class="chip">${esc(b.label)}${b.next_message_id?' → '+esc(b.next_message_id.slice(0,8)):''}</span>`).join('')}</div>`:''}
+    <div class="chat-msg-actions"><button class="btn sm" data-chat-edit="${m.id}">изменить</button>${CHAT.flowMode&&m.image_url?`<button class="btn sm danger" data-chat-image-del="${m.id}">удалить скрин</button>`:''}<button class="btn sm" data-chat-up="${m.id}" ${i===0?'disabled':''}>↑</button><button class="btn sm" data-chat-down="${m.id}" ${i===CHAT.messages.length-1?'disabled':''}>↓</button><button class="btn sm danger" data-chat-del="${m.id}">удалить</button></div>
+  </div>`).join('')||'<div class="chat-empty">Сообщений пока нет — напишите первым</div>';
+  $$('[data-chat-edit]').forEach(b=>b.onclick=()=>editChatMessage(b.dataset.chatEdit));
+  $$('[data-chat-image-del]').forEach(b=>b.onclick=()=>deleteFlowScreenshot(b.dataset.chatImageDel));
+  $$('[data-chat-del]').forEach(b=>b.onclick=()=>deleteChatMessage(b.dataset.chatDel));
+  $$('[data-chat-up]').forEach(b=>b.onclick=()=>moveChatMessage(b.dataset.chatUp,-1));
+  $$('[data-chat-down]').forEach(b=>b.onclick=()=>moveChatMessage(b.dataset.chatDown,1));
+  $$('.chat-msg-id').forEach(x=>x.onclick=()=>{const id=x.closest('.chat-msg').dataset.mid;navigator.clipboard&&navigator.clipboard.writeText(id);toast('ID сообщения скопирован','ok')});
+  if(!keepScroll||wasBottom)requestAnimationFrame(()=>flow.scrollTop=flow.scrollHeight);
+}
+async function uploadChatFile(file){
+  if(!file)return '';
+  if(file.size>8*1024*1024)throw new Error('Файл больше 8 МБ');
+  const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)});
+  const out=await fetchJSON('/api/admin/chat-media',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data_url:data})});
+  if(!out||!out.ok)throw new Error((out&&out.error)||'upload_failed');return out.url;
+}
+async function sendChatMessage(){
+  if(!CHAT.id){toast('Сначала выберите диалог','bad');return}
+  const btn=$('#chat-send');btn.disabled=true;
+  try{
+    let image=$('#chat-image').value.trim();const file=$('#chat-file').files[0];if(file)image=await uploadChatFile(file);
+    const payload={text:$('#chat-text').value.trim(),image_url:image,buttons:CHAT.buttons};
+    const endpoint=CHAT.flowMode?'/api/admin/support-flow/messages':'/api/admin/chats/'+encodeURIComponent(CHAT.id)+'/messages';
+    const d=await fetchJSON(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!d||!d.ok)throw new Error((d&&d.error)||'send_failed');
+    $('#chat-text').value='';$('#chat-image').value='';$('#chat-file').value='';CHAT.buttons=[];updateChatButtonsNote();if(CHAT.flowMode)await openSupportFlow();else await openChat(CHAT.id);toast(CHAT.flowMode?'Шаг добавлен':'Сообщение отправлено','ok');
+  }catch(e){toast('Ошибка: '+e.message,'bad')}finally{btn.disabled=false}
+}
+function updateChatButtonsNote(){const n=CHAT.buttons.length;$('#chat-buttons-note').textContent=n?`Кнопок: ${n}. Формат: действие, переход к сообщению или ссылка.`:'Кнопок нет. Поле ввода находится ниже всех элементов диалога.';}
+function editButtons(target,onSave){
+  const wrap=document.createElement('div');wrap.className='modal';wrap.innerHTML=`<div class="mbox"><div class="mt">Кнопки сообщения</div><div class="md">Одна кнопка на строку: <b>Текст | ответ/значение | ID следующего сообщения | URL | действие</b>. Действия: reply, url или copy. Целевое сообщение можно сделать скрытым до нажатия.</div><textarea id="chat-btn-lines" style="width:100%;min-height:180px;resize:vertical" placeholder="Подробнее | подробнее | flow_next | | reply\nСкопировать | команда | | | copy">${esc(chatFormatButtons(target))}</textarea><div class="mfoot"><button class="btn" data-cancel>Отмена</button><button class="btn accent" data-save>Сохранить</button></div></div>`;
+  document.body.appendChild(wrap);wrap.querySelector('[data-cancel]').onclick=()=>wrap.remove();wrap.querySelector('[data-save]').onclick=()=>{onSave(chatParseButtons(wrap.querySelector('#chat-btn-lines').value));wrap.remove()};wrap.onclick=e=>{if(e.target===wrap)wrap.remove()};
+}
+function editChatMessage(id){
+  const m=CHAT.messages.find(x=>x.id===id);if(!m)return;
+  const fixedCopy=isFixedCopyStep(id),currentCommand=fixedCopy&&m.buttons&&m.buttons[0]?m.buttons[0].value||'':'';
+  const buttonEditor=fixedCopy?`<label class="fld"><div class="lbl">Команда для копирования</div><textarea data-copy-command style="min-height:150px" placeholder="Вставьте команду целиком">${esc(currentCommand)}</textarea><div class="hint">Текст сохраняется целиком. Кнопка «Копировать команду» и её действие закреплены.</div></label>`:`<label class="fld"><div class="lbl">Кнопки</div><textarea data-buttons placeholder="Текст | значение | ID следующего | URL | reply/url/copy">${esc(chatFormatButtons(m.buttons))}</textarea></label>`;
+  const wrap=document.createElement('div');wrap.className='modal';wrap.innerHTML=`<div class="mbox chat-edit-form"><div class="mt">Редактировать сообщение</div><div class="md mono">${esc(m.id)} · ${esc(m.sender)}</div><label class="fld"><div class="lbl">Текст</div><textarea data-text>${esc(m.text||'')}</textarea></label><label class="fld"><div class="lbl">Картинка (URL)</div><input data-image value="${esc(m.image_url||'')}"></label><label class="fld"><div class="lbl">Или загрузить новую картинку</div><input data-file type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>${buttonEditor}<label style="display:flex;align-items:center;gap:8px;margin-top:12px"><input data-visible type="checkbox" style="width:auto" ${m.visible?'checked':''}> Показывать пользователю сейчас</label><div class="mfoot"><button class="btn" data-cancel>Отмена</button><button class="btn accent" data-save>Сохранить</button></div></div>`;
+  document.body.appendChild(wrap);wrap.querySelector('[data-cancel]').onclick=()=>wrap.remove();wrap.onclick=e=>{if(e.target===wrap)wrap.remove()};wrap.querySelector('[data-save]').onclick=async()=>{try{let image=wrap.querySelector('[data-image]').value.trim(),file=wrap.querySelector('[data-file]').files[0];if(file)image=await uploadChatFile(file);const buttons=fixedCopy?[{label:'Копировать команду',value:wrap.querySelector('[data-copy-command]').value,next_message_id:'',url:'',action:'copy'}]:chatParseButtons(wrap.querySelector('[data-buttons]').value);const payload={text:wrap.querySelector('[data-text]').value,image_url:image,buttons:buttons,visible:wrap.querySelector('[data-visible]').checked};const endpoint=CHAT.flowMode?'/api/admin/support-flow/messages/'+id:'/api/admin/chats/'+encodeURIComponent(CHAT.id)+'/messages/'+id;const d=await fetchJSON(endpoint,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(d&&d.ok){wrap.remove();if(CHAT.flowMode)await openSupportFlow();else await openChat(CHAT.id);toast('Сообщение изменено','ok')}else toast('Не удалось сохранить','bad')}catch(e){toast('Ошибка картинки: '+e.message,'bad')}};
+}
+async function deleteChatMessage(id){if(!confirm('Удалить это сообщение?'))return;const endpoint=CHAT.flowMode?'/api/admin/support-flow/messages/'+id:'/api/admin/chats/'+encodeURIComponent(CHAT.id)+'/messages/'+id;const d=await fetchJSON(endpoint,{method:'DELETE'});if(d&&d.ok){if(CHAT.flowMode)await openSupportFlow();else await openChat(CHAT.id);toast('Сообщение удалено','ok')}}
+async function deleteFlowScreenshot(id){if(!CHAT.flowMode||!confirm('Удалить скрин из этого сообщения?'))return;const d=await fetchJSON('/api/admin/support-flow/messages/'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_url:''})});if(d&&d.ok){await openSupportFlow();toast('Скрин удалён из сообщения','ok')}else toast('Не удалось удалить скрин','bad')}
+async function moveChatMessage(id,delta){const i=CHAT.messages.findIndex(x=>x.id===id),j=i+delta;if(i<0||j<0||j>=CHAT.messages.length)return;const copy=CHAT.messages.slice(),tmp=copy[i];copy[i]=copy[j];copy[j]=tmp;const endpoint=CHAT.flowMode?'/api/admin/support-flow/reorder':'/api/admin/chats/'+encodeURIComponent(CHAT.id)+'/reorder';const d=await fetchJSON(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:copy.map(x=>x.id)})});if(d&&d.ok){if(CHAT.flowMode)await openSupportFlow();else await openChat(CHAT.id,true)}}
+function editFlowConfig(){const c=CHAT.flowConfig||{},wrap=document.createElement('div');wrap.className='modal';wrap.innerHTML=`<div class="mbox chat-edit-form"><div class="mt">Системное уведомление WebSocket</div><label class="fld"><div class="lbl">Заголовок</div><input data-title value="${esc(c.notice_title||'')}"></label><label class="fld"><div class="lbl">Текст</div><textarea data-text>${esc(c.notice_text||'')}</textarea></label><label class="fld"><div class="lbl">Текст кнопки</div><input data-action value="${esc(c.notice_action||'')}"></label><div class="mfoot"><button class="btn" data-cancel>Отмена</button><button class="btn accent" data-save>Сохранить</button></div></div>`;document.body.appendChild(wrap);wrap.querySelector('[data-cancel]').onclick=()=>wrap.remove();wrap.querySelector('[data-save]').onclick=async()=>{const d=await fetchJSON('/api/admin/support-flow/config',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({notice_title:wrap.querySelector('[data-title]').value,notice_text:wrap.querySelector('[data-text]').value,notice_action:wrap.querySelector('[data-action]').value})});if(d&&d.ok){wrap.remove();await openSupportFlow();toast('Уведомление сохранено','ok')}};}
+function bindChats(){
+  let debounce;$('#chat-search').oninput=()=>{clearTimeout(debounce);debounce=setTimeout(()=>loadChats(true),250)};
+  $('#chat-send').onclick=sendChatMessage;$('#chat-text').onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();sendChatMessage()}};
+  $('#chat-buttons').onclick=()=>editButtons(CHAT.buttons,x=>{CHAT.buttons=x;updateChatButtonsNote()});
+  $('#chat-config').onclick=editFlowConfig;
+  $('#chat-status').onchange=async()=>{if(!CHAT.id)return;await fetchJSON('/api/admin/chats/'+encodeURIComponent(CHAT.id)+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:$('#chat-status').value})});loadChats(true)};
+}
+
+/* ═══════════════════ router ═══════════════════ */
+const SUB={overview:'сводка по сервису',stats:'выручка, подписки, маркетинг',metrics:'службы, биржи, свежесть фидов',visitors:'анонимные клиенты и доставка WebSocket',chats:'переписка, медиа, кнопки и цепочки сообщений',users:'аккаунты и доступ PRO',partners:'партнёрская программа и выплаты'};
+const TITLE={overview:'Обзор',stats:'Статистика',metrics:'Метрики',visitors:'Посетители',chats:'Чаты',users:'Пользователи',partners:'Партнёры'};
+let active='overview', _timer=null;
+function stopTimer(){ if(_timer){ clearInterval(_timer); _timer=null; } }
+async function setSection(name){
+  active=name;
+  $$('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.sec===name));
+  $$('.sec').forEach(s=>s.classList.toggle('on',s.id==='sec-'+name));
+  $('#pg-title').textContent=TITLE[name]; $('#pg-sub').textContent=SUB[name]||'';
+  toggleNav(false);
+  stopTimer();
+  if(name==='overview'){ await loadCore(); renderOverview(); _timer=setInterval(()=>loadCore().then(()=>active==='overview'&&renderOverview()),30000); }
+  else if(name==='stats'){ if(!G.stats) await loadCore(); renderStats(); }
+  else if(name==='metrics'){ await loadCore(); renderMetrics(); _timer=setInterval(()=>loadCore().then(()=>active==='metrics'&&renderMetrics()),60000); }
+  else if(name==='visitors'){ await loadVisitors(); _timer=setInterval(()=>active==='visitors'&&loadVisitors(),10000); }
+  else if(name==='chats'){ await loadChats(true); _timer=setInterval(()=>active==='chats'&&loadChats(false),5000); }
+  else if(name==='users'){ loadUsers(); }
+  else if(name==='partners'){ loadPartners(); }
+}
+function refreshActive(){ setSection(active); toast('Обновлено'); }
+function toggleNav(force){ const s=$('#side'),sc=$('#scrim'); const open=force==null?!s.classList.contains('open'):force; s.classList.toggle('open',open); sc.classList.toggle('on',open); }
+
+/* ═══════════════════ boot ═══════════════════ */
+async function adminLogin(e){
+  e.preventDefault();const submit=$('#admin-login-submit'),error=$('#admin-login-error');submit.disabled=true;error.textContent='';
+  try{const d=await fetchJSON('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('#admin-login-email').value.trim(),password:$('#admin-login-password').value})});if(!d||!d.ok){error.textContent='Неверный email или пароль';return}$('#admin-login-password').value='';await boot();}catch(err){error.textContent='Не удалось выполнить вход'}finally{submit.disabled=false}
+}
+async function adminLogout(){await fetchJSON('/api/admin/logout',{method:'POST'});G.admin=false;stopTimer();CHAT.id='';$('#app').style.display='none';$('#gate').style.display='grid';$('#admin-login-password').value='';$('#admin-login-password').focus();}
+async function boot(){
+  let session;try{session=await fetchJSON('/api/admin/session')}catch(e){session={}}
+  G.admin=!!(session&&session.authenticated);
+  if(!G.admin){ $('#gate').style.display='grid'; $('#app').style.display='none'; return; }
+  $('#gate').style.display='none'; $('#app').style.display='grid';
+  $$('#nav a').forEach(a=>a.onclick=()=>setSection(a.dataset.sec));
+  bindUsers();
+  bindChats();
+  $('#pr-add').onclick=affAddPromo; $('#sl-add').onclick=affRecordSale; $('#pn-designate-btn').onclick=affDesignate;
+  $('#admin-logout').onclick=adminLogout;
+  await setSection('overview');
+}
+$('#admin-login-form').addEventListener('submit',adminLogin);
+boot();
+</script>
+</body>
+</html>

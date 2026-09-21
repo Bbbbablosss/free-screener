@@ -1,0 +1,249 @@
+"""
+MarketDataService: fetches 24h tickers from all exchanges every 60s in parallel,
+broadcasts a market_data WebSocket message to all connected clients.
+"""
+import asyncio
+import json
+import logging
+import time
+
+import aiohttp
+
+logger = logging.getLogger(__name__)
+
+_session: aiohttp.ClientSession | None = None
+
+
+async def _get_session() -> aiohttp.ClientSession:
+    global _session
+    if _session is None or _session.closed:
+        connector = aiohttp.TCPConnector(resolver=aiohttp.ThreadedResolver())
+        _session = aiohttp.ClientSession(connector=connector)
+    return _session
+
+
+# ── per-exchange fetchers (each writes into shared dict) ─────────────────────
+
+async def _fx_binance_futures(session: aiohttp.ClientSession, out: dict):
+    try:
+        async with session.get("https://fapi.binance.com/fapi/v1/ticker/24hr",
+                               timeout=aiohttp.ClientTimeout(total=15)) as r:
+            for t in await r.json():
+                sym: str = t["symbol"]
+                if not sym.endswith("USDT"):
+                    continue
+                vol = float(t["quoteVolume"])
+                if sym not in out:
+                    out[sym] = {"price": float(t["lastPrice"]),
+                                "change_pct": float(t["priceChangePercent"]),
+                                "volume_usd": vol}
+                else:
+                    out[sym]["volume_usd"] = max(out[sym]["volume_usd"], vol)
+        logger.debug("[md] binance_f ok")
+    except Exception as e:
+        logger.warning("[md] binance_f error: %s", e)
+
+
+async def _fx_binance_spot(session: aiohttp.ClientSession, out: dict):
+    try:
+        async with session.get("https://api.binance.com/api/v3/ticker/24hr",
+                               timeout=aiohttp.ClientTimeout(total=15)) as r:
+            for t in await r.json():
+                sym: str = t["symbol"]
+                if not sym.endswith("USDT"):
+                    continue
+                vol = float(t["quoteVolume"])
+                if sym not in out:
+                    out[sym] = {"price": float(t["lastPrice"]),
+                                "change_pct": float(t["priceChangePercent"]),
+                                "volume_usd": vol}
+                else:
+                    out[sym]["volume_usd"] += vol   # add spot on top of futures
+        logger.debug("[md] binance_spot ok")
+    except Exception as e:
+        logger.warning("[md] binance_spot error: %s", e)
+
+
+async def _fx_bybit(session: aiohttp.ClientSession, out: dict):
+    try:
+        async with session.get("https://api.bybit.com/v5/market/tickers?category=linear",
+                               timeout=aiohttp.ClientTimeout(total=15)) as r:
+            data = await r.json()
+            count = 0
+            for t in (data.get("result", {}).get("list") or []):
+                sym: str = t.get("symbol", "")
+                if not sym.endswith("USDT"):
+                    continue
+                vol = float(t.get("turnover24h") or 0)
+                if vol <= 0:
+                    continue
+                if sym not in out:
+                    cp = float(t.get("price24hPcnt") or 0) * 100
+                    out[sym] = {"price": float(t.get("lastPrice") or 0),
+                                "change_pct": cp, "volume_usd": vol}
+                else:
+                    out[sym]["volume_usd"] = max(out[sym]["volume_usd"], vol)
+                count += 1
+            logger.debug("[md] bybit ok: %d symbols", count)
+    except Exception as e:
+        logger.warning("[md] bybit error: %s", e)
+
+
+async def _fx_okx(session: aiohttp.ClientSession, out: dict):
+    try:
+        async with session.get("https://www.okx.com/api/v5/market/tickers?instType=SWAP",
+                               timeout=aiohttp.ClientTimeout(total=15)) as r:
+            data = await r.json()
+            count = 0
+            for t in (data.get("data") or []):
+                inst: str = t.get("instId", "")
+                if not inst.endswith("-USDT-SWAP"):
+                    continue
+                # "BTC-USDT-SWAP" → "BTCUSDT"
+                sym = inst[:-len("-USDT-SWAP")] + "USDT"
+                last = float(t.get("last") or 0)
+                vol_base = float(t.get("volCcy24h") or 0)   # in base currency
+                vol = vol_base * last
+                if vol <= 0:
+                    continue
+                if sym not in out:
+                    open_ = float(t.get("sodUtc8") or last or 1)
+                    cp = (last - open_) / open_ * 100 if open_ else 0
+                    out[sym] = {"price": last, "change_pct": cp, "volume_usd": vol}
+                else:
+                    out[sym]["volume_usd"] = max(out[sym]["volume_usd"], vol)
+                count += 1
+            logger.debug("[md] okx ok: %d symbols", count)
+    except Exception as e:
+        logger.warning("[md] okx error: %s", e)
+
+
+async def _fx_gate(session: aiohttp.ClientSession, out: dict):
+    try:
+        async with session.get("https://api.gateio.ws/api/v4/futures/usdt/tickers",
+                               timeout=aiohttp.ClientTimeout(total=15)) as r:
+            items = await r.json()
+            count = 0
+            for t in (items or []):
+                contract: str = t.get("contract", "")
+                if not contract.endswith("_USDT"):
+                    continue
+                # "AIN_USDT" → "AINUSDT"
+                sym = contract.replace("_USDT", "USDT").replace("_", "")
+                vol = float(t.get("volume_24h_settle") or 0)
+                if vol <= 0:
+                    continue
+                if sym not in out:
+                    last = float(t.get("last") or 0)
+                    cp = float(t.get("change_percentage") or 0)
+                    out[sym] = {"price": last, "change_pct": cp, "volume_usd": vol}
+                else:
+                    out[sym]["volume_usd"] = max(out[sym]["volume_usd"], vol)
+                count += 1
+            logger.debug("[md] gate ok: %d symbols", count)
+    except Exception as e:
+        logger.warning("[md] gate error: %s", e)
+
+
+async def _fx_bitget(session: aiohttp.ClientSession, out: dict):
+    try:
+        async with session.get(
+                "https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES",
+                timeout=aiohttp.ClientTimeout(total=15)) as r:
+            data = await r.json()
+            count = 0
+            for t in (data.get("data") or []):
+                sym: str = t.get("symbol", "")
+                if not sym.endswith("USDT"):
+                    continue
+                vol = float(t.get("usdtVolume") or 0)
+                if vol <= 0:
+                    continue
+                if sym not in out:
+                    last = float(t.get("lastPr") or 0)
+                    cp = float(t.get("priceChangePercent") or 0)
+                    out[sym] = {"price": last, "change_pct": cp, "volume_usd": vol}
+                else:
+                    out[sym]["volume_usd"] = max(out[sym]["volume_usd"], vol)
+                count += 1
+            logger.debug("[md] bitget ok: %d symbols", count)
+    except Exception as e:
+        logger.warning("[md] bitget error: %s", e)
+
+
+class MarketDataService:
+    def __init__(self):
+        self.pairs: dict[str, dict] = {}
+        self.total_pairs: int = 0
+        self.gainers: int = 0
+        self.losers: int = 0
+        self.total_vol: float = 0.0
+        self._last_fetch: float = 0.0
+        self._ws_clients: set = set()
+
+    def snapshot(self) -> dict:
+        return {
+            "type": "market_data",
+            "stats": {
+                "total_pairs": self.total_pairs,
+                "gainers": self.gainers,
+                "losers": self.losers,
+                "total_vol": self.total_vol,
+            },
+            "pairs": [
+                {"s": sym, "p": v["price"], "c": v["change_pct"], "v": v["volume_usd"]}
+                for sym, v in sorted(self.pairs.items(), key=lambda x: -x[1]["volume_usd"])
+            ],
+        }
+
+    async def _fetch(self):
+        session = await _get_session()
+        out: dict[str, dict] = {}
+
+        # All exchanges in parallel — total time ~5–10s instead of ~30s
+        await asyncio.gather(
+            _fx_binance_futures(session, out),
+            _fx_binance_spot(session, out),
+            _fx_bybit(session, out),
+            _fx_okx(session, out),
+            _fx_gate(session, out),
+            _fx_bitget(session, out),
+            return_exceptions=True,
+        )
+
+        if not out:
+            logger.warning("[md] all fetches failed — keeping previous %d pairs", len(self.pairs))
+            return
+
+        gainers = sum(1 for v in out.values() if v["change_pct"] > 0)
+        losers  = sum(1 for v in out.values() if v["change_pct"] < 0)
+        total_vol = sum(v["volume_usd"] for v in out.values())
+
+        self.pairs      = out
+        self.total_pairs = len(out)
+        self.gainers    = gainers
+        self.losers     = losers
+        self.total_vol  = total_vol
+        self._last_fetch = time.time()
+        logger.info("[md] updated: %d pairs, gainers=%d, losers=%d", len(out), gainers, losers)
+
+        if self._ws_clients:
+            msg  = json.dumps(self.snapshot())
+            dead = set()
+            for ws in list(self._ws_clients):
+                try:
+                    await ws.send_text(msg)
+                except Exception:
+                    dead.add(ws)
+            self._ws_clients -= dead
+
+    async def start(self):
+        while True:
+            try:
+                await self._fetch()
+            except Exception as e:
+                logger.error("[md] start error: %s", e, exc_info=True)
+            await asyncio.sleep(60)
+
+
+market_data = MarketDataService()

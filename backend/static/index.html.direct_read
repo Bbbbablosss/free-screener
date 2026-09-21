@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screener</title>
+<style>
+  :root {
+    --bg:          #07080b;
+    --sidebar-bg:  #05060a;
+    --header-bg:   #08090d;
+    --card-bg:     #0c0d11;
+    --card-border: #17191f;
+    --bar-bg:      #08090d;
+    --accent:      #A4FF00;
+    --accent-dim:  rgba(164,255,0,0.09);
+    --accent-glow: rgba(164,255,0,0.22);
+    --ask:         #FF4444;
+    --ask-dim:     rgba(255,68,68,0.09);
+    --text:        #e2e2e8;
+    --muted:       #42444f;
+    --muted2:      #63667a;
+    --border:      #17191f;
+    --panel-bg:    #0c0d11;
+    --input-bg:    #111318;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; background: var(--bg); color: var(--text);
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px; overflow: hidden;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    height: 100vh; width: 100vw;
+  }
+
+  /* ── Sidebar ──────────────────────────────────────────────────────────── */
+  #sidebar {
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    height: 100vh; overflow: hidden;
+  }
+  .sb-logo {
+    padding: 15px 14px 13px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  }
+  .sb-logo-icon {
+    width: 34px; height: 34px; background: var(--accent); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: 900; color: #000; flex-shrink: 0;
+  }
+  .sb-logo-name { font-size: 12px; font-weight: 800; color: var(--text); letter-spacing: 0.3px; line-height: 1.25; }
+  .sb-logo-sub  { font-size: 8px; color: var(--muted2); letter-spacing: 1.2px; text-transform: uppercase; }
+  .sb-nav { padding: 10px 8px; flex: 1; overflow: hidden; }
+  .sb-nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 10px; border-radius: 8px; cursor: pointer;
+    color: var(--muted2); font-size: 13px; font-weight: 500;
+    transition: background .15s, color .15s; margin-bottom: 2px;
+    user-select: none; border: 1px solid transparent;
+  }
+  .sb-nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .sb-nav-item.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(164,255,0,0.16); }
+  .sb-nav-item svg { flex-shrink: 0; }
+  .sb-eye {
+    padding: 14px 14px 10px; border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .sb-eye-svg { width: 80px; height: 80px; filter: drop-shadow(0 0 18px rgba(164,255,0,0.45)); opacity: .88; }
+  .sb-eye-text {
+    font-size: 8px; font-weight: 700; letter-spacing: 1.8px;
+    text-transform: uppercase; color: var(--muted2); text-align: center; line-height: 1.6;
+  }
+  .sb-social {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    padding: 10px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .sb-social-icon { color: var(--muted2); font-size: 14px; cursor: pointer; transition: color .15s; }
+  .sb-social-icon:hover { color: var(--accent); }
+  .sb-user {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .sb-user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent-dim); border: 1px solid var(--accent-glow);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--accent); font-weight: 800; flex-shrink: 0;
+  }
+  .sb-user-name  { font-size: 12px; font-weight: 600; color: var(--text); }
+  .sb-user-badge {
+    font-size: 8px; font-weight: 800; background: var(--accent);
+    color: #000; padding: 1px 5px; border-radius: 3px; margin-left: 5px;
+  }
+
+  /* ── Right column ─────────────────────────────────────────────────────── */
+  #right { display: grid; grid-template-rows: 56px 70px 1fr 58px; height: 100vh; overflow: hidden; }
+
+  /* ── Brand bar ────────────────────────────────────────────────────────── */
+  #brandbar {
+    background: var(--header-bg); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 20px; gap: 10px;
+  }
+  .brand-eye  { font-size: 22px; color: var(--accent); filter: drop-shadow(0 0 8px var(--accent-glow)); }
+  .brand-name { font-size: 20px; font-weight: 900; color: var(--accent); letter-spacing: 1px; }
+  .brand-sub  {
+    font-size: 10px; font-weight: 600; color: var(--muted2);
+    letter-spacing: 3px; text-transform: uppercase;
+    align-self: flex-end; margin-bottom: 2px; margin-left: 2px;
+  }
+  .brand-spacer { flex: 1; }
+  .brand-right  { display: flex; align-items: center; gap: 8px; }
+  #conn-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted); transition: background .3s;
+  }
+  #conn-dot.connected { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  #status-text { color: var(--muted2); font-size: 11px; margin-right: 4px; }
+  .hdr-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted2); padding: 5px 12px; border-radius: 6px;
+    cursor: pointer; font-size: 11px; font-weight: 500;
+    transition: border-color .2s, color .2s; white-space: nowrap;
+  }
+  .hdr-btn:hover, .hdr-btn.active { border-color: var(--accent); color: var(--accent); }
+  .hdr-icon-btn {
+    width: 30px; height: 30px; background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--muted2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+    transition: border-color .2s, color .2s;
+  }
+  .hdr-icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Big settings gear button */
+  #settings-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--accent-dim); border: 1px solid rgba(164,255,0,0.25);
+    color: var(--accent); padding: 6px 14px; border-radius: 7px;
+    cursor: pointer; font-size: 12px; font-weight: 600;
+    transition: background .2s, border-color .2s;
+  }
+  #settings-btn:hover { background: rgba(164,255,0,0.16); border-color: var(--accent); }
+  #settings-btn svg { transition: transform .4s; }
+  #settings-btn:hover svg { transform: rotate(45deg); }
+
+  .hdr-plus-btn {
+    width: 30px; height: 30px; background: var(--accent); border: none; border-radius: 6px;
+    color: #000; font-size: 20px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: filter .15s;
+  }
+  .hdr-plus-btn:hover { filter: brightness(1.1); }
+
+  /* ── Stats bar ────────────────────────────────────────────────────────── */
+  #statsbar {
+    background: var(--header-bg); border-bottom: 1px solid var(--border);
+    display: flex; align-items: stretch; padding: 0 20px;
+  }
+  .stat-block {
+    display: flex; flex-direction: column; justify-content: center;
+    padding-right: 24px; margin-right: 24px; border-right: 1px solid var(--border);
+  }
+  .stat-block:last-of-type { border-right: none; }
+  .stat-lbl { font-size: 8px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted2); margin-bottom: 4px; }
+  .stat-val  { font-size: 26px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; line-height: 1; display: flex; align-items: center; gap: 5px; }
+  .stat-arr  { font-size: 15px; font-weight: 700; }
+  .stat-val.v-perp { color: var(--accent); }
+  .stat-val.v-spot { color: #5B8EFF; }
+  .stat-arr.up   { color: var(--accent); }
+  .stats-spacer  { flex: 1; }
+  .stats-right   { display: flex; align-items: center; gap: 6px; }
+  .customize-btn {
+    display: flex; align-items: center; gap: 5px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted2); padding: 5px 12px; border-radius: 6px;
+    cursor: pointer; font-size: 11px; font-weight: 500; transition: all .2s;
+  }
+  .customize-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Main ─────────────────────────────────────────────────────────────── */
+  #main { overflow-y: auto; overflow-x: hidden; padding: 10px; }
+
+  /* ── Masonry grid ─────────────────────────────────────────────────────── */
+  #grid { columns: 280px; column-gap: 8px; }
+
+  /* ── Card ─────────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 8px; overflow: hidden; transition: border-color .25s;
+    break-inside: avoid; margin-bottom: 8px; width: 100%;
+  }
+  .card.new-flash { border-color: var(--accent); box-shadow: 0 0 14px rgba(164,255,0,0.14); }
+  .card.fav       { border-color: rgba(164,255,0,0.3); }
+  .card-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 12px 7px;
+    background: rgba(255,255,255,0.022);
+    border-bottom: 1px solid var(--card-border);
+  }
+  .card-base  { font-weight: 800; font-size: 13px; color: #fff; }
+  .card-quote { font-size: 11px; font-weight: 400; color: var(--muted2); margin-left: 1px; }
+  .card-sym-wrap { flex: 1; }
+  .fav-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 14px; line-height: 1; padding: 1px 3px; transition: color .2s;
+  }
+  .fav-btn:hover, .fav-btn.active { color: var(--accent); }
+  /* Gear button on card */
+  .card-gear-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); line-height: 1; padding: 2px 4px;
+    transition: color .3s, transform .3s; display: flex; align-items: center;
+  }
+  .card-gear-btn:hover { color: var(--accent); transform: rotate(45deg); }
+
+  /* ── Density row ──────────────────────────────────────────────────────── */
+  .density-row {
+    display: grid;
+    grid-template-columns: 80px 20px 26px 44px 1fr 48px;
+    align-items: center; gap: 4px; padding: 5px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.016);
+    transition: background .12s;
+  }
+  .density-row:last-child { border-bottom: none; }
+  .density-row:hover      { background: rgba(255,255,255,0.028); }
+  .density-row.new-row    { animation: rowFlash .65s ease-out; }
+  @keyframes rowFlash {
+    0%   { background: rgba(164,255,0,0.12); }
+    100% { background: transparent; }
+  }
+  .d-vol { font-weight: 700; font-size: 12px; padding: 2px 5px; border-radius: 3px; text-align: right; white-space: nowrap; }
+  .bid .d-vol { color: var(--accent); background: var(--accent-dim); }
+  .ask .d-vol { color: var(--ask);    background: var(--ask-dim); }
+  .d-exch { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex-shrink: 0; }
+  .d-exch img { border-radius: 3px; display: block; }
+  .d-type { font-size: 8px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 4px; border-radius: 3px; text-align: center; white-space: nowrap; }
+  .d-type-f { background: rgba(255,168,0,0.12); color: #FFA800; }
+  .d-type-s { background: rgba(91,142,255,0.12); color: #5B8EFF; }
+  .d-age   { color: var(--muted2); font-size: 11px; text-align: center; white-space: nowrap; }
+  .d-price { font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bid .d-price { color: var(--accent); }
+  .ask .d-price { color: var(--ask); }
+  .d-pct   { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .bid .d-pct { color: var(--accent); }
+  .ask .d-pct { color: var(--ask); }
+
+  /* ── Empty ────────────────────────────────────────────────────────────── */
+  #empty { column-span: all; text-align: center; color: var(--muted2); padding: 70px 20px; font-size: 14px; break-inside: avoid; }
+  #empty span { display: block; margin-top: 8px; font-size: 12px; }
+
+  /* ── Bottom filter bar ────────────────────────────────────────────────── */
+  #filterbar {
+    background: var(--bar-bg); border-top: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 20px; gap: 10px; overflow-x: auto;
+  }
+  #filterbar::-webkit-scrollbar { height: 0; }
+  .fb-group { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .fb-lbl   { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted2); }
+  .fb-select {
+    background: #0c0d10; border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; font-weight: 500;
+    padding: 5px 28px 5px 10px; border-radius: 6px; outline: none; cursor: pointer;
+    appearance: none; -webkit-appearance: none; transition: border-color .15s; min-width: 86px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2363667a' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+  .fb-select:focus { border-color: var(--accent); }
+  .fb-select option { background: #0c0d10; }
+  #search-input {
+    background: #0c0d10; border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; padding: 5px 10px 5px 30px; border-radius: 6px;
+    width: 150px; outline: none; transition: border-color .15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2363667a' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: 9px center;
+  }
+  #search-input:focus { border-color: var(--accent); }
+  #search-input::placeholder { color: var(--muted2); }
+  .fb-pills { display: flex; gap: 3px; }
+  .pill {
+    padding: 5px 11px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border); background: transparent; color: var(--muted2);
+    transition: all .15s; white-space: nowrap;
+  }
+  .pill:hover { border-color: #2e3040; color: var(--text); }
+  .pill.active { background: var(--accent-dim); border-color: rgba(164,255,0,0.3); color: var(--accent); }
+  .fb-sep   { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+  .fb-spacer { flex: 1; }
+  .fb-reset {
+    background: transparent; border: 1px solid var(--border); color: var(--muted2);
+    padding: 7px 16px; border-radius: 6px; cursor: pointer; font-size: 12px;
+    font-weight: 500; transition: all .2s; flex-shrink: 0;
+  }
+  .fb-reset:hover { border-color: #555; color: var(--text); }
+  .fb-apply {
+    background: var(--accent); border: none; color: #000; padding: 7px 18px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; font-weight: 700; display: flex; align-items: center;
+    gap: 5px; transition: filter .15s; flex-shrink: 0;
+  }
+  .fb-apply:hover { filter: brightness(1.08); }
+
+  /* ══ Settings overlay ════════════════════════════════════════════════════ */
+  #settings-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.65);
+  }
+  #settings-overlay.open { display: flex; justify-content: flex-end; }
+
+  #settings-panel {
+    width: 520px; max-width: 96vw;
+    background: #0a0b0f; border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    animation: slideIn .18s ease-out;
+  }
+  @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* Panel header */
+  .sp-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .sp-header-icon { color: var(--accent); display: flex; align-items: center; }
+  .sp-title  { font-size: 15px; font-weight: 800; color: #fff; flex: 1; letter-spacing: 0.3px; }
+  .sp-close  { background: none; border: none; color: var(--muted2); font-size: 18px; cursor: pointer; padding: 2px 5px; line-height: 1; transition: color .15s; }
+  .sp-close:hover { color: var(--text); }
+
+  .sp-body   { flex: 1; overflow-y: auto; padding: 0; }
+
+  /* Section */
+  .sp-section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .sp-section-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--muted2); margin-bottom: 14px;
+  }
+
+  /* ── Sort section ────────────────────────────────────────── */
+  .sort-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sort-row  { display: flex; gap: 4px; }
+  .sort-btn  {
+    flex: 1; padding: 7px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--border); background: transparent; color: var(--muted2);
+    cursor: pointer; transition: all .15s; text-align: center;
+  }
+  .sort-btn:hover { border-color: #2e3040; color: var(--text); }
+  .sort-btn.active { background: var(--accent-dim); border-color: rgba(164,255,0,0.3); color: var(--accent); }
+  .sort-order-btn {
+    width: 34px; padding: 7px 0; border-radius: 6px; font-size: 13px; font-weight: 700;
+    border: 1px solid var(--border); background: transparent; color: var(--muted2);
+    cursor: pointer; transition: all .15s; text-align: center; flex-shrink: 0;
+  }
+  .sort-order-btn:hover, .sort-order-btn.active { border-color: rgba(164,255,0,0.3); color: var(--accent); background: var(--accent-dim); }
+
+  /* ── Min size section ────────────────────────────────────── */
+  .exch-sf-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .exch-sf-logo { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1.5px solid; }
+  .exch-sf-logo img { width: 18px; height: 18px; border-radius: 2px; }
+  .exch-sf-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+    color: var(--muted2); width: 9px; flex-shrink: 0; text-align: center;
+  }
+  .exch-sf-input {
+    flex: 1; background: var(--input-bg); border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; padding: 5px 8px; border-radius: 5px;
+    text-align: right; outline: none; transition: border-color .15s;
+    -moz-appearance: textfield; min-width: 0;
+  }
+  .exch-sf-input::-webkit-inner-spin-button,
+  .exch-sf-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .exch-sf-input:focus { border-color: var(--accent); }
+  .exch-sf-div { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; margin: 0 2px; }
+
+  /* ── Coin list section ───────────────────────────────────── */
+  #coin-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+
+  .coin-item {
+    background: #0f1015; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .coin-item.hidden-coin { opacity: 0.45; }
+
+  .coin-item-top {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .coin-sym-input {
+    flex: 1; background: transparent; border: none; color: var(--text);
+    font-size: 13px; font-weight: 700; outline: none; text-transform: uppercase;
+    min-width: 0; letter-spacing: 0.5px;
+  }
+  .coin-sym-input::placeholder { color: var(--muted2); font-weight: 400; }
+  .coin-vol-input {
+    width: 120px; background: var(--input-bg); border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; padding: 4px 8px; border-radius: 5px;
+    text-align: right; outline: none; transition: border-color .15s;
+    -moz-appearance: textfield; flex-shrink: 0;
+  }
+  .coin-vol-input::-webkit-inner-spin-button,
+  .coin-vol-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .coin-vol-input:focus { border-color: var(--accent); }
+  .coin-vol-unit { font-size: 10px; color: var(--muted2); flex-shrink: 0; }
+
+  .coin-eye-btn {
+    width: 28px; height: 28px; background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--muted2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all .15s; font-size: 13px;
+  }
+  .coin-eye-btn:hover     { border-color: var(--accent); color: var(--accent); }
+  .coin-eye-btn.hidden    { border-color: var(--ask); color: var(--ask); }
+  .coin-del-btn {
+    width: 28px; height: 28px; background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--muted2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all .15s; font-size: 12px;
+  }
+  .coin-del-btn:hover { border-color: var(--ask); color: var(--ask); }
+
+  .sp-add-coin-btn {
+    width: 100%; padding: 8px 0; border-radius: 7px;
+    background: transparent; border: 1px dashed var(--border);
+    color: var(--muted2); font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .sp-add-coin-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Panel footer */
+  .sp-footer {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .sp-reset-link {
+    display: flex; align-items: center; gap: 5px;
+    background: none; border: none; color: var(--muted2);
+    font-size: 12px; cursor: pointer; padding: 0; transition: color .15s;
+  }
+  .sp-reset-link:hover { color: var(--text); }
+  .sp-footer-spacer { flex: 1; }
+  .sp-cancel-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--muted2);
+    padding: 8px 18px; border-radius: 7px; cursor: pointer;
+    font-size: 12px; font-weight: 600; transition: all .18s;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .sp-cancel-btn:hover { border-color: #555; color: var(--text); }
+  .sp-save-btn {
+    background: var(--accent); border: none; color: #000;
+    padding: 8px 22px; border-radius: 7px; cursor: pointer;
+    font-size: 12px; font-weight: 700; transition: filter .15s;
+  }
+  .sp-save-btn:hover { filter: brightness(1.08); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #22242e; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">⬡</div>
+      <div>
+        <div class="sb-logo-name">OrderBook</div>
+        <div class="sb-logo-sub">by screener</div>
+      </div>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-nav-item active">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+        </svg>Screener
+      </div>
+      <div class="sb-nav-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>Оповещения
+      </div>
+      <div class="sb-nav-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+        </svg>Watchlist
+      </div>
+      <div class="sb-nav-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>Сигналы
+      </div>
+      <div class="sb-nav-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <rect x="7" y="7" width="3" height="9"/><rect x="14" y="7" width="3" height="5"/>
+        </svg>Heatmap
+      </div>
+      <div class="sb-nav-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+        </svg>Настройки
+      </div>
+    </div>
+    <div class="sb-eye">
+      <svg class="sb-eye-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="50" cy="50" rx="46" ry="26" fill="none" stroke="#A4FF00" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="50" cy="50" r="18" fill="none" stroke="#A4FF00" stroke-width="1.5" opacity="0.8"/>
+        <circle cx="50" cy="50" r="10" fill="#A4FF00" opacity="0.15"/>
+        <circle cx="50" cy="50" r="5"  fill="#A4FF00" opacity="0.9"/>
+        <circle cx="44" cy="44" r="2"  fill="#fff" opacity="0.6"/>
+        <ellipse cx="50" cy="50" rx="46" ry="26" fill="none" stroke="#A4FF00" stroke-width="0.5" opacity="0.2" transform="rotate(15 50 50)"/>
+        <ellipse cx="50" cy="50" rx="46" ry="26" fill="none" stroke="#A4FF00" stroke-width="0.5" opacity="0.2" transform="rotate(-15 50 50)"/>
+      </svg>
+      <div class="sb-eye-text">THIS IS WHERE<br>THE REAL ACTION HAPPENS</div>
+    </div>
+    <div class="sb-social">
+      <span class="sb-social-icon" title="Discord">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.1a19.6 19.6 0 0 0-4.8-1.5.1.1 0 0 0-.1 0 13.7 13.7 0 0 0-.6 1.3 18 18 0 0 0-5.5 0 13.4 13.4 0 0 0-.7-1.3h-.1A19.5 19.5 0 0 0 3.7 4.1a.1.1 0 0 0 0 0C1.2 7.8.5 11.4.7 15a.1.1 0 0 0 0 .1 19.7 19.7 0 0 0 6 3 .1.1 0 0 0 .1 0 14 14 0 0 0 1.2-2 .1.1 0 0 0-.1-.1 13 13 0 0 1-1.9-.9.1.1 0 0 1 0-.1c.1-.1.3-.2.4-.3a.1.1 0 0 1 .1 0c3.9 1.8 8.2 1.8 12.1 0a.1.1 0 0 1 .1 0l.4.3a.1.1 0 0 1 0 .1 12.5 12.5 0 0 1-1.9.9.1.1 0 0 0 0 .1 15.9 15.9 0 0 0 1.2 2 .1.1 0 0 0 .1 0 19.6 19.6 0 0 0 6-3 .1.1 0 0 0 0-.1c.3-3.9-.5-7.5-2.9-10.8zM8.5 13a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4zm7 0a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4z"/></svg>
+      </span>
+      <span class="sb-social-icon" title="YouTube">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.6 2.8 12 2.8 12 2.8s-4.6 0-6.8.2c-.6 0-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.3.7 11.5v2.1c0 2.2.3 4.4.3 4.4s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.5 22 12 22 12 22s4.6 0 6.8-.2c.6-.1 1.9-.1 3-1.2.9-.8 1.2-2.8 1.2-2.8s.3-2.2.3-4.4v-2.1C23.3 9.3 23 7 23 7zM9.7 15.5v-7.6l8.1 3.8-8.1 3.8z"/></svg>
+      </span>
+      <span class="sb-social-icon" title="Twitter">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </span>
+      <span class="sb-social-icon" title="Telegram">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+      </span>
+    </div>
+    <div class="sb-user">
+      <div class="sb-user-avatar">U</div>
+      <div><span class="sb-user-name">User</span><span class="sb-user-badge">PRO</span></div>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div id="right">
+
+    <!-- Brand bar -->
+    <div id="brandbar">
+      <span class="brand-eye">👁</span>
+      <span class="brand-name">OCTA</span>
+      <span class="brand-sub">SCREENER</span>
+      <div class="brand-spacer"></div>
+      <div class="brand-right">
+        <div id="conn-dot"></div>
+        <span id="status-text">Подключение…</span>
+        <button id="sound-btn" class="hdr-btn active">🔔 Звук</button>
+        <button class="hdr-icon-btn" title="★">★</button>
+        <button class="hdr-icon-btn" title="↻">↻</button>
+        <!-- Big gear settings button -->
+        <button id="settings-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Customize
+        </button>
+        <button class="hdr-plus-btn">+</button>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div id="statsbar">
+      <div class="stat-block">
+        <div class="stat-lbl">Total Densities</div>
+        <div class="stat-val" id="stat-total">0</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-lbl">PERP</div>
+        <div class="stat-val v-perp"><span id="stat-perp">0</span><span class="stat-arr up">↑</span></div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-lbl">SPOT</div>
+        <div class="stat-val v-spot"><span id="stat-spot">0</span><span class="stat-arr" style="color:#5B8EFF">↑</span></div>
+      </div>
+      <div class="stats-spacer"></div>
+      <div class="stats-right">
+        <button class="customize-btn" id="stats-customize-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          Customize
+        </button>
+      </div>
+    </div>
+
+    <!-- Main scrollable area -->
+    <div id="main">
+      <div id="grid">
+        <div id="empty">
+          Подключаемся к биржам…
+          <span>Плотности появятся автоматически</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom filter bar -->
+    <div id="filterbar">
+      <div class="fb-group">
+        <div class="fb-lbl">Search</div>
+        <input id="search-input" type="text" placeholder="Search pair…">
+      </div>
+      <div class="fb-sep"></div>
+      <div class="fb-group">
+        <div class="fb-lbl">Exchange</div>
+        <select class="fb-select" id="filter-exchange">
+          <option value="all">All</option>
+          <option value="binance">Binance</option>
+          <option value="bybit">Bybit</option>
+          <option value="okx">OKX</option>
+          <option value="gate">Gate.io</option>
+          <option value="bitget">Bitget</option>
+        </select>
+      </div>
+      <div class="fb-sep"></div>
+      <div class="fb-group">
+        <div class="fb-lbl">Market</div>
+        <div class="fb-pills">
+          <button class="pill active" data-filter="market" data-val="all">All</button>
+          <button class="pill" data-filter="market" data-val="perp">PERP</button>
+          <button class="pill" data-filter="market" data-val="spot">SPOT</button>
+        </div>
+      </div>
+      <div class="fb-sep"></div>
+      <div class="fb-group">
+        <div class="fb-lbl">Side</div>
+        <div class="fb-pills">
+          <button class="pill active" data-filter="side" data-val="all">All</button>
+          <button class="pill" data-filter="side" data-val="bid">BID</button>
+          <button class="pill" data-filter="side" data-val="ask">ASK</button>
+        </div>
+      </div>
+      <div class="fb-spacer"></div>
+      <button class="fb-reset" id="fb-reset-btn">Reset</button>
+      <button class="fb-apply" id="open-settings-fb">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/>
+        </svg>
+        Apply Filters
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ Settings panel ════════════════════════════════════════════════════ -->
+<div id="settings-overlay">
+  <div id="settings-panel">
+
+    <div class="sp-header">
+      <span class="sp-header-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </span>
+      <span class="sp-title">Настройки</span>
+      <button class="sp-close" id="sp-close">✕</button>
+    </div>
+
+    <div class="sp-body">
+
+      <!-- Sort section -->
+      <div class="sp-section">
+        <div class="sp-section-title">Сортировка</div>
+        <div class="sort-grid">
+          <div class="sort-row">
+            <button class="sort-btn active" data-sort="time">По времени</button>
+            <button class="sort-order-btn" id="sort-order-btn" title="Порядок">↓</button>
+          </div>
+          <div class="sort-row">
+            <button class="sort-btn" data-sort="volume">По объёму</button>
+          </div>
+          <div class="sort-row">
+            <button class="sort-btn" data-sort="distance">По дальности</button>
+          </div>
+          <div class="sort-row">
+            <button class="sort-btn" data-sort="age">По возрасту</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Min size section -->
+      <div class="sp-section">
+        <div class="sp-section-title">Мин. размер (SPOT / FUTURES)</div>
+        <div id="sp-exch-rows"></div>
+      </div>
+
+      <!-- Coin list section -->
+      <div class="sp-section">
+        <div class="sp-section-title">Список монет</div>
+        <div id="coin-list"></div>
+        <button class="sp-add-coin-btn" id="sp-add-coin">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Добавить монету
+        </button>
+      </div>
+
+    </div>
+
+    <div class="sp-footer">
+      <button class="sp-reset-link" id="sp-reset">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.86"/></svg>
+        Сброс настроек
+      </button>
+      <div class="sp-footer-spacer"></div>
+      <button class="sp-cancel-btn" id="sp-cancel">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Отменить
+      </button>
+      <button class="sp-save-btn" id="sp-save">Сохранить</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══ Default values ════════════════════════════════════════════════════════
+const EXCHANGES_LIST = [
+  { key:'binance', label:'Binance', domain:'binance.com',  color:'#F0B90B' },
+  { key:'bybit',   label:'Bybit',   domain:'bybit.com',    color:'#FF6108' },
+  { key:'okx',     label:'OKX',     domain:'okx.com',      color:'#5B8EFF' },
+  { key:'gate',    label:'Gate.io', domain:'gate.io',      color:'#5BB4FF' },
+  { key:'bitget',  label:'Bitget',  domain:'bitget.com',   color:'#1DA2B4' },
+];
+
+const DEFAULT_EXCH_MINS = {
+  binance: { s: 50000, f: 50000 },
+  bybit:   { s: 50000, f: 50000 },
+  okx:     { s: 50000, f: 50000 },
+  gate:    { s: 50000, f: 50000 },
+  bitget:  { s: 50000, f: 50000 },
+};
+
+// High-volume symbol overrides (formerly SYMBOL_MIN_USD)
+const DEFAULT_SYMBOL_OVERRIDES = {
+  BTCUSDT:10000000, ETHUSDT:7000000, BNBUSDT:1000000, BCHUSDT:1000000,
+  HYPEUSDT:1500000, TONUSDT:500000, TRXUSDT:200000, NEARUSDT:200000,
+  ZECUSDT:500000, '1000PEPEUSDT':300000, PEPEUSDT:300000, ORDIUSDT:200000,
+  DOGEUSDT:1500000, PENGUUSDT:250000, TAOUSDT:300000, ATOMUSDT:200000,
+  XMRUSDT:200000, AVAXUSDT:500000,
+};
+
+// ══ Settings state ════════════════════════════════════════════════════════
+function loadSettings() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('screener_settings_v2') || 'null');
+    if (raw && raw.exchangeMins) return raw;
+  } catch(e) {}
+  return {
+    sortBy:    'time',
+    sortOrder: 'desc',
+    exchangeMins: JSON.parse(JSON.stringify(DEFAULT_EXCH_MINS)),
+    coinList: [],   // [{ symbol, minVol, visible }]
+  };
+}
+
+// Draft copy that's edited in the panel; committed on Save
+let settings     = loadSettings();
+let draftSettings = null;
+
+function saveSettings() {
+  localStorage.setItem('screener_settings_v2', JSON.stringify(settings));
+}
+
+// ══ Quick-filter state ════════════════════════════════════════════════════
+let filterExchange = 'all';
+let filterMarket   = 'all';
+let filterSide     = 'all';
+let filterText     = '';
+
+// ══ passesFilter ══════════════════════════════════════════════════════════
+function passesFilter(d) {
+  // Quick bar filters
+  if (filterExchange !== 'all' && d.exchange !== filterExchange) return false;
+  if (filterMarket   !== 'all' && d.market   !== filterMarket)   return false;
+  if (filterSide     !== 'all' && d.side     !== filterSide)     return false;
+  if (filterText && !d.symbol.toLowerCase().includes(filterText.toLowerCase())) return false;
+
+  // Coin list: hidden?
+  const sym = d.symbol.toUpperCase();
+  const coinEntry = (settings.coinList || []).find(c => c.symbol === sym);
+  if (coinEntry && !coinEntry.visible) return false;
+
+  // Volume threshold
+  const market = d.market === 'spot' ? 's' : 'f';
+  const exchObj = (settings.exchangeMins || {})[d.exchange] || {};
+  const exchMin = exchObj[market] || 0;
+
+  if (coinEntry && coinEntry.minVol != null) return d.volume_usd >= coinEntry.minVol;
+  // fallback: default symbol overrides
+  if (DEFAULT_SYMBOL_OVERRIDES[sym] && market === 'f') return d.volume_usd >= DEFAULT_SYMBOL_OVERRIDES[sym];
+  return d.volume_usd >= exchMin;
+}
+
+// ══ Core state ════════════════════════════════════════════════════════════
+const densities   = new Map();
+const symbolCards = new Map();
+let soundOn   = true;
+let favorites = new Set(JSON.parse(localStorage.getItem('favs') || '[]'));
+
+// ══ Formatters ════════════════════════════════════════════════════════════
+function fmtUsd(v) {
+  if (v >= 1e9) return (v/1e9).toFixed(2)+'B$';
+  if (v >= 1e6) return (v/1e6).toFixed(2)+'M$';
+  if (v >= 1e3) return (v/1e3).toFixed(1)+'K$';
+  return v.toFixed(0)+'$';
+}
+function fmtPrice(p) {
+  if (p >= 10000) return p.toLocaleString('en-US',{maximumFractionDigits:1});
+  if (p >= 100)   return p.toLocaleString('en-US',{maximumFractionDigits:2});
+  if (p >= 1)     return p.toLocaleString('en-US',{maximumFractionDigits:4});
+  if (p >= 0.01)  return p.toLocaleString('en-US',{maximumFractionDigits:5});
+  return p.toFixed(6);
+}
+function fmtAge(ts) {
+  const s = Math.floor(Date.now()/1000 - ts);
+  if (s < 60)   return s+'с';
+  if (s < 3600) return Math.floor(s/60)+'м';
+  return Math.floor(s/3600)+'ч';
+}
+const EXCH_DOMAINS = { binance:'binance.com', bybit:'bybit.com', okx:'okx.com', gate:'gate.io', bitget:'bitget.com' };
+function exchIcon(ex) {
+  const d = EXCH_DOMAINS[ex];
+  if (!d) return `<span style="font-size:9px;font-weight:700;color:#aaa">${ex.slice(0,2).toUpperCase()}</span>`;
+  return `<img src="https://www.google.com/s2/favicons?domain=${d}&sz=64" width="20" height="20" alt="${ex}" title="${ex}" style="border-radius:3px;display:block">`;
+}
+function marketBadge(d) {
+  if (d.market === 'spot') return `<span class="d-type d-type-s">SPOT</span>`;
+  return `<span class="d-type d-type-f">PERP</span>`;
+}
+function saveFavs() { localStorage.setItem('favs', JSON.stringify([...favorites])); }
+
+// ══ Sound ═════════════════════════════════════════════════════════════════
+let audioCtx = null;
+function playBeep() {
+  if (!soundOn) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime+0.15);
+    gain.gain.setValueAtTime(0.22, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.35);
+    osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime+0.35);
+  } catch(e) {}
+}
+
+// ══ Card DOM ══════════════════════════════════════════════════════════════
+function symParts(sym) {
+  if (sym.endsWith('USDT')) return { base: sym.slice(0,-4), quote: '/USDT' };
+  if (sym.endsWith('BTC'))  return { base: sym.slice(0,-3),  quote: '/BTC' };
+  return { base: sym, quote: '' };
+}
+
+function buildRow(d, isNew=false) {
+  const div = document.createElement('div');
+  div.className = `density-row ${d.side}${isNew?' new-row':''}`;
+  div.dataset.id = d.id;
+  const sign = d.pct_from_price >= 0 ? '+' : '';
+  div.innerHTML = `
+    <span class="d-vol">${fmtUsd(d.volume_usd)}</span>
+    <span class="d-exch">${exchIcon(d.exchange)}</span>
+    ${marketBadge(d)}
+    <span class="d-age" data-ts="${d.first_seen}">${fmtAge(d.first_seen)}</span>
+    <span class="d-price">${fmtPrice(d.price)}</span>
+    <span class="d-pct">${sign}${d.pct_from_price.toFixed(1)}%</span>
+  `;
+  return div;
+}
+
+function getOrCreateCard(symbol) {
+  let card = document.getElementById('card-'+symbol);
+  if (card) return card;
+  const { base, quote } = symParts(symbol);
+  card = document.createElement('div');
+  card.id = 'card-'+symbol;
+  card.className = 'card'+(favorites.has(symbol)?' fav':'');
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-sym-wrap">
+        <span class="card-base">${base}</span><span class="card-quote">${quote}</span>
+      </div>
+      <button class="card-gear-btn" title="Настройки монеты" data-sym="${symbol}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+      <button class="fav-btn${favorites.has(symbol)?' active':''}" title="Избранное">★</button>
+    </div>
+  `;
+  card.querySelector('.fav-btn').addEventListener('click', () => toggleFav(symbol));
+  card.querySelector('.card-gear-btn').addEventListener('click', () => openSettingsForSymbol(symbol));
+  if (!symbolCards.has(symbol)) symbolCards.set(symbol, new Set());
+  document.getElementById('grid').appendChild(card);
+  return card;
+}
+
+function renderCard(symbol) {
+  const card = document.getElementById('card-'+symbol);
+  if (!card) return;
+  const ids = symbolCards.get(symbol);
+  if (!ids) return;
+  card.querySelectorAll('.density-row').forEach(el => el.remove());
+  const ds = [...ids].map(id => densities.get(id)).filter(d => d && passesFilter(d));
+  ds.sort((a,b) => sortDensities(a,b));
+  ds.forEach(d => card.appendChild(buildRow(d)));
+  card.style.display = (ds.length===0 && ids.size>0) ? 'none' : '';
+  if (ids.size === 0) removeCard(symbol);
+}
+
+function sortDensities(a, b) {
+  // asks before bids within a card
+  if (a.side !== b.side) return a.side==='ask' ? -1 : 1;
+  switch (settings.sortBy) {
+    case 'volume':   return settings.sortOrder==='desc' ? b.volume_usd - a.volume_usd : a.volume_usd - b.volume_usd;
+    case 'distance': return settings.sortOrder==='desc'
+      ? Math.abs(b.pct_from_price) - Math.abs(a.pct_from_price)
+      : Math.abs(a.pct_from_price) - Math.abs(b.pct_from_price);
+    case 'age':      return settings.sortOrder==='desc' ? a.first_seen - b.first_seen : b.first_seen - a.first_seen;
+    default:         return settings.sortOrder==='desc' ? b.first_seen - a.first_seen : a.first_seen - b.first_seen;
+  }
+}
+
+function removeCard(symbol) {
+  const card = document.getElementById('card-'+symbol);
+  if (card) card.remove();
+  symbolCards.delete(symbol);
+}
+
+function toggleFav(symbol) {
+  if (favorites.has(symbol)) favorites.delete(symbol); else favorites.add(symbol);
+  saveFavs();
+  const card = document.getElementById('card-'+symbol);
+  if (card) {
+    card.classList.toggle('fav', favorites.has(symbol));
+    const btn = card.querySelector('.fav-btn');
+    if (btn) btn.classList.toggle('active', favorites.has(symbol));
+  }
+  reorderGrid();
+}
+
+function cardSortValue(sym) {
+  const ids = symbolCards.get(sym);
+  if (!ids || !ids.size) return 0;
+  const ds = [...ids].map(id => densities.get(id)).filter(Boolean);
+  if (!ds.length) return 0;
+  switch (settings.sortBy) {
+    case 'volume':   return Math.max(...ds.map(d => d.volume_usd));
+    case 'distance': return -Math.min(...ds.map(d => Math.abs(d.pct_from_price)));
+    case 'age':      return settings.sortOrder==='desc' ? -Math.min(...ds.map(d=>d.first_seen)) : Math.min(...ds.map(d=>d.first_seen));
+    default:         return Math.max(...ds.map(d => d.first_seen));
+  }
+}
+
+function reorderGrid() {
+  const grid = document.getElementById('grid');
+  const cards = [...grid.querySelectorAll('.card')];
+  cards.sort((a,b) => {
+    const sA = a.id.replace('card-',''), sB = b.id.replace('card-','');
+    const fa = favorites.has(sA)?1:0, fb = favorites.has(sB)?1:0;
+    if (fa!==fb) return fb-fa;
+    return cardSortValue(sB) - cardSortValue(sA);
+  });
+  cards.forEach(c => grid.appendChild(c));
+}
+
+function updateCounter() {
+  let total=0, perp=0, spot=0;
+  densities.forEach(d => {
+    if (passesFilter(d)) { total++; if (d.market==='perp') perp++; else spot++; }
+  });
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-perp').textContent  = perp;
+  document.getElementById('stat-spot').textContent  = spot;
+}
+
+// ══ WS handlers ═══════════════════════════════════════════════════════════
+function handleNew(d) {
+  densities.set(d.id, d);
+  if (!symbolCards.has(d.symbol)) symbolCards.set(d.symbol, new Set());
+  symbolCards.get(d.symbol).add(d.id);
+  if (!passesFilter(d)) { updateCounter(); return; }
+  const emptyEl = document.getElementById('empty');
+  if (emptyEl) emptyEl.remove();
+  const card = getOrCreateCard(d.symbol);
+  card.style.display = '';
+  card.classList.add('new-flash');
+  setTimeout(()=>card.classList.remove('new-flash'), 700);
+  const row = buildRow(d, true);
+  const first = card.querySelector('.density-row');
+  if (first) card.insertBefore(row, first); else card.appendChild(row);
+  playBeep(); reorderGrid(); updateCounter();
+}
+
+function handleUpdate(d) {
+  densities.set(d.id, d);
+  const row = document.querySelector(`.density-row[data-id="${d.id}"]`);
+  if (row) {
+    row.querySelector('.d-vol').textContent   = fmtUsd(d.volume_usd);
+    row.querySelector('.d-price').textContent = fmtPrice(d.price);
+    const sign = d.pct_from_price>=0?'+':'';
+    row.querySelector('.d-pct').textContent   = sign+d.pct_from_price.toFixed(1)+'%';
+  }
+  updateCounter();
+}
+
+function handleRemove(id) {
+  const d = densities.get(id);
+  if (!d) return;
+  densities.delete(id);
+  const ids = symbolCards.get(d.symbol);
+  if (ids) {
+    ids.delete(id);
+    if (ids.size===0) removeCard(d.symbol); else renderCard(d.symbol);
+  }
+  const row = document.querySelector(`.density-row[data-id="${id}"]`);
+  if (row) row.remove();
+  updateCounter();
+}
+
+function handleInitial(list) {
+  densities.clear(); symbolCards.clear();
+  document.getElementById('grid').innerHTML = '';
+  if (!list.length) {
+    document.getElementById('grid').innerHTML = '<div id="empty">Плотностей пока нет<span>Данные поступают с бирж, подождите…</span></div>';
+    return;
+  }
+  list.sort((a,b) => b.first_seen - a.first_seen);
+  list.forEach(d => {
+    densities.set(d.id, d);
+    if (!symbolCards.has(d.symbol)) symbolCards.set(d.symbol, new Set());
+    symbolCards.get(d.symbol).add(d.id);
+  });
+  [...symbolCards.keys()].forEach(sym => { getOrCreateCard(sym); renderCard(sym); });
+  reorderGrid(); updateCounter();
+}
+
+// ══ Age ticker ════════════════════════════════════════════════════════════
+setInterval(() => {
+  document.querySelectorAll('.d-age[data-ts]').forEach(el => {
+    el.textContent = fmtAge(parseFloat(el.dataset.ts));
+  });
+}, 10000);
+
+// ══ WebSocket ═════════════════════════════════════════════════════════════
+function connect() {
+  const proto = location.protocol==='https:'?'wss':'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => {
+    document.getElementById('conn-dot').className = 'connected';
+    document.getElementById('status-text').textContent = 'Подключено';
+    ws._ping = setInterval(()=>{ if(ws.readyState===1) ws.send('ping'); }, 30000);
+  };
+  ws.onmessage = ev => {
+    if (ev.data==='pong') return;
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.type==='initial_state')  handleInitial(msg.data);
+      if (msg.type==='density_new')    handleNew(msg.data);
+      if (msg.type==='density_update') handleUpdate(msg.data);
+      if (msg.type==='density_remove') handleRemove(msg.data.id);
+    } catch(e) {}
+  };
+  ws.onclose = () => {
+    clearInterval(ws._ping);
+    document.getElementById('conn-dot').className = '';
+    document.getElementById('status-text').textContent = 'Переподключение…';
+    setTimeout(connect, 3000);
+  };
+  ws.onerror = () => ws.close();
+}
+
+// ══ Quick filter handlers ═════════════════════════════════════════════════
+function applyQuickFilters() {
+  [...symbolCards.keys()].forEach(sym => renderCard(sym));
+  reorderGrid(); updateCounter();
+}
+
+document.getElementById('filter-exchange').addEventListener('change', e => {
+  filterExchange = e.target.value; applyQuickFilters();
+});
+document.querySelectorAll('[data-filter="market"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterMarket = btn.dataset.val;
+    document.querySelectorAll('[data-filter="market"]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); applyQuickFilters();
+  });
+});
+document.querySelectorAll('[data-filter="side"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterSide = btn.dataset.val;
+    document.querySelectorAll('[data-filter="side"]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); applyQuickFilters();
+  });
+});
+document.getElementById('search-input').addEventListener('input', e => {
+  filterText = e.target.value.trim(); applyQuickFilters();
+});
+document.getElementById('fb-reset-btn').addEventListener('click', () => {
+  filterExchange='all'; filterMarket='all'; filterSide='all'; filterText='';
+  document.getElementById('search-input').value='';
+  document.getElementById('filter-exchange').value='all';
+  document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.val==='all'));
+  applyQuickFilters();
+});
+
+// ══ Settings panel ════════════════════════════════════════════════════════
+
+// --- Exchange min-size rows ---
+function buildExchRows(draft) {
+  const container = document.getElementById('sp-exch-rows');
+  container.innerHTML = '';
+  EXCHANGES_LIST.forEach(({ key, label, domain, color }) => {
+    const mins = (draft.exchangeMins||{})[key] || { s:50000, f:50000 };
+    const row = document.createElement('div');
+    row.className = 'exch-sf-row';
+    row.innerHTML = `
+      <div class="exch-sf-logo" style="border-color:${color}22">
+        <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" width="18" height="18" alt="${label}">
+      </div>
+      <span class="exch-sf-label" style="color:${color}">S</span>
+      <input class="exch-sf-input" type="number" data-key="${key}" data-type="s"
+             value="${mins.s}" min="0" step="1000" placeholder="50000">
+      <div class="exch-sf-div"></div>
+      <span class="exch-sf-label" style="color:#FFA800">F</span>
+      <input class="exch-sf-input" type="number" data-key="${key}" data-type="f"
+             value="${mins.f}" min="0" step="1000" placeholder="50000">
+    `;
+    container.appendChild(row);
+  });
+}
+
+// --- Coin list ---
+function buildCoinList(draft) {
+  const container = document.getElementById('coin-list');
+  container.innerHTML = '';
+  (draft.coinList||[]).forEach((coin, idx) => appendCoinItem(coin, idx, draft));
+}
+
+function appendCoinItem(coin, idx, draft) {
+  const container = document.getElementById('coin-list');
+  const item = document.createElement('div');
+  item.className = 'coin-item' + (coin.visible===false?' hidden-coin':'');
+  item.dataset.idx = idx;
+  item.innerHTML = `
+    <div class="coin-item-top">
+      <input class="coin-sym-input" type="text" placeholder="Символ (BTCUSDT)"
+             value="${coin.symbol||''}" maxlength="20">
+      <input class="coin-vol-input" type="number" placeholder="Мин. объём"
+             value="${coin.minVol||''}" min="0" step="1000">
+      <span class="coin-vol-unit">$</span>
+      <button class="coin-eye-btn${coin.visible===false?' hidden':''}" title="${coin.visible===false?'Показать':'Скрыть'}">
+        ${coin.visible===false
+          ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+          : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`
+        }
+      </button>
+      <button class="coin-del-btn" title="Удалить">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  `;
+
+  // sym input
+  item.querySelector('.coin-sym-input').addEventListener('input', e => {
+    draft.coinList[idx].symbol = e.target.value.trim().toUpperCase();
+    e.target.value = draft.coinList[idx].symbol;
+  });
+  // vol input
+  item.querySelector('.coin-vol-input').addEventListener('input', e => {
+    draft.coinList[idx].minVol = parseInt(e.target.value)||0;
+  });
+  // eye toggle
+  item.querySelector('.coin-eye-btn').addEventListener('click', () => {
+    draft.coinList[idx].visible = draft.coinList[idx].visible===false ? true : false;
+    buildCoinList(draft); // re-render list
+  });
+  // delete
+  item.querySelector('.coin-del-btn').addEventListener('click', () => {
+    draft.coinList.splice(idx, 1);
+    buildCoinList(draft);
+  });
+
+  container.appendChild(item);
+}
+
+// --- Sort UI ---
+function syncSortUI(draft) {
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.sort === draft.sortBy);
+  });
+  const ob = document.getElementById('sort-order-btn');
+  ob.textContent = draft.sortOrder === 'desc' ? '↓' : '↑';
+  ob.classList.toggle('active', true);
+}
+
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (draftSettings) draftSettings.sortBy = btn.dataset.sort;
+    syncSortUI(draftSettings || settings);
+  });
+});
+document.getElementById('sort-order-btn').addEventListener('click', () => {
+  if (!draftSettings) return;
+  draftSettings.sortOrder = draftSettings.sortOrder==='desc'?'asc':'desc';
+  syncSortUI(draftSettings);
+});
+
+// --- Open / close ---
+function openSettings() {
+  // Deep copy into draft
+  draftSettings = JSON.parse(JSON.stringify(settings));
+  buildExchRows(draftSettings);
+  buildCoinList(draftSettings);
+  syncSortUI(draftSettings);
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+  draftSettings = null;
+}
+
+// Collect current input values from the panel into draftSettings
+function collectDraft() {
+  if (!draftSettings) return;
+  document.querySelectorAll('.exch-sf-input').forEach(inp => {
+    const key = inp.dataset.key, type = inp.dataset.type;
+    if (!draftSettings.exchangeMins[key]) draftSettings.exchangeMins[key] = {};
+    draftSettings.exchangeMins[key][type] = Math.max(0, parseInt(inp.value)||0);
+  });
+  // coin list values are updated live via input listeners
+}
+
+function commitSettings() {
+  collectDraft();
+  settings = JSON.parse(JSON.stringify(draftSettings));
+  saveSettings();
+  [...symbolCards.keys()].forEach(sym => renderCard(sym));
+  reorderGrid();
+  updateCounter();
+  closeSettings();
+}
+
+// Open settings and scroll to coin for a specific symbol (from card gear)
+function openSettingsForSymbol(symbol) {
+  openSettings();
+  // Check if already in coin list
+  const exists = draftSettings.coinList.find(c => c.symbol === symbol.toUpperCase());
+  if (!exists) {
+    draftSettings.coinList.push({ symbol: symbol.toUpperCase(), minVol: 0, visible: true });
+    buildCoinList(draftSettings);
+  }
+  // Scroll to bottom of coin list section
+  setTimeout(() => {
+    const coinList = document.getElementById('coin-list');
+    if (coinList) coinList.lastElementChild?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }, 100);
+}
+
+document.getElementById('settings-btn').addEventListener('click', openSettings);
+document.getElementById('stats-customize-btn').addEventListener('click', openSettings);
+document.getElementById('open-settings-fb').addEventListener('click', openSettings);
+document.getElementById('sp-close').addEventListener('click', closeSettings);
+document.getElementById('sp-cancel').addEventListener('click', closeSettings);
+document.getElementById('settings-overlay').addEventListener('click', e => {
+  if (e.target===document.getElementById('settings-overlay')) closeSettings();
+});
+document.getElementById('sp-save').addEventListener('click', commitSettings);
+
+document.getElementById('sp-add-coin').addEventListener('click', () => {
+  if (!draftSettings) return;
+  draftSettings.coinList.push({ symbol:'', minVol:0, visible:true });
+  buildCoinList(draftSettings);
+  const items = document.querySelectorAll('.coin-item');
+  items[items.length-1]?.querySelector('.coin-sym-input')?.focus();
+});
+
+document.getElementById('sp-reset').addEventListener('click', () => {
+  draftSettings = {
+    sortBy: 'time', sortOrder: 'desc',
+    exchangeMins: JSON.parse(JSON.stringify(DEFAULT_EXCH_MINS)),
+    coinList: [],
+  };
+  buildExchRows(draftSettings);
+  buildCoinList(draftSettings);
+  syncSortUI(draftSettings);
+});
+
+// Sound
+document.getElementById('sound-btn').addEventListener('click', function() {
+  soundOn = !soundOn;
+  this.classList.toggle('active', soundOn);
+  this.textContent = soundOn ? '🔔 Звук' : '🔕 Звук';
+  if (soundOn && !audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+});
+
+connect();
+</script>
+</body>
+</html>

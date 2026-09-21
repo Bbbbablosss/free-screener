@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCTA Screener</title>
+<style>
+:root {
+  --bg:           #060d09;
+  --sidebar-bg:   #040a06;
+  --header-bg:    #060d09;
+  --card-bg:      #080f0a;
+  --card-border:  #111a12;
+  --accent:       #A4FF00;
+  --accent-dim:   rgba(164,255,0,0.08);
+  --accent-glow:  rgba(164,255,0,0.28);
+  --ask:          #FF4444;
+  --ask-dim:      rgba(255,68,68,0.09);
+  --text:         #d8e8d2;
+  --muted:        #3a5035;
+  --muted2:       #587050;
+  --border:       #111a12;
+  --input-bg:     #0a1209;
+  --row-hover:    rgba(255,255,255,0.025);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%; background: var(--bg); color: var(--text);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 12px; overflow: hidden;
+}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+#app {
+  display: grid;
+  grid-template-columns: 208px 1fr;
+  height: 100vh; width: 100vw;
+}
+#right {
+  display: grid;
+  grid-template-rows: 54px 66px 1fr 52px;
+  height: 100vh; overflow: hidden; min-width: 0;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────── */
+#sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  height: 100vh; overflow: hidden;
+}
+.sb-logo {
+  padding: 12px 14px 11px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.sb-logo-icon { width: 36px; height: 36px; flex-shrink: 0; }
+.sb-logo-name { font-size: 11px; font-weight: 800; color: var(--text); }
+.sb-logo-sub  { font-size: 7.5px; color: var(--muted2); letter-spacing: 1.4px; text-transform: uppercase; }
+
+.sb-nav { padding: 8px; flex: 1; overflow: hidden; }
+.sb-nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: 7px; cursor: pointer;
+  color: var(--muted2); font-size: 12px; font-weight: 500;
+  transition: background .15s, color .15s; margin-bottom: 1px;
+  user-select: none; border: 1px solid transparent;
+}
+.sb-nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+.sb-nav-item.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(164,255,0,0.13); }
+.sb-nav-item svg { flex-shrink: 0; opacity: .7; }
+.sb-nav-item.active svg { opacity: 1; }
+
+.sb-eye-wrap {
+  padding: 10px 14px 6px; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0;
+}
+.sb-eye-svg { width: 84px; height: 84px; filter: drop-shadow(0 0 18px rgba(164,255,0,0.5)); }
+.sb-eye-text {
+  font-size: 7.5px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted2); text-align: center; line-height: 1.7;
+}
+.sb-social {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 8px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.sb-social a { color: var(--muted2); display: flex; transition: color .15s; cursor: pointer; }
+.sb-social a:hover { color: var(--accent); }
+.sb-user {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.sb-user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid rgba(164,255,0,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--accent); font-weight: 800; flex-shrink: 0;
+}
+.sb-user-name  { font-size: 11.5px; font-weight: 600; color: var(--text); }
+.sb-user-badge {
+  font-size: 7.5px; font-weight: 800; background: var(--accent);
+  color: #000; padding: 1px 5px; border-radius: 3px; margin-left: 4px;
+}
+.sb-user-chevron { margin-left: auto; color: var(--muted); }
+
+/* ── Brand bar ──────────────────────────────────────────────── */
+#brandbar {
+  background: var(--header-bg); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 18px; gap: 10px;
+}
+.brand-octa-icon { width: 30px; height: 30px; flex-shrink: 0; }
+.brand-name {
+  font-size: 21px; font-weight: 900; color: var(--accent); letter-spacing: 1.5px;
+  filter: drop-shadow(0 0 8px rgba(164,255,0,0.35));
+}
+.brand-sub {
+  font-size: 9px; font-weight: 600; color: var(--muted2);
+  letter-spacing: 3.5px; text-transform: uppercase;
+  align-self: flex-end; margin-bottom: 3px; margin-left: 3px;
+}
+.brand-spacer { flex: 1; }
+#conn-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted); transition: background .3s;
+}
+#conn-dot.on { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+#conn-label { color: var(--muted2); font-size: 10.5px; margin-right: 4px; }
+
+.hdr-btn {
+  background: transparent; border: 1px solid var(--border); color: var(--muted2);
+  padding: 5px 11px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500;
+  transition: border-color .15s, color .15s; white-space: nowrap;
+}
+.hdr-btn:hover, .hdr-btn.on { border-color: var(--accent); color: var(--accent); }
+.hdr-icon-btn {
+  width: 30px; height: 30px; background: transparent; border: 1px solid var(--border);
+  border-radius: 6px; color: var(--muted2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
+  transition: border-color .15s, color .15s;
+}
+.hdr-icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+#settings-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--accent-dim); border: 1px solid rgba(164,255,0,0.22);
+  color: var(--accent); padding: 5px 12px; border-radius: 6px;
+  cursor: pointer; font-size: 11px; font-weight: 600; transition: all .15s;
+}
+#settings-btn:hover { background: rgba(164,255,0,0.14); border-color: var(--accent); }
+#settings-btn svg { transition: transform .4s; }
+#settings-btn:hover svg { transform: rotate(45deg); }
+.hdr-plus {
+  width: 30px; height: 30px; background: var(--accent); border: none; border-radius: 6px;
+  color: #000; font-size: 20px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: filter .15s;
+}
+.hdr-plus:hover { filter: brightness(1.1); }
+.ws-select {
+  background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 11.5px; padding: 5px 26px 5px 10px; border-radius: 6px;
+  appearance: none; cursor: pointer; outline: none; transition: border-color .15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M1 1l3.5 3.5L8 1' stroke='%23587050' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center; min-width: 120px;
+}
+.ws-select:focus { border-color: var(--accent); }
+
+/* ── Stats bar ──────────────────────────────────────────────── */
+#statsbar {
+  background: var(--header-bg); border-bottom: 1px solid var(--border);
+  display: flex; align-items: stretch; padding: 0 18px;
+}
+.stat-block {
+  display: flex; flex-direction: column; justify-content: center;
+  padding-right: 22px; margin-right: 22px; border-right: 1px solid var(--border); flex-shrink: 0;
+}
+.stat-block:last-of-type { border-right: none; }
+.stat-lbl { font-size: 7.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted2); margin-bottom: 2px; }
+.stat-val { font-size: 27px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; line-height: 1; display: flex; align-items: center; gap: 5px; }
+.stat-arr { font-size: 14px; }
+.stat-val.green { color: var(--accent); }
+.stat-val.blue  { color: #5B9EFF; }
+.stats-spacer { flex: 1; }
+.stats-right  { display: flex; align-items: center; gap: 6px; }
+.stats-icon-btn {
+  width: 29px; height: 29px; background: transparent; border: 1px solid var(--border);
+  border-radius: 6px; color: var(--muted2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
+  transition: border-color .15s, color .15s;
+}
+.stats-icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.stats-customize {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--accent-dim); border: 1px solid rgba(164,255,0,0.18);
+  color: var(--accent); padding: 5px 11px; border-radius: 6px;
+  cursor: pointer; font-size: 11px; font-weight: 600; transition: all .15s;
+}
+.stats-customize:hover { background: rgba(164,255,0,0.14); border-color: var(--accent); }
+
+/* ── Main scroll area ───────────────────────────────────────── */
+#main { overflow-y: auto; overflow-x: hidden; padding: 10px; }
+#main::-webkit-scrollbar { width: 4px; }
+#main::-webkit-scrollbar-track { background: transparent; }
+#main::-webkit-scrollbar-thumb { background: #1a2416; border-radius: 2px; }
+
+/* ── Masonry grid ───────────────────────────────────────────── */
+#grid { columns: 275px; column-gap: 8px; }
+
+/* ── Card ───────────────────────────────────────────────────── */
+.card {
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 9px; overflow: hidden; break-inside: avoid;
+  margin-bottom: 8px; width: 100%;
+  transition: border-color .25s, box-shadow .25s;
+}
+.card.flash { border-color: var(--accent); box-shadow: 0 0 16px rgba(164,255,0,0.12); }
+.card.fav   { border-color: rgba(164,255,0,0.25); }
+
+.card-header {
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 10px 6px;
+  background: rgba(255,255,255,0.018);
+  border-bottom: 1px solid var(--card-border);
+}
+.card-sym { font-size: 13px; font-weight: 800; color: #fff; white-space: nowrap; }
+.card-quote { font-size: 10px; font-weight: 400; color: var(--muted2); }
+.card-market {
+  font-size: 8px; font-weight: 800; padding: 2px 5px; border-radius: 3px;
+  letter-spacing: 0.3px; flex-shrink: 0;
+}
+.market-f { background: rgba(255,168,0,0.12); color: #FFA800; }
+.market-s { background: rgba(91,158,255,0.12); color: #5B9EFF; }
+.card-spacer { flex: 1; }
+
+.card-icon-btn {
+  width: 22px; height: 22px; background: none; border: none; cursor: pointer;
+  color: var(--muted); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; transition: color .15s; flex-shrink: 0; border-radius: 4px;
+}
+.card-icon-btn:hover { color: var(--accent); background: var(--accent-dim); }
+.card-icon-btn.active { color: var(--accent); }
+.card-gear-btn {
+  background: none; border: none; cursor: pointer; color: var(--muted);
+  display: flex; align-items: center; padding: 3px; border-radius: 4px;
+  transition: color .3s, transform .3s;
+}
+.card-gear-btn:hover { color: var(--accent); transform: rotate(45deg); background: var(--accent-dim); }
+
+/* ── Density row ────────────────────────────────────────────── */
+.d-row {
+  display: grid;
+  grid-template-columns: 72px 18px 8px 20px 46px 1fr 44px;
+  align-items: center; gap: 3px;
+  padding: 4px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.018);
+  transition: background .1s;
+}
+.d-row:last-child { border-bottom: none; }
+.d-row:hover { background: var(--row-hover); }
+.d-row.new-row { animation: rowFlash .6s ease-out; }
+@keyframes rowFlash {
+  0%   { background: rgba(164,255,0,0.1); }
+  100% { background: transparent; }
+}
+
+/* Vol badge */
+.d-vol {
+  font-weight: 700; font-size: 11.5px; padding: 2px 5px;
+  border-radius: 3px; text-align: right; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.bid .d-vol { color: var(--accent); background: rgba(164,255,0,0.1); }
+.ask .d-vol { color: var(--ask);    background: rgba(255,68,68,0.09); }
+
+/* Exchange icon */
+.d-exch { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.d-exch img { border-radius: 3px; display: block; width: 14px; height: 14px; }
+
+/* Market dot */
+.d-mkt-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.market-f-dot { background: #FFA800; box-shadow: 0 0 4px rgba(255,168,0,0.5); }
+.market-s-dot { background: #5B9EFF; box-shadow: 0 0 4px rgba(91,158,255,0.5); }
+
+/* Exchange label abbr */
+.d-exch-lbl { font-size: 8px; font-weight: 800; color: var(--muted2); text-align: center; white-space: nowrap; }
+
+/* Age */
+.d-age { color: var(--muted2); font-size: 10.5px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Price */
+.d-price { font-size: 10.5px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bid .d-price { color: var(--accent); }
+.ask .d-price { color: var(--ask); }
+
+/* Pct */
+.d-pct { font-size: 11px; font-weight: 700; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bid .d-pct { color: var(--accent); }
+.ask .d-pct { color: var(--ask); }
+
+/* ── Empty / Loading ────────────────────────────────────────── */
+#empty {
+  color: var(--muted2); padding: 70px 20px; font-size: 14px;
+  text-align: center; break-inside: avoid;
+}
+#empty span { display: block; margin-top: 8px; font-size: 12px; }
+
+/* ── Filter bar ─────────────────────────────────────────────── */
+#filterbar {
+  background: var(--header-bg); border-top: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 16px; gap: 8px; overflow-x: auto; flex-shrink: 0;
+}
+#filterbar::-webkit-scrollbar { height: 0; }
+.fb-search-wrap { position: relative; flex-shrink: 0; }
+.fb-search-icon {
+  position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+  color: var(--muted2); pointer-events: none;
+}
+#search-input {
+  background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 11.5px; padding: 6px 10px 6px 28px;
+  border-radius: 6px; width: 148px; outline: none; transition: border-color .15s;
+}
+#search-input:focus { border-color: var(--accent); }
+#search-input::placeholder { color: var(--muted2); }
+
+.fb-group { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+.fb-lbl   { font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--muted2); }
+.fb-select {
+  background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 11.5px; font-weight: 500;
+  padding: 5px 22px 5px 8px; border-radius: 6px; outline: none; cursor: pointer;
+  appearance: none; transition: border-color .15s; min-width: 80px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M1 1l3.5 3.5L8 1' stroke='%23587050' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 6px center;
+}
+.fb-select:focus { border-color: var(--accent); }
+.fb-select option { background: #0a1209; }
+
+.fb-pills { display: flex; gap: 3px; }
+.pill {
+  padding: 4px 10px; border-radius: 5px; font-size: 10.5px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--muted2);
+  transition: all .12s; white-space: nowrap;
+}
+.pill:hover { border-color: #2a3a28; color: var(--text); }
+.pill.on { background: var(--accent-dim); border-color: rgba(164,255,0,0.28); color: var(--accent); }
+
+.fb-sep    { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
+.fb-spacer { flex: 1; min-width: 6px; }
+.fb-reset  {
+  background: transparent; border: 1px solid var(--border); color: var(--muted2);
+  padding: 6px 13px; border-radius: 6px; cursor: pointer; font-size: 11.5px;
+  font-weight: 500; transition: all .15s; flex-shrink: 0;
+}
+.fb-reset:hover { border-color: #2a3a28; color: var(--text); }
+.fb-apply {
+  background: var(--accent); border: none; color: #000;
+  padding: 6px 15px; border-radius: 6px; cursor: pointer;
+  font-size: 11.5px; font-weight: 700; display: flex; align-items: center; gap: 5px;
+  transition: filter .15s; flex-shrink: 0;
+}
+.fb-apply:hover { filter: brightness(1.08); }
+
+/* ══ Settings overlay ══════════════════════════════════════════ */
+#settings-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.6);
+}
+#settings-overlay.open { display: flex; justify-content: flex-end; }
+#settings-panel {
+  width: 490px; max-width: 95vw; background: #090f0a;
+  border-left: 1px solid var(--border); display: flex; flex-direction: column;
+  animation: slideIn .18s ease-out;
+}
+@keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sp-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sp-title  { font-size: 14px; font-weight: 800; color: #fff; flex: 1; }
+.sp-close  { background: none; border: none; color: var(--muted2); font-size: 18px; cursor: pointer; padding: 2px 5px; line-height: 1; transition: color .15s; }
+.sp-close:hover { color: var(--text); }
+.sp-body   { flex: 1; overflow-y: auto; }
+.sp-section { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+.sp-section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted2); margin-bottom: 12px; }
+.sort-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.sort-row  { display: flex; gap: 4px; }
+.sort-btn  {
+  flex: 1; padding: 6px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  border: 1px solid var(--border); background: transparent; color: var(--muted2);
+  cursor: pointer; transition: all .12s; text-align: center;
+}
+.sort-btn.on { background: var(--accent-dim); border-color: rgba(164,255,0,0.25); color: var(--accent); }
+.sort-order-btn {
+  width: 32px; padding: 6px 0; border-radius: 6px; font-size: 13px; font-weight: 700;
+  border: 1px solid var(--border); background: transparent; color: var(--muted2);
+  cursor: pointer; transition: all .12s; text-align: center; flex-shrink: 0;
+}
+.sort-order-btn.on { border-color: rgba(164,255,0,0.25); color: var(--accent); background: var(--accent-dim); }
+.exch-sf-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.exch-sf-logo { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1.5px solid; }
+.exch-sf-logo img { width: 16px; height: 16px; border-radius: 2px; }
+.exch-sf-label { font-size: 8px; font-weight: 700; color: var(--muted2); width: 10px; flex-shrink: 0; text-align: center; }
+.exch-sf-input {
+  flex: 1; background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 11.5px; padding: 4px 7px; border-radius: 5px;
+  text-align: right; outline: none; transition: border-color .15s;
+  -moz-appearance: textfield; min-width: 0;
+}
+.exch-sf-input::-webkit-inner-spin-button, .exch-sf-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.exch-sf-input:focus { border-color: var(--accent); }
+.exch-sf-div { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+#coin-list   { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.coin-item   { background: #0c130d; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.coin-item.hidden-coin { opacity: .42; }
+.coin-item-top { display: flex; align-items: center; gap: 7px; padding: 7px 9px; }
+.coin-sym-input { flex: 1; background: transparent; border: none; color: var(--text); font-size: 12px; font-weight: 700; outline: none; text-transform: uppercase; min-width: 0; }
+.coin-sym-input::placeholder { color: var(--muted2); font-weight: 400; }
+.coin-vol-input {
+  width: 110px; background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 11.5px; padding: 3px 7px; border-radius: 5px;
+  text-align: right; outline: none; -moz-appearance: textfield; flex-shrink: 0;
+}
+.coin-vol-input::-webkit-inner-spin-button, .coin-vol-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.coin-vol-input:focus { border-color: var(--accent); }
+.coin-vol-unit { font-size: 9px; color: var(--muted2); flex-shrink: 0; }
+.coin-eye-btn, .coin-del-btn {
+  width: 26px; height: 26px; background: transparent; border: 1px solid var(--border);
+  border-radius: 5px; color: var(--muted2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .12s;
+}
+.coin-eye-btn:hover { border-color: var(--accent); color: var(--accent); }
+.coin-eye-btn.hidden { border-color: var(--ask); color: var(--ask); }
+.coin-del-btn:hover  { border-color: var(--ask); color: var(--ask); }
+.sp-add-coin-btn {
+  width: 100%; padding: 7px 0; border-radius: 6px;
+  background: transparent; border: 1px dashed var(--border); color: var(--muted2);
+  font-size: 11.5px; font-weight: 600; cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.sp-add-coin-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sp-footer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 18px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.sp-reset-link { display: flex; align-items: center; gap: 5px; background: none; border: none; color: var(--muted2); font-size: 11px; cursor: pointer; transition: color .15s; }
+.sp-reset-link:hover { color: var(--text); }
+.sp-footer-spacer { flex: 1; }
+.sp-cancel-btn { background: transparent; border: 1px solid var(--border); color: var(--muted2); padding: 7px 15px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 600; transition: all .15s; }
+.sp-cancel-btn:hover { border-color: #2a3a28; color: var(--text); }
+.sp-save-btn   { background: var(--accent); border: none; color: #000; padding: 7px 20px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700; transition: filter .15s; }
+.sp-save-btn:hover { filter: brightness(1.08); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── Sidebar ──────────────────────────────────────────────── -->
+<div id="sidebar">
+  <div class="sb-logo">
+    <svg class="sb-logo-icon" viewBox="0 0 36 36" fill="none">
+      <circle cx="18" cy="18" r="17" stroke="#A4FF00" stroke-width="1.2" opacity=".7"/>
+      <circle cx="18" cy="18" r="12" stroke="#A4FF00" stroke-width=".8" opacity=".45"/>
+      <path d="M11 18 Q13.5 13 18 13 Q22.5 13 25 18 Q22.5 23 18 23 Q13.5 23 11 18Z"
+            stroke="#A4FF00" stroke-width=".9" fill="none" opacity=".85"/>
+      <path d="M11 13 L25 23 M25 13 L11 23" stroke="#A4FF00" stroke-width=".7" opacity=".45"/>
+      <circle cx="18" cy="18" r="3" fill="#A4FF00" opacity=".75"/>
+    </svg>
+    <div>
+      <div class="sb-logo-name">redteamsoft</div>
+      <div class="sb-logo-sub">BY CRYPTO EDGE</div>
+    </div>
+  </div>
+
+  <div class="sb-nav">
+    <div class="sb-nav-item active">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Screener
+    </div>
+    <div class="sb-nav-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Alerts
+    </div>
+    <div class="sb-nav-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Watchlist
+    </div>
+    <div class="sb-nav-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Signals
+    </div>
+    <div class="sb-nav-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="3" height="9"/><rect x="14" y="7" width="3" height="5"/></svg>
+      Heatmap
+    </div>
+    <div class="sb-nav-item" id="nav-settings">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </div>
+  </div>
+
+  <div class="sb-eye-wrap">
+    <svg class="sb-eye-svg" viewBox="0 0 120 120">
+      <defs>
+        <radialGradient id="eg" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#A4FF00" stop-opacity=".22"/>
+          <stop offset="100%" stop-color="#A4FF00" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="60" cy="60" rx="55" ry="55" fill="url(#eg)"/>
+      <path d="M10 60 Q35 24 60 24 Q85 24 110 60 Q85 96 60 96 Q35 96 10 60Z"
+            fill="#021002" stroke="#A4FF00" stroke-width="1.4" opacity=".9"/>
+      <circle cx="60" cy="60" r="23" fill="#011001" stroke="#A4FF00" stroke-width="1.4"/>
+      <circle cx="60" cy="60" r="19" fill="none" stroke="#A4FF00" stroke-width=".4" opacity=".3"/>
+      <circle cx="60" cy="60" r="15" fill="none" stroke="#A4FF00" stroke-width=".4" opacity=".2"/>
+      <line x1="60" y1="37" x2="60" y2="83" stroke="#A4FF00" stroke-width=".4" opacity=".25"/>
+      <line x1="37" y1="60" x2="83" y2="60" stroke="#A4FF00" stroke-width=".4" opacity=".25"/>
+      <line x1="43" y1="43" x2="77" y2="77" stroke="#A4FF00" stroke-width=".3" opacity=".18"/>
+      <line x1="77" y1="43" x2="43" y2="77" stroke="#A4FF00" stroke-width=".3" opacity=".18"/>
+      <circle cx="60" cy="60" r="9.5" fill="#010901" stroke="#A4FF00" stroke-width=".9"/>
+      <circle cx="60" cy="60" r="6" fill="#000600"/>
+      <circle cx="60" cy="60" r="3.5" fill="#A4FF00" opacity=".9"/>
+      <circle cx="54.5" cy="54.5" r="2.5" fill="#fff" opacity=".5"/>
+    </svg>
+    <div class="sb-eye-text">THIS IS WHERE<br>THE REAL ACTION HAPPENS</div>
+  </div>
+
+  <div class="sb-social">
+    <a title="Discord"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.1a19.6 19.6 0 0 0-4.8-1.5.1.1 0 0 0-.1 0 13.7 13.7 0 0 0-.6 1.3 18 18 0 0 0-5.5 0 13.4 13.4 0 0 0-.7-1.3h-.1A19.5 19.5 0 0 0 3.7 4.1a.1.1 0 0 0 0 0C1.2 7.8.5 11.4.7 15a.1.1 0 0 0 0 .1 19.7 19.7 0 0 0 6 3 .1.1 0 0 0 .1 0 14 14 0 0 0 1.2-2 .1.1 0 0 0-.1-.1 13 13 0 0 1-1.9-.9.1.1 0 0 1 0-.1c.1-.1.3-.2.4-.3a.1.1 0 0 1 .1 0c3.9 1.8 8.2 1.8 12.1 0a.1.1 0 0 1 .1 0l.4.3a.1.1 0 0 1 0 .1 12.5 12.5 0 0 1-1.9.9.1.1 0 0 0 0 .1 15.9 15.9 0 0 0 1.2 2 .1.1 0 0 0 .1 0 19.6 19.6 0 0 0 6-3 .1.1 0 0 0 0-.1c.3-3.9-.5-7.5-2.9-10.8zM8.5 13a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4zm7 0a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4z"/></svg></a>
+    <a title="YouTube"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.6 2.8 12 2.8 12 2.8s-4.6 0-6.8.2c-.6 0-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.3.7 11.5v2.1c0 2.2.3 4.4.3 4.4s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.5 22 12 22 12 22s4.6 0 6.8-.2c.6-.1 1.9-.1 3-1.2.9-.8 1.2-2.8 1.2-2.8s.3-2.2.3-4.4v-2.1C23.3 9.3 23 7 23 7zM9.7 15.5v-7.6l8.1 3.8-8.1 3.8z"/></svg></a>
+    <a title="Twitter"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+    <a title="Reddit"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg></a>
+    <a title="Telegram"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></a>
+  </div>
+
+  <div class="sb-user">
+    <div class="sb-user-avatar">S</div>
+    <div><span class="sb-user-name">Crypto Edge</span><span class="sb-user-badge">PRO</span></div>
+    <span class="sb-user-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+  </div>
+</div>
+
+<!-- ── Right column ─────────────────────────────────────────── -->
+<div id="right">
+
+  <!-- Brand bar -->
+  <div id="brandbar">
+    <svg class="brand-octa-icon" viewBox="0 0 30 30" fill="none">
+      <path d="M8 22 Q6 25 4 26" stroke="#A4FF00" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>
+      <path d="M11 24 Q10 27 9 28" stroke="#A4FF00" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>
+      <path d="M15 25 Q15 28 15 29" stroke="#A4FF00" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>
+      <path d="M19 24 Q20 27 21 28" stroke="#A4FF00" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>
+      <path d="M22 22 Q24 25 26 26" stroke="#A4FF00" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>
+      <path d="M6 15 Q6 7 15 5 Q24 7 24 15 Q24 22 15 24 Q6 22 6 15Z"
+            fill="#0a1a0a" stroke="#A4FF00" stroke-width="1.4"/>
+      <circle cx="15" cy="14" r="6.5" fill="#020d02" stroke="#A4FF00" stroke-width="1.2"/>
+      <circle cx="15" cy="14" r="4.5" fill="#010801" stroke="#A4FF00" stroke-width=".7" opacity=".6"/>
+      <circle cx="15" cy="14" r="2.5" fill="#A4FF00" opacity=".9"/>
+      <circle cx="15" cy="14" r="1.2" fill="#001200"/>
+      <circle cx="12.8" cy="11.8" r="1" fill="#fff" opacity=".5"/>
+    </svg>
+    <span class="brand-name">OCTA</span>
+    <span class="brand-sub">SCREENER</span>
+    <div class="brand-spacer"></div>
+    <div style="display:flex;align-items:center;gap:7px">
+      <div id="conn-dot"></div>
+      <span id="conn-label">Connecting…</span>
+      <button id="sound-btn" class="hdr-btn on">🔔 Sound</button>
+      <button class="hdr-icon-btn" id="favs-btn" title="Favorites only">★</button>
+      <button class="hdr-icon-btn" title="Refresh" onclick="location.reload()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-9.49"/></svg>
+      </button>
+      <button id="settings-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Customize
+      </button>
+      <select class="ws-select">
+        <option>Workspace 1</option>
+        <option>Workspace 2</option>
+      </select>
+      <button class="hdr-plus">+</button>
+    </div>
+  </div>
+
+  <!-- Stats bar -->
+  <div id="statsbar">
+    <div class="stat-block">
+      <div class="stat-lbl">Total Densities</div>
+      <div class="stat-val" id="stat-total">0</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-lbl">PERP Walls</div>
+      <div class="stat-val green">
+        <span id="stat-perp">0</span>
+        <span class="stat-arr" style="color:var(--accent)">↑</span>
+      </div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-lbl">SPOT Walls</div>
+      <div class="stat-val blue">
+        <span id="stat-spot">0</span>
+        <span class="stat-arr" style="color:#5B9EFF">↑</span>
+      </div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-lbl">Symbols Active</div>
+      <div class="stat-val" id="stat-syms">0</div>
+    </div>
+    <div class="stats-spacer"></div>
+    <div class="stats-right">
+      <button class="stats-customize" id="stats-settings-btn">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Customize
+      </button>
+      <button class="stats-icon-btn" title="Fullscreen">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div id="main">
+    <div id="grid">
+      <div id="empty">
+        Connecting to exchanges…
+        <span>Density walls will appear automatically</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div id="filterbar">
+    <div class="fb-search-wrap">
+      <span class="fb-search-icon">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </span>
+      <input id="search-input" type="text" placeholder="Search pair…">
+    </div>
+    <div class="fb-sep"></div>
+    <div class="fb-group">
+      <div class="fb-lbl">Exchange</div>
+      <select class="fb-select" id="filter-exchange">
+        <option value="all">All</option>
+        <option value="binance">Binance</option>
+        <option value="bybit">Bybit</option>
+        <option value="okx">OKX</option>
+        <option value="gate">Gate.io</option>
+        <option value="bitget">Bitget</option>
+      </select>
+    </div>
+    <div class="fb-sep"></div>
+    <div class="fb-group">
+      <div class="fb-lbl">Quote</div>
+      <select class="fb-select" id="filter-quote">
+        <option value="USDT">USDT</option>
+      </select>
+    </div>
+    <div class="fb-sep"></div>
+    <div class="fb-group">
+      <div class="fb-lbl">Market</div>
+      <div class="fb-pills">
+        <button class="pill on" data-filter="market" data-val="all">All</button>
+        <button class="pill"    data-filter="market" data-val="perp">PERP</button>
+        <button class="pill"    data-filter="market" data-val="spot">SPOT</button>
+      </div>
+    </div>
+    <div class="fb-sep"></div>
+    <div class="fb-group">
+      <div class="fb-lbl">Side</div>
+      <div class="fb-pills">
+        <button class="pill on" data-filter="side" data-val="all">All</button>
+        <button class="pill"    data-filter="side" data-val="bid">BID</button>
+        <button class="pill"    data-filter="side" data-val="ask">ASK</button>
+      </div>
+    </div>
+    <div class="fb-spacer"></div>
+    <button class="fb-reset" id="fb-reset-btn">Reset</button>
+    <button class="fb-apply" id="open-settings-fb">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+      Apply Filters
+    </button>
+  </div>
+
+</div><!-- #right -->
+</div><!-- #app -->
+
+<!-- ══ Settings panel ══════════════════════════════════════════ -->
+<div id="settings-overlay">
+  <div id="settings-panel">
+    <div class="sp-header">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A4FF00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="sp-title">Settings</span>
+      <button class="sp-close" id="sp-close">✕</button>
+    </div>
+    <div class="sp-body">
+      <!-- Sort -->
+      <div class="sp-section">
+        <div class="sp-section-title">Sort Order</div>
+        <div class="sort-grid">
+          <div class="sort-row">
+            <button class="sort-btn on" data-sort="time">By Time</button>
+            <button class="sort-order-btn on" id="sort-order-btn">↓</button>
+          </div>
+          <div class="sort-row"><button class="sort-btn" data-sort="volume">By Volume</button></div>
+          <div class="sort-row"><button class="sort-btn" data-sort="distance">By Distance</button></div>
+          <div class="sort-row"><button class="sort-btn" data-sort="age">By Age</button></div>
+        </div>
+      </div>
+      <!-- Min size per exchange -->
+      <div class="sp-section">
+        <div class="sp-section-title">Min Size (Spot / Futures)</div>
+        <div id="sp-exch-rows"></div>
+      </div>
+      <!-- Coin list -->
+      <div class="sp-section">
+        <div class="sp-section-title">Coin List</div>
+        <div id="coin-list"></div>
+        <button class="sp-add-coin-btn" id="sp-add-coin">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Coin
+        </button>
+      </div>
+    </div>
+    <div class="sp-footer">
+      <button class="sp-reset-link" id="sp-reset">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.86"/></svg>
+        Reset Settings
+      </button>
+      <div class="sp-footer-spacer"></div>
+      <button class="sp-cancel-btn" id="sp-cancel">Cancel</button>
+      <button class="sp-save-btn"   id="sp-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ Config ═══════════════════════════════════════════════════
+const EXCHANGES_LIST = [
+  { key:'binance', label:'Binance', domain:'binance.com',  color:'#F0B90B' },
+  { key:'bybit',   label:'Bybit',   domain:'bybit.com',    color:'#FF6108' },
+  { key:'okx',     label:'OKX',     domain:'okx.com',      color:'#5B8EFF' },
+  { key:'gate',    label:'Gate.io', domain:'gate.io',      color:'#5BB4FF' },
+  { key:'bitget',  label:'Bitget',  domain:'bitget.com',   color:'#1DA2B4' },
+];
+const EXCH_DOMAINS = { binance:'binance.com', bybit:'bybit.com', okx:'okx.com', gate:'gate.io', bitget:'bitget.com' };
+const DEFAULT_EXCH_MINS = {
+  binance:{s:50000,f:50000}, bybit:{s:50000,f:50000}, okx:{s:50000,f:50000},
+  gate:{s:50000,f:50000}, bitget:{s:50000,f:50000}
+};
+const DEFAULT_SYM_OVERRIDES = {
+  BTCUSDT:10000000, ETHUSDT:7000000, BNBUSDT:1000000, BCHUSDT:1000000,
+  DOGEUSDT:1500000, AVAXUSDT:500000, TONUSDT:500000, HYPEUSDT:1500000,
+  TRXUSDT:200000, NEARUSDT:200000, ZECUSDT:500000,
+  '1000PEPEUSDT':300000, PEPEUSDT:300000, ORDIUSDT:200000,
+  PENGUUSDT:250000, TAOUSDT:300000, ATOMUSDT:200000,
+  XMRUSDT:200000,
+};
+
+// ══ Settings ══════════════════════════════════════════════════
+function loadSettings() {
+  try {
+    const r = JSON.parse(localStorage.getItem('octa_v3') || 'null');
+    if (r && r.exchangeMins) return r;
+  } catch(e) {}
+  return { sortBy:'time', sortOrder:'desc', exchangeMins: JSON.parse(JSON.stringify(DEFAULT_EXCH_MINS)), coinList:[] };
+}
+let settings     = loadSettings();
+let draftSettings = null;
+function saveSettings() { localStorage.setItem('octa_v3', JSON.stringify(settings)); }
+
+// ══ Quick-filter state ════════════════════════════════════════
+let filterExchange = 'all', filterMarket = 'all', filterSide = 'all', filterText = '';
+let favsOnly = false;
+
+// ══ Core state ════════════════════════════════════════════════
+const densities   = new Map();
+const symCards    = new Map();  // symbol -> Set of density ids
+let favorites     = new Set(JSON.parse(localStorage.getItem('octa_favs') || '[]'));
+let soundOn       = true;
+let audioCtx      = null;
+
+// ══ Filter logic ══════════════════════════════════════════════
+function passesFilter(d) {
+  if (filterExchange !== 'all' && d.exchange !== filterExchange) return false;
+  if (filterMarket   !== 'all' && d.market   !== filterMarket)   return false;
+  if (filterSide     !== 'all' && d.side     !== filterSide)     return false;
+  if (filterText && !d.symbol.toLowerCase().includes(filterText.toLowerCase())) return false;
+  if (favsOnly && !favorites.has(d.symbol)) return false;
+
+  const sym  = d.symbol.toUpperCase();
+  const coin = (settings.coinList || []).find(c => c.symbol === sym);
+  if (coin && coin.visible === false) return false;
+
+  const mk    = d.market === 'spot' ? 's' : 'f';
+  const emin  = ((settings.exchangeMins || {})[d.exchange] || {})[mk] || 0;
+  if (coin && coin.minVol != null) return d.volume_usd >= coin.minVol;
+  if (DEFAULT_SYM_OVERRIDES[sym] && mk === 'f') return d.volume_usd >= DEFAULT_SYM_OVERRIDES[sym];
+  return d.volume_usd >= emin;
+}
+
+// ══ Formatters ════════════════════════════════════════════════
+function fmtUsd(v) {
+  if (v >= 1e9) return (v/1e9).toFixed(2)+'B$';
+  if (v >= 1e6) return (v/1e6).toFixed(2)+'M$';
+  if (v >= 1e3) return (v/1e3).toFixed(1)+'K$';
+  return v.toFixed(0)+'$';
+}
+function fmtPrice(p) {
+  if (p >= 10000) return p.toLocaleString('en-US',{maximumFractionDigits:1});
+  if (p >= 100)   return p.toLocaleString('en-US',{maximumFractionDigits:2});
+  if (p >= 1)     return p.toLocaleString('en-US',{maximumFractionDigits:4});
+  if (p >= 0.01)  return p.toLocaleString('en-US',{maximumFractionDigits:5});
+  return p.toFixed(6);
+}
+function fmtAge(ts) {
+  const s = Math.floor(Date.now()/1000 - ts);
+  if (s < 60)   return s+'s';
+  if (s < 3600) return Math.floor(s/60)+'m ' + (s%60)+'s';
+  return Math.floor(s/3600)+'h';
+}
+function exchIcon(ex) {
+  const d = EXCH_DOMAINS[ex];
+  if (!d) return `<span style="font-size:8px;font-weight:800;color:#aaa">${ex.slice(0,2).toUpperCase()}</span>`;
+  return `<img src="https://www.google.com/s2/favicons?domain=${d}&sz=64" width="14" height="14" alt="${ex}" title="${ex}" style="border-radius:2px;display:block">`;
+}
+function symParts(sym) {
+  if (sym.endsWith('USDT')) return { base:sym.slice(0,-4), quote:'/USDT' };
+  if (sym.endsWith('BTC'))  return { base:sym.slice(0,-3),  quote:'/BTC' };
+  return { base:sym, quote:'' };
+}
+function saveFavs() { localStorage.setItem('octa_favs', JSON.stringify([...favorites])); }
+
+// ══ Sound ═════════════════════════════════════════════════════
+function playBeep() {
+  if (!soundOn) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(450, audioCtx.currentTime+0.15);
+    g.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.32);
+    osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime+0.32);
+  } catch(e) {}
+}
+
+// ══ Row builder ═══════════════════════════════════════════════
+function buildRow(d, isNew=false) {
+  const el   = document.createElement('div');
+  el.className = `d-row ${d.side}${isNew?' new-row':''}`;
+  el.dataset.id = d.id;
+  const sign = d.pct_from_price >= 0 ? '+' : '';
+  const mktDot = d.market === 'spot'
+    ? `<span class="d-mkt-dot market-s-dot" title="Spot"></span>`
+    : `<span class="d-mkt-dot market-f-dot" title="Futures"></span>`;
+  const exchAbbr = d.exchange.slice(0,2).toUpperCase();
+  el.innerHTML = `
+    <span class="d-vol">${fmtUsd(d.volume_usd)}</span>
+    <span class="d-exch">${exchIcon(d.exchange)}</span>
+    ${mktDot}
+    <span class="d-exch-lbl">${exchAbbr}</span>
+    <span class="d-age" data-ts="${d.first_seen}">${fmtAge(d.first_seen)}</span>
+    <span class="d-price">${fmtPrice(d.price)}</span>
+    <span class="d-pct">${sign}${d.pct_from_price.toFixed(1)}%</span>
+  `;
+  return el;
+}
+
+// ══ Card builder ══════════════════════════════════════════════
+function getOrCreateCard(symbol) {
+  let card = document.getElementById('card-' + symbol);
+  if (card) return card;
+
+  const { base, quote } = symParts(symbol);
+  card = document.createElement('div');
+  card.id        = 'card-' + symbol;
+  card.className = 'card' + (favorites.has(symbol) ? ' fav' : '');
+
+  card.innerHTML = `
+    <div class="card-header">
+      <span class="card-sym">${base}</span>
+      <span class="card-quote">${quote}</span>
+      <div class="card-spacer"></div>
+      <button class="card-icon-btn" title="Watch" data-sym="${symbol}">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+      <button class="card-icon-btn fav-btn${favorites.has(symbol)?' active':''}" title="Favorite" data-sym="${symbol}">☆</button>
+      <button class="card-gear-btn" title="Settings" data-sym="${symbol}">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  `;
+
+  // detect market type from first density (assigned later) — placeholder header badge updated on first row insert
+  card.querySelector('.fav-btn').addEventListener('click', e => { e.stopPropagation(); toggleFav(symbol); });
+  card.querySelector('.card-gear-btn').addEventListener('click', e => { e.stopPropagation(); openSettingsForSymbol(symbol); });
+
+  if (!symCards.has(symbol)) symCards.set(symbol, new Set());
+  document.getElementById('grid').appendChild(card);
+  return card;
+}
+
+function updateCardMarketBadge(card, d) {
+  if (card.querySelector('.card-market')) return;
+  const hdr = card.querySelector('.card-header');
+  const badge = document.createElement('span');
+  badge.className = `card-market market-${d.market === 'spot' ? 's' : 'f'}`;
+  badge.textContent = d.market === 'spot' ? 'S' : 'F';
+  // insert after card-quote
+  const quoteEl = hdr.querySelector('.card-quote');
+  quoteEl.after(badge);
+}
+
+function renderCard(symbol) {
+  const card = document.getElementById('card-' + symbol);
+  if (!card) return;
+  const ids = symCards.get(symbol);
+  if (!ids) return;
+
+  card.querySelectorAll('.d-row').forEach(el => el.remove());
+  const ds = [...ids].map(id => densities.get(id)).filter(d => d && passesFilter(d));
+  ds.sort(sortDensities);
+  ds.forEach(d => card.appendChild(buildRow(d)));
+
+  if (ids.size === 0) { removeCard(symbol); return; }
+  card.style.display = ds.length === 0 ? 'none' : '';
+}
+
+function sortDensities(a, b) {
+  if (a.side !== b.side) return a.side === 'ask' ? -1 : 1;
+  switch (settings.sortBy) {
+    case 'volume':   return settings.sortOrder==='desc' ? b.volume_usd-a.volume_usd : a.volume_usd-b.volume_usd;
+    case 'distance': return settings.sortOrder==='desc'
+      ? Math.abs(b.pct_from_price)-Math.abs(a.pct_from_price)
+      : Math.abs(a.pct_from_price)-Math.abs(b.pct_from_price);
+    case 'age':      return settings.sortOrder==='desc' ? a.first_seen-b.first_seen : b.first_seen-a.first_seen;
+    default:         return settings.sortOrder==='desc' ? b.first_seen-a.first_seen : a.first_seen-b.first_seen;
+  }
+}
+
+function removeCard(symbol) {
+  document.getElementById('card-'+symbol)?.remove();
+  symCards.delete(symbol);
+}
+
+function toggleFav(symbol) {
+  if (favorites.has(symbol)) favorites.delete(symbol); else favorites.add(symbol);
+  saveFavs();
+  const card = document.getElementById('card-'+symbol);
+  if (card) {
+    card.classList.toggle('fav', favorites.has(symbol));
+    const btn = card.querySelector('.fav-btn');
+    if (btn) {
+      btn.classList.toggle('active', favorites.has(symbol));
+      btn.textContent = favorites.has(symbol) ? '★' : '☆';
+    }
+  }
+  reorderGrid();
+}
+
+function cardSortVal(sym) {
+  const ids = symCards.get(sym);
+  if (!ids || !ids.size) return 0;
+  const ds = [...ids].map(id => densities.get(id)).filter(Boolean);
+  if (!ds.length) return 0;
+  switch (settings.sortBy) {
+    case 'volume':   return Math.max(...ds.map(d => d.volume_usd));
+    case 'distance': return -Math.min(...ds.map(d => Math.abs(d.pct_from_price)));
+    case 'age':      return settings.sortOrder==='desc' ? -Math.min(...ds.map(d=>d.first_seen)) : Math.min(...ds.map(d=>d.first_seen));
+    default:         return Math.max(...ds.map(d => d.first_seen));
+  }
+}
+
+function reorderGrid() {
+  const grid  = document.getElementById('grid');
+  const cards = [...grid.querySelectorAll('.card')];
+  cards.sort((a, b) => {
+    const sA = a.id.replace('card-',''), sB = b.id.replace('card-','');
+    const fa = favorites.has(sA)?1:0, fb = favorites.has(sB)?1:0;
+    if (fa !== fb) return fb - fa;
+    return cardSortVal(sB) - cardSortVal(sA);
+  });
+  cards.forEach(c => grid.appendChild(c));
+}
+
+function updateStats() {
+  let total=0, perp=0, spot=0;
+  densities.forEach(d => { if (passesFilter(d)) { total++; if (d.market==='perp') perp++; else spot++; } });
+  const syms = new Set();
+  densities.forEach(d => { if (passesFilter(d)) syms.add(d.symbol); });
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-perp').textContent  = perp;
+  document.getElementById('stat-spot').textContent  = spot;
+  document.getElementById('stat-syms').textContent  = syms.size;
+}
+
+// ══ WS handlers ═══════════════════════════════════════════════
+function handleNew(d) {
+  densities.set(d.id, d);
+  if (!symCards.has(d.symbol)) symCards.set(d.symbol, new Set());
+  symCards.get(d.symbol).add(d.id);
+  if (!passesFilter(d)) { updateStats(); return; }
+
+  const emptyEl = document.getElementById('empty');
+  if (emptyEl) emptyEl.remove();
+
+  const card = getOrCreateCard(d.symbol);
+  updateCardMarketBadge(card, d);
+  card.style.display = '';
+  card.classList.add('flash');
+  setTimeout(() => card.classList.remove('flash'), 750);
+
+  const row   = buildRow(d, true);
+  const first = card.querySelector('.d-row');
+  if (first) card.insertBefore(row, first); else card.appendChild(row);
+  playBeep(); reorderGrid(); updateStats();
+}
+
+function handleUpdate(d) {
+  densities.set(d.id, d);
+  const row = document.querySelector(`.d-row[data-id="${d.id}"]`);
+  if (row) {
+    row.querySelector('.d-vol').textContent   = fmtUsd(d.volume_usd);
+    row.querySelector('.d-price').textContent = fmtPrice(d.price);
+    const sign = d.pct_from_price>=0?'+':'';
+    row.querySelector('.d-pct').textContent   = sign+d.pct_from_price.toFixed(1)+'%';
+    row.querySelector('.d-age').textContent   = fmtAge(d.first_seen);
+  }
+  updateStats();
+}
+
+function handleRemove(id) {
+  const d = densities.get(id);
+  if (!d) return;
+  densities.delete(id);
+  const ids = symCards.get(d.symbol);
+  if (ids) {
+    ids.delete(id);
+    if (ids.size === 0) removeCard(d.symbol);
+    else renderCard(d.symbol);
+  }
+  document.querySelector(`.d-row[data-id="${id}"]`)?.remove();
+  updateStats();
+}
+
+function handleInitial(list) {
+  densities.clear(); symCards.clear();
+  document.getElementById('grid').innerHTML = '';
+  if (!list.length) {
+    document.getElementById('grid').innerHTML =
+      '<div id="empty">No densities yet<span>Data is loading from exchanges…</span></div>';
+    return;
+  }
+  list.sort((a,b) => b.first_seen - a.first_seen);
+  list.forEach(d => {
+    densities.set(d.id, d);
+    if (!symCards.has(d.symbol)) symCards.set(d.symbol, new Set());
+    symCards.get(d.symbol).add(d.id);
+  });
+  [...symCards.keys()].forEach(sym => { getOrCreateCard(sym); renderCard(sym); });
+  // update market badges
+  densities.forEach(d => {
+    const card = document.getElementById('card-'+d.symbol);
+    if (card) updateCardMarketBadge(card, d);
+  });
+  reorderGrid(); updateStats();
+}
+
+// ══ Age ticker ════════════════════════════════════════════════
+setInterval(() => {
+  document.querySelectorAll('.d-age[data-ts]').forEach(el => {
+    el.textContent = fmtAge(parseFloat(el.dataset.ts));
+  });
+}, 10000);
+
+// ══ WebSocket ═════════════════════════════════════════════════
+function connect() {
+  const proto = location.protocol==='https:'?'wss':'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => {
+    document.getElementById('conn-dot').className = 'on';
+    document.getElementById('conn-label').textContent = 'Connected';
+    ws._ping = setInterval(() => { if (ws.readyState===1) ws.send('ping'); }, 30000);
+  };
+  ws.onmessage = ev => {
+    if (ev.data==='pong') return;
+    try {
+      const msg = JSON.parse(ev.data);
+      if      (msg.type==='initial_state')  handleInitial(msg.data);
+      else if (msg.type==='density_new')    handleNew(msg.data);
+      else if (msg.type==='density_update') handleUpdate(msg.data);
+      else if (msg.type==='density_remove') handleRemove(msg.data.id);
+      // market_data ignored in card mode (no table)
+    } catch(e) {}
+  };
+  ws.onclose = () => {
+    clearInterval(ws._ping);
+    document.getElementById('conn-dot').className = '';
+    document.getElementById('conn-label').textContent = 'Reconnecting…';
+    setTimeout(connect, 3000);
+  };
+  ws.onerror = () => ws.close();
+}
+
+// ══ Quick-filters ═════════════════════════════════════════════
+function applyFilters() {
+  [...symCards.keys()].forEach(sym => renderCard(sym));
+  reorderGrid(); updateStats();
+}
+
+document.getElementById('filter-exchange').addEventListener('change', e => {
+  filterExchange = e.target.value; applyFilters();
+});
+document.querySelectorAll('[data-filter="market"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterMarket = btn.dataset.val;
+    document.querySelectorAll('[data-filter="market"]').forEach(b => b.classList.toggle('on', b===btn));
+    applyFilters();
+  });
+});
+document.querySelectorAll('[data-filter="side"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterSide = btn.dataset.val;
+    document.querySelectorAll('[data-filter="side"]').forEach(b => b.classList.toggle('on', b===btn));
+    applyFilters();
+  });
+});
+document.getElementById('search-input').addEventListener('input', e => {
+  filterText = e.target.value.trim(); applyFilters();
+});
+document.getElementById('fb-reset-btn').addEventListener('click', () => {
+  filterExchange='all'; filterMarket='all'; filterSide='all'; filterText=''; favsOnly=false;
+  document.getElementById('search-input').value='';
+  document.getElementById('filter-exchange').value='all';
+  document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('on', b.dataset.val==='all'));
+  document.getElementById('favs-btn').classList.remove('on');
+  applyFilters();
+});
+
+// Favorites only toggle
+document.getElementById('favs-btn').addEventListener('click', function() {
+  favsOnly = !favsOnly;
+  this.classList.toggle('on', favsOnly);
+  applyFilters();
+});
+
+// Sound toggle
+document.getElementById('sound-btn').addEventListener('click', function() {
+  soundOn = !soundOn;
+  this.classList.toggle('on', soundOn);
+  this.textContent = soundOn ? '🔔 Sound' : '🔕 Sound';
+  if (soundOn && !audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+});
+
+// ══ Settings panel ════════════════════════════════════════════
+function buildExchRows(draft) {
+  const c = document.getElementById('sp-exch-rows');
+  c.innerHTML = '';
+  EXCHANGES_LIST.forEach(({ key, label, domain, color }) => {
+    const mins = (draft.exchangeMins||{})[key] || {s:50000,f:50000};
+    const row  = document.createElement('div');
+    row.className = 'exch-sf-row';
+    row.innerHTML = `
+      <div class="exch-sf-logo" style="border-color:${color}25">
+        <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" width="16" height="16" alt="${label}">
+      </div>
+      <span class="exch-sf-label" style="color:${color}">S</span>
+      <input class="exch-sf-input" type="number" data-key="${key}" data-type="s" value="${mins.s}" min="0" step="1000">
+      <div class="exch-sf-div"></div>
+      <span class="exch-sf-label" style="color:#FFA800">F</span>
+      <input class="exch-sf-input" type="number" data-key="${key}" data-type="f" value="${mins.f}" min="0" step="1000">
+    `;
+    c.appendChild(row);
+  });
+}
+
+function buildCoinList(draft) {
+  const c = document.getElementById('coin-list');
+  c.innerHTML = '';
+  (draft.coinList||[]).forEach((coin, idx) => appendCoinItem(coin, idx, draft));
+}
+
+function appendCoinItem(coin, idx, draft) {
+  const c    = document.getElementById('coin-list');
+  const item = document.createElement('div');
+  item.className = 'coin-item' + (coin.visible===false?' hidden-coin':'');
+  item.dataset.idx = idx;
+  const eyeHidden = coin.visible===false;
+  item.innerHTML = `
+    <div class="coin-item-top">
+      <input class="coin-sym-input" type="text" placeholder="Symbol (BTCUSDT)" value="${coin.symbol||''}" maxlength="20">
+      <input class="coin-vol-input" type="number" placeholder="Min vol" value="${coin.minVol||''}" min="0" step="1000">
+      <span class="coin-vol-unit">$</span>
+      <button class="coin-eye-btn${eyeHidden?' hidden':''}" title="${eyeHidden?'Show':'Hide'}">
+        ${eyeHidden
+          ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+          : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`}
+      </button>
+      <button class="coin-del-btn" title="Remove">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  `;
+  item.querySelector('.coin-sym-input').addEventListener('input', e => {
+    draft.coinList[idx].symbol = e.target.value.trim().toUpperCase();
+    e.target.value = draft.coinList[idx].symbol;
+  });
+  item.querySelector('.coin-vol-input').addEventListener('input', e => {
+    draft.coinList[idx].minVol = parseInt(e.target.value)||0;
+  });
+  item.querySelector('.coin-eye-btn').addEventListener('click', () => {
+    draft.coinList[idx].visible = draft.coinList[idx].visible===false ? true : false;
+    buildCoinList(draft);
+  });
+  item.querySelector('.coin-del-btn').addEventListener('click', () => {
+    draft.coinList.splice(idx,1); buildCoinList(draft);
+  });
+  c.appendChild(item);
+}
+
+function syncSortUI(draft) {
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('on', b.dataset.sort===draft.sortBy));
+  const ob = document.getElementById('sort-order-btn');
+  ob.textContent = draft.sortOrder==='desc'?'↓':'↑';
+  ob.classList.add('on');
+}
+
+function openSettings() {
+  draftSettings = JSON.parse(JSON.stringify(settings));
+  buildExchRows(draftSettings); buildCoinList(draftSettings); syncSortUI(draftSettings);
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+  draftSettings = null;
+}
+function collectDraft() {
+  if (!draftSettings) return;
+  document.querySelectorAll('.exch-sf-input').forEach(inp => {
+    const k=inp.dataset.key, t=inp.dataset.type;
+    if (!draftSettings.exchangeMins[k]) draftSettings.exchangeMins[k]={};
+    draftSettings.exchangeMins[k][t] = Math.max(0, parseInt(inp.value)||0);
+  });
+}
+function commitSettings() {
+  collectDraft();
+  settings = JSON.parse(JSON.stringify(draftSettings));
+  saveSettings();
+  [...symCards.keys()].forEach(sym => renderCard(sym));
+  reorderGrid(); updateStats(); closeSettings();
+}
+
+function openSettingsForSymbol(symbol) {
+  openSettings();
+  const exists = draftSettings.coinList.find(c => c.symbol===symbol.toUpperCase());
+  if (!exists) {
+    draftSettings.coinList.push({ symbol:symbol.toUpperCase(), minVol:0, visible:true });
+    buildCoinList(draftSettings);
+  }
+  setTimeout(() => {
+    document.getElementById('coin-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }, 120);
+}
+
+['settings-btn','stats-settings-btn','nav-settings','open-settings-fb'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', openSettings);
+});
+document.getElementById('sp-close').addEventListener('click', closeSettings);
+document.getElementById('sp-cancel').addEventListener('click', closeSettings);
+document.getElementById('settings-overlay').addEventListener('click', e => {
+  if (e.target===document.getElementById('settings-overlay')) closeSettings();
+});
+document.getElementById('sp-save').addEventListener('click', commitSettings);
+
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (draftSettings) { draftSettings.sortBy=btn.dataset.sort; syncSortUI(draftSettings); }
+  });
+});
+document.getElementById('sort-order-btn').addEventListener('click', () => {
+  if (!draftSettings) return;
+  draftSettings.sortOrder = draftSettings.sortOrder==='desc'?'asc':'desc';
+  syncSortUI(draftSettings);
+});
+
+document.getElementById('sp-add-coin').addEventListener('click', () => {
+  if (!draftSettings) return;
+  draftSettings.coinList.push({symbol:'',minVol:0,visible:true});
+  buildCoinList(draftSettings);
+  document.querySelectorAll('.coin-item').forEach((el,i,arr) => {
+    if (i===arr.length-1) el.querySelector('.coin-sym-input')?.focus();
+  });
+});
+
+document.getElementById('sp-reset').addEventListener('click', () => {
+  draftSettings = { sortBy:'time', sortOrder:'desc', exchangeMins:JSON.parse(JSON.stringify(DEFAULT_EXCH_MINS)), coinList:[] };
+  buildExchRows(draftSettings); buildCoinList(draftSettings); syncSortUI(draftSettings);
+});
+
+// ══ Init ═════════════════════════════════════════════════════
+connect();
+</script>
+</body>
+</html>

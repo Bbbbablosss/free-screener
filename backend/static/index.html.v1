@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crypto Screener</title>
+<style>
+  :root {
+    --bg:         #0d0d0f;
+    --card-bg:    #111114;
+    --card-border:#1e1e22;
+    --header-bg:  #0f0f12;
+    --accent:     #7BFF00;
+    --accent-dim: rgba(123,255,0,0.11);
+    --ask:        #FF4444;
+    --ask-dim:    rgba(255,68,68,0.11);
+    --text:       #d4d4d4;
+    --muted:      #4e4e5a;
+    --border:     #1e1e22;
+    --panel-bg:   #131316;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; background: var(--bg); color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px;
+    overflow-x: hidden;
+  }
+
+  /* ── Topbar ─────────────────────────────────────────────────────────── */
+  #topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; height: 46px;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-size: 15px; font-weight: 800; color: var(--accent); letter-spacing: 2px; }
+  #status-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
+    transition: background .3s; flex-shrink: 0;
+  }
+  #status-dot.connected { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  #status-text { color: var(--muted); font-size: 12px; }
+  .topbar-spacer { flex: 1; }
+  #counter { color: var(--muted); font-size: 12px; }
+  .tb-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); padding: 4px 13px; border-radius: 4px;
+    cursor: pointer; font-size: 12px; transition: border-color .2s, color .2s;
+    white-space: nowrap;
+  }
+  .tb-btn:hover, .tb-btn.active { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Grid ───────────────────────────────────────────────────────────── */
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 1px;
+    padding: 1px;
+    align-items: start;
+  }
+
+  /* ── Card ───────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 0;
+    overflow: hidden;
+    transition: border-color .25s;
+  }
+  .card.new-flash  { border-color: var(--accent); }
+  .card.fav        { border-color: rgba(123,255,0,0.32); }
+
+  .card-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 10px 6px 12px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--card-border);
+  }
+  .card-base  { font-weight: 700; font-size: 14px; color: #ececec; }
+  .card-quote { font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 1px; }
+  .card-sym-wrap { flex: 1; }
+  .fav-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 15px; line-height: 1;
+    padding: 1px 3px; transition: color .2s;
+  }
+  .fav-btn:hover, .fav-btn.active { color: var(--accent); }
+
+  /* ── Density row ─────────────────────────────────────────────────────── */
+  .density-row {
+    display: grid;
+    grid-template-columns: 82px 20px 26px 50px 1fr 50px;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.022);
+    transition: background .12s;
+  }
+  .density-row:last-child { border-bottom: none; }
+  .density-row:hover      { background: rgba(255,255,255,0.025); }
+  .density-row.new-row    { animation: rowFlash .65s ease-out; }
+
+  @keyframes rowFlash {
+    0%   { background: rgba(123,255,0,0.14); }
+    100% { background: transparent; }
+  }
+
+  /* Volume */
+  .d-vol {
+    font-weight: 700; font-size: 12px;
+    padding: 2px 5px; border-radius: 3px;
+    text-align: right; white-space: nowrap;
+  }
+  .bid .d-vol { color: var(--accent); background: var(--accent-dim); }
+  .ask .d-vol { color: var(--ask);    background: var(--ask-dim); }
+
+  /* Exchange icon */
+  .d-exch {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; flex-shrink: 0;
+  }
+  .d-exch img { border-radius: 3px; display: block; }
+
+  /* Market type badge: Futures / Spot */
+  .d-type {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.4px;
+    padding: 2px 4px; border-radius: 3px;
+    text-align: center; white-space: nowrap;
+  }
+  .d-type-f { background: rgba(255,168,0,0.14); color: #FFA800; }
+  .d-type-s { background: rgba(91,142,255,0.14); color: #5B8EFF; }
+
+  /* Age */
+  .d-age { color: var(--muted); font-size: 11px; text-align: center; white-space: nowrap; }
+
+  /* Price */
+  .d-price {
+    font-size: 12px; font-variant-numeric: tabular-nums;
+    text-align: right; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .bid .d-price { color: var(--accent); }
+  .ask .d-price { color: var(--ask); }
+
+  /* Pct */
+  .d-pct {
+    font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
+    text-align: right; white-space: nowrap;
+  }
+  .bid .d-pct { color: var(--accent); }
+  .ask .d-pct { color: var(--ask); }
+
+  /* ── Empty placeholder ───────────────────────────────────────────────── */
+  #empty {
+    grid-column: 1/-1; text-align: center;
+    color: var(--muted); padding: 70px 20px; font-size: 14px;
+  }
+  #empty span { display: block; margin-top: 8px; font-size: 12px; }
+
+  /* ── Settings overlay ───────────────────────────────────────────────── */
+  #settings-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.55);
+  }
+  #settings-overlay.open { display: flex; justify-content: flex-end; }
+
+  #settings-panel {
+    width: 360px; max-width: 95vw;
+    background: var(--panel-bg);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    animation: slideIn .18s ease-out;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(40px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+
+  .sp-header {
+    display: flex; align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .sp-title { font-size: 13px; font-weight: 700; color: #e8e8e8; flex: 1; }
+  .sp-close {
+    background: none; border: none; color: var(--muted);
+    font-size: 16px; cursor: pointer; padding: 2px 4px; line-height: 1;
+  }
+  .sp-close:hover { color: var(--text); }
+
+  .sp-body { flex: 1; overflow-y: auto; padding: 16px; }
+
+  .sp-section       { margin-bottom: 22px; }
+  .sp-section-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted);
+    margin-bottom: 10px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sp-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+  }
+  .sp-label {
+    font-size: 11px; color: var(--text); flex: 1;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .sp-input {
+    width: 108px; background: #18181c; border: 1px solid var(--border);
+    color: var(--text); font-size: 11px;
+    padding: 4px 8px; border-radius: 4px;
+    text-align: right; outline: none;
+    transition: border-color .15s;
+    -moz-appearance: textfield;
+  }
+  .sp-input::-webkit-inner-spin-button,
+  .sp-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .sp-input:focus { border-color: var(--accent); }
+  .sp-unit { color: var(--muted); font-size: 10px; }
+
+  .exch-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot-binance { background: #F0B90B; }
+  .dot-bybit   { background: #FF6108; }
+  .dot-okx     { background: #5B8EFF; }
+  .dot-gate    { background: #5BB4FF; }
+  .dot-bitget  { background: #1DA2B4; }
+
+  /* Symbol overrides */
+  #sym-overrides { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+  .sym-row { display: flex; align-items: center; gap: 5px; }
+  .sym-name-input {
+    width: 100px; background: #18181c; border: 1px solid var(--border);
+    color: var(--text); font-size: 11px;
+    padding: 4px 7px; border-radius: 4px; outline: none;
+    text-transform: uppercase;
+    transition: border-color .15s;
+  }
+  .sym-name-input:focus { border-color: var(--accent); }
+  .sym-val-input {
+    flex: 1; background: #18181c; border: 1px solid var(--border);
+    color: var(--text); font-size: 11px;
+    padding: 4px 7px; border-radius: 4px;
+    text-align: right; outline: none;
+    transition: border-color .15s;
+    -moz-appearance: textfield;
+  }
+  .sym-val-input::-webkit-inner-spin-button,
+  .sym-val-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .sym-val-input:focus { border-color: var(--accent); }
+  .sym-unit { color: var(--muted); font-size: 10px; flex-shrink: 0; }
+  .sym-del {
+    background: none; border: none; color: var(--muted);
+    font-size: 14px; cursor: pointer; padding: 1px 3px; line-height: 1;
+  }
+  .sym-del:hover { color: var(--ask); }
+
+  .sp-add-btn {
+    width: 100%; padding: 5px 0; border-radius: 4px;
+    background: transparent; border: 1px dashed var(--border);
+    color: var(--muted); font-size: 11px; cursor: pointer;
+    transition: border-color .2s, color .2s;
+  }
+  .sp-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .sp-footer {
+    display: flex; gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .sp-btn {
+    flex: 1; padding: 7px; border-radius: 5px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border); transition: all .18s;
+  }
+  .sp-btn-reset { background: transparent; color: var(--muted); }
+  .sp-btn-reset:hover { border-color: #555; color: var(--text); }
+  .sp-btn-save  { background: var(--accent); color: #000; border-color: var(--accent); }
+  .sp-btn-save:hover { filter: brightness(1.08); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a2a30; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div id="topbar">
+  <div class="logo">⬡ SCREENER</div>
+  <div id="status-dot"></div>
+  <div id="status-text">Подключение…</div>
+  <div class="topbar-spacer"></div>
+  <div id="counter">0 плотностей</div>
+  <button id="sound-btn" class="tb-btn active">🔔 Звук</button>
+  <button id="settings-btn" class="tb-btn">⚙ Фильтры</button>
+</div>
+
+<!-- Main grid -->
+<div id="grid">
+  <div id="empty">
+    Подключаемся к биржам…
+    <span>Плотности появятся автоматически</span>
+  </div>
+</div>
+
+<!-- Settings panel -->
+<div id="settings-overlay">
+  <div id="settings-panel">
+    <div class="sp-header">
+      <span class="sp-title">⚙ Настройки фильтров</span>
+      <button class="sp-close" id="sp-close">✕</button>
+    </div>
+
+    <div class="sp-body">
+      <!-- Per-exchange -->
+      <div class="sp-section">
+        <div class="sp-section-title">Минимальный объём по бирже</div>
+        <div id="exch-settings"></div>
+      </div>
+
+      <!-- Per-symbol -->
+      <div class="sp-section">
+        <div class="sp-section-title">Переопределение по монете</div>
+        <div id="sym-overrides"></div>
+        <button class="sp-add-btn" id="sp-add-sym">+ Добавить монету</button>
+      </div>
+    </div>
+
+    <div class="sp-footer">
+      <button class="sp-btn sp-btn-reset" id="sp-reset">↺ По умолчанию</button>
+      <button class="sp-btn sp-btn-save"  id="sp-save">Применить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Default config (mirrors backend config.py) ────────────────────────────
+const DEFAULT_EXCHANGE_MINS = {
+  binance: 50000,
+  bybit:   50000,
+  okx:     50000,
+  gate:    50000,
+  bitget:  50000,
+};
+
+// Per-symbol defaults — mirrors SYMBOL_MIN_USD in config.py.
+// For symbols where exchanges differ, we use the lowest value across exchanges
+// (the backend already enforces per-exchange precision; this is a client-side extra layer).
+const DEFAULT_SYMBOL_MINS = {
+  "BTCUSDT":       10000000,  // gate/bitget 10M, binance/bybit/okx 20M → min=10M
+  "ETHUSDT":        7000000,  // gate/bitget 7M, binance/bybit/okx 15M → min=7M
+  "BNBUSDT":        1000000,  // gate/bitget/okx 1M, binance/bybit 2M → min=1M
+  "BCHUSDT":        1000000,  // gate/bitget/okx 1M, binance/bybit 2M → min=1M
+  "HYPEUSDT":       1500000,
+  "TONUSDT":         500000,
+  "TRXUSDT":         200000,  // gate/bitget 200K, others 500K → min=200K
+  "NEARUSDT":        200000,  // gate 200K, others 500K → min=200K
+  "ZECUSDT":         500000,  // gate/bitget 500K, others 1M → min=500K
+  "1000PEPEUSDT":    300000,  // gate/bitget/okx 300K, binance/bybit 500K → min=300K
+  "PEPEUSDT":        300000,
+  "ORDIUSDT":        200000,
+  "DOGEUSDT":       1500000,  // bitget/okx 1.5M override
+  "PENGUUSDT":       250000,  // bybit/okx 250K override
+  "TAOUSDT":         300000,  // binance 300K override
+  "ATOMUSDT":        200000,  // bitget 200K override
+  "XMRUSDT":         200000,  // binance 200K override
+  "AVAXUSDT":        500000,  // bybit 500K override
+};
+
+// ── Settings ───────────────────────────────────────────────────────────────
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('screener_settings') || 'null');
+    if (s && s.exchangeMins) return s;
+  } catch(e) {}
+  // First launch: use all defaults
+  return {
+    exchangeMins: { ...DEFAULT_EXCHANGE_MINS },
+    symbolMins:   { ...DEFAULT_SYMBOL_MINS },
+  };
+}
+let settings = loadSettings();
+
+function saveSettings() {
+  localStorage.setItem('screener_settings', JSON.stringify(settings));
+}
+
+function passesFilter(d) {
+  const exMin = (settings.exchangeMins || {})[d.exchange] || 0;
+  // Per-symbol thresholds are calibrated for perpetual futures liquidity.
+  // Spot order books have far lower individual level sizes, so apply only
+  // the per-exchange floor for spot densities.
+  if (d.market === 'spot') return d.volume_usd >= exMin;
+  const sym = d.symbol.toUpperCase();
+  const symMins = settings.symbolMins || {};
+  if (symMins[sym] !== undefined) return d.volume_usd >= symMins[sym];
+  return d.volume_usd >= exMin;
+}
+
+// ── Core state ─────────────────────────────────────────────────────────────
+const densities   = new Map();   // id → density object
+const symbolCards = new Map();   // symbol → Set<id>
+let soundOn   = true;
+let favorites = new Set(JSON.parse(localStorage.getItem('favs') || '[]'));
+
+// ── Formatters ─────────────────────────────────────────────────────────────
+function fmtUsd(v) {
+  if (v >= 1e9) return (v / 1e9).toFixed(2) + 'B$';
+  if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M$';
+  if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K$';
+  return v.toFixed(0) + '$';
+}
+function fmtPrice(p) {
+  if (p >= 10000) return p.toLocaleString('en-US', { maximumFractionDigits: 1 });
+  if (p >= 100)   return p.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  if (p >= 1)     return p.toLocaleString('en-US', { maximumFractionDigits: 4 });
+  if (p >= 0.01)  return p.toLocaleString('en-US', { maximumFractionDigits: 5 });
+  return p.toFixed(6);
+}
+function fmtAge(ts) {
+  const s = Math.floor(Date.now() / 1000 - ts);
+  if (s < 60)   return s + 'с';
+  if (s < 3600) return Math.floor(s / 60) + 'м';
+  return Math.floor(s / 3600) + 'ч';
+}
+const EXCH_DOMAINS = {
+  binance: 'binance.com',
+  bybit:   'bybit.com',
+  okx:     'okx.com',
+  gate:    'gate.io',
+  bitget:  'bitget.com',
+};
+
+function exchIcon(ex) {
+  const domain = EXCH_DOMAINS[ex];
+  if (!domain) {
+    return `<span style="font-size:9px;font-weight:700;color:#aaa">${ex.slice(0,2).toUpperCase()}</span>`;
+  }
+  return `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64"
+               width="20" height="20" alt="${ex}" title="${ex}"
+               style="border-radius:3px;display:block">`;
+}
+
+// d.market is 'perp' | 'spot' — sent by backend
+function marketBadge(d) {
+  if (d.market === 'spot') return `<span class="d-type d-type-s">SPOT</span>`;
+  return `<span class="d-type d-type-f">PERP</span>`;
+}
+function saveFavs() { localStorage.setItem('favs', JSON.stringify([...favorites])); }
+
+// ── Sound ──────────────────────────────────────────────────────────────────
+let audioCtx = null;
+function playBeep() {
+  if (!soundOn) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.22, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.35);
+  } catch (e) {}
+}
+
+// ── Card DOM ───────────────────────────────────────────────────────────────
+function symParts(symbol) {
+  // "BTCUSDT" → { base: "BTC", quote: "/USDT" }
+  if (symbol.endsWith('USDT')) return { base: symbol.slice(0, -4), quote: '/USDT' };
+  if (symbol.endsWith('BTC'))  return { base: symbol.slice(0, -3), quote: '/BTC' };
+  return { base: symbol, quote: '' };
+}
+
+function buildRow(d, isNew = false) {
+  const div = document.createElement('div');
+  div.className = `density-row ${d.side}${isNew ? ' new-row' : ''}`;
+  div.dataset.id = d.id;
+  const sign = d.pct_from_price >= 0 ? '+' : '';
+  div.innerHTML = `
+    <span class="d-vol">${fmtUsd(d.volume_usd)}</span>
+    <span class="d-exch">${exchIcon(d.exchange)}</span>
+    ${marketBadge(d)}
+    <span class="d-age" data-ts="${d.first_seen}">${fmtAge(d.first_seen)}</span>
+    <span class="d-price">${fmtPrice(d.price)}</span>
+    <span class="d-pct">${sign}${d.pct_from_price.toFixed(1)}%</span>
+  `;
+  return div;
+}
+
+function getOrCreateCard(symbol) {
+  let card = document.getElementById('card-' + symbol);
+  if (card) return card;
+
+  const { base, quote } = symParts(symbol);
+  card = document.createElement('div');
+  card.id = 'card-' + symbol;
+  card.className = 'card' + (favorites.has(symbol) ? ' fav' : '');
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-sym-wrap">
+        <span class="card-base">${base}</span><span class="card-quote">${quote}</span>
+      </div>
+      <button class="fav-btn${favorites.has(symbol) ? ' active' : ''}"
+              title="Избранное" aria-label="Избранное">★</button>
+    </div>
+  `;
+
+  card.querySelector('.fav-btn').addEventListener('click', () => toggleFav(symbol));
+  if (!symbolCards.has(symbol)) symbolCards.set(symbol, new Set());
+  document.getElementById('grid').appendChild(card);
+  return card;
+}
+
+function renderCard(symbol) {
+  const card = document.getElementById('card-' + symbol);
+  if (!card) return;
+  const ids = symbolCards.get(symbol);
+  if (!ids) return;
+
+  card.querySelectorAll('.density-row').forEach(el => el.remove());
+
+  const ds = [...ids]
+    .map(id => densities.get(id))
+    .filter(d => d && passesFilter(d));
+
+  ds.sort((a, b) => {
+    if (a.side !== b.side) return a.side === 'ask' ? -1 : 1;
+    return b.first_seen - a.first_seen;
+  });
+
+  ds.forEach(d => card.appendChild(buildRow(d)));
+
+  // Hide card when all densities are filtered but still tracked
+  card.style.display = (ds.length === 0 && ids.size > 0) ? 'none' : '';
+
+  if (ids.size === 0) removeCard(symbol);
+}
+
+function removeCard(symbol) {
+  const card = document.getElementById('card-' + symbol);
+  if (card) card.remove();
+  symbolCards.delete(symbol);
+}
+
+function toggleFav(symbol) {
+  if (favorites.has(symbol)) favorites.delete(symbol);
+  else favorites.add(symbol);
+  saveFavs();
+  const card = document.getElementById('card-' + symbol);
+  if (card) {
+    card.classList.toggle('fav', favorites.has(symbol));
+    const btn = card.querySelector('.fav-btn');
+    if (btn) btn.classList.toggle('active', favorites.has(symbol));
+  }
+  reorderGrid();
+}
+
+function latestTime(sym) {
+  const ids = symbolCards.get(sym);
+  if (!ids || !ids.size) return 0;
+  return Math.max(...[...ids].map(id => densities.get(id)?.first_seen || 0));
+}
+
+function reorderGrid() {
+  const grid = document.getElementById('grid');
+  const cards = [...grid.querySelectorAll('.card')];
+  cards.sort((a, b) => {
+    const symA = a.id.replace('card-', '');
+    const symB = b.id.replace('card-', '');
+    const fa = favorites.has(symA) ? 1 : 0;
+    const fb = favorites.has(symB) ? 1 : 0;
+    if (fa !== fb) return fb - fa;
+    return latestTime(symB) - latestTime(symA);
+  });
+  cards.forEach(c => grid.appendChild(c));
+}
+
+function updateCounter() {
+  let n = 0;
+  densities.forEach(d => { if (passesFilter(d)) n++; });
+  document.getElementById('counter').textContent =
+    n + ' плотност' + (n === 1 ? 'ь' : n < 5 ? 'и' : 'ей');
+}
+
+// ── WS event handlers ──────────────────────────────────────────────────────
+function handleNew(d) {
+  densities.set(d.id, d);
+  if (!symbolCards.has(d.symbol)) symbolCards.set(d.symbol, new Set());
+  symbolCards.get(d.symbol).add(d.id);
+
+  if (!passesFilter(d)) { updateCounter(); return; }
+
+  const emptyEl = document.getElementById('empty');
+  if (emptyEl) emptyEl.remove();
+
+  const card = getOrCreateCard(d.symbol);
+  card.style.display = '';
+  card.classList.add('new-flash');
+  setTimeout(() => card.classList.remove('new-flash'), 700);
+
+  const row = buildRow(d, true);
+  const first = card.querySelector('.density-row');
+  if (first) card.insertBefore(row, first);
+  else card.appendChild(row);
+
+  playBeep();
+  reorderGrid();
+  updateCounter();
+}
+
+function handleUpdate(d) {
+  densities.set(d.id, d);
+  const row = document.querySelector(`.density-row[data-id="${d.id}"]`);
+  if (row) {
+    row.querySelector('.d-vol').textContent   = fmtUsd(d.volume_usd);
+    row.querySelector('.d-price').textContent = fmtPrice(d.price);
+    const sign = d.pct_from_price >= 0 ? '+' : '';
+    row.querySelector('.d-pct').textContent   = sign + d.pct_from_price.toFixed(1) + '%';
+  }
+  updateCounter();
+}
+
+function handleRemove(id) {
+  const d = densities.get(id);
+  if (!d) return;
+  densities.delete(id);
+  const ids = symbolCards.get(d.symbol);
+  if (ids) {
+    ids.delete(id);
+    if (ids.size === 0) removeCard(d.symbol);
+    else renderCard(d.symbol);
+  }
+  const row = document.querySelector(`.density-row[data-id="${id}"]`);
+  if (row) row.remove();
+  updateCounter();
+}
+
+function handleInitial(list) {
+  densities.clear();
+  symbolCards.clear();
+  document.getElementById('grid').innerHTML = '';
+
+  if (!list.length) {
+    document.getElementById('grid').innerHTML =
+      '<div id="empty">Плотностей пока нет<span>Данные поступают с бирж, подождите…</span></div>';
+    return;
+  }
+
+  list.sort((a, b) => b.first_seen - a.first_seen);
+  list.forEach(d => {
+    densities.set(d.id, d);
+    if (!symbolCards.has(d.symbol)) symbolCards.set(d.symbol, new Set());
+    symbolCards.get(d.symbol).add(d.id);
+  });
+
+  [...symbolCards.keys()].forEach(sym => {
+    getOrCreateCard(sym);
+    renderCard(sym);
+  });
+  reorderGrid();
+  updateCounter();
+}
+
+// ── Age ticker ─────────────────────────────────────────────────────────────
+setInterval(() => {
+  document.querySelectorAll('.d-age[data-ts]').forEach(el => {
+    el.textContent = fmtAge(parseFloat(el.dataset.ts));
+  });
+}, 10000);
+
+// ── WebSocket ──────────────────────────────────────────────────────────────
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+
+  ws.onopen = () => {
+    document.getElementById('status-dot').className = 'connected';
+    document.getElementById('status-text').textContent = 'Подключено';
+    ws._ping = setInterval(() => { if (ws.readyState === 1) ws.send('ping'); }, 30000);
+  };
+
+  ws.onmessage = ev => {
+    if (ev.data === 'pong') return;
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'initial_state')  handleInitial(msg.data);
+      if (msg.type === 'density_new')    handleNew(msg.data);
+      if (msg.type === 'density_update') handleUpdate(msg.data);
+      if (msg.type === 'density_remove') handleRemove(msg.data.id);
+    } catch (e) {}
+  };
+
+  ws.onclose = () => {
+    clearInterval(ws._ping);
+    document.getElementById('status-dot').className = '';
+    document.getElementById('status-text').textContent = 'Переподключение…';
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+// ── Settings UI ────────────────────────────────────────────────────────────
+const EXCHANGES = [
+  { key: 'binance', label: 'Binance', dot: 'dot-binance' },
+  { key: 'bybit',   label: 'Bybit',   dot: 'dot-bybit'   },
+  { key: 'okx',     label: 'OKX',     dot: 'dot-okx'     },
+  { key: 'gate',    label: 'Gate.io', dot: 'dot-gate'     },
+  { key: 'bitget',  label: 'Bitget',  dot: 'dot-bitget'  },
+];
+
+function buildSettingsUI() {
+  // Exchange rows
+  const ec = document.getElementById('exch-settings');
+  ec.innerHTML = '';
+  EXCHANGES.forEach(({ key, label, dot }) => {
+    const val = (settings.exchangeMins || {})[key] ?? DEFAULT_EXCHANGE_MINS[key] ?? 0;
+    const row = document.createElement('div');
+    row.className = 'sp-row';
+    row.innerHTML = `
+      <label class="sp-label">
+        <span class="exch-dot ${dot}"></span>${label}
+      </label>
+      <input class="sp-input" id="exch-${key}" type="number"
+             value="${val}" min="0" step="1000">
+      <span class="sp-unit">$</span>
+    `;
+    ec.appendChild(row);
+  });
+
+  // Symbol overrides
+  buildSymRows();
+}
+
+function buildSymRows() {
+  const container = document.getElementById('sym-overrides');
+  container.innerHTML = '';
+  Object.entries(settings.symbolMins || {}).forEach(([sym, val]) => {
+    appendSymRow(sym, val);
+  });
+}
+
+function appendSymRow(sym = '', val = 0) {
+  const row = document.createElement('div');
+  row.className = 'sym-row';
+  row.innerHTML = `
+    <input class="sym-name-input" type="text" placeholder="BTCUSDT" value="${sym}">
+    <input class="sym-val-input"  type="number" placeholder="50000" value="${val || ''}" min="0" step="1000">
+    <span class="sym-unit">$</span>
+    <button class="sym-del" title="Удалить">✕</button>
+  `;
+  row.querySelector('.sym-del').addEventListener('click', () => row.remove());
+  document.getElementById('sym-overrides').appendChild(row);
+}
+
+function collectSettings() {
+  const exchangeMins = {};
+  EXCHANGES.forEach(({ key }) => {
+    const el = document.getElementById(`exch-${key}`);
+    exchangeMins[key] = el ? Math.max(0, parseInt(el.value) || 0) : DEFAULT_EXCHANGE_MINS[key];
+  });
+
+  const symbolMins = {};
+  document.querySelectorAll('#sym-overrides .sym-row').forEach(row => {
+    const sym = row.querySelector('.sym-name-input').value.trim().toUpperCase();
+    const val = Math.max(0, parseInt(row.querySelector('.sym-val-input').value) || 0);
+    if (sym) symbolMins[sym] = val;
+  });
+
+  return { exchangeMins, symbolMins };
+}
+
+function applyAndClose(newSettings) {
+  settings = newSettings;
+  saveSettings();
+  // Re-render all cards with new filter
+  [...symbolCards.keys()].forEach(sym => renderCard(sym));
+  updateCounter();
+  closeSettings();
+}
+
+function openSettings() {
+  buildSettingsUI();
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+document.getElementById('settings-btn').addEventListener('click', openSettings);
+document.getElementById('sp-close').addEventListener('click', closeSettings);
+document.getElementById('settings-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('settings-overlay')) closeSettings();
+});
+document.getElementById('sp-save').addEventListener('click', () => {
+  applyAndClose(collectSettings());
+});
+document.getElementById('sp-reset').addEventListener('click', () => {
+  settings = {
+    exchangeMins: { ...DEFAULT_EXCHANGE_MINS },
+    symbolMins:   { ...DEFAULT_SYMBOL_MINS },
+  };
+  buildSettingsUI();
+});
+document.getElementById('sp-add-sym').addEventListener('click', () => appendSymRow());
+
+// Sound button
+document.getElementById('sound-btn').addEventListener('click', function () {
+  soundOn = !soundOn;
+  this.classList.toggle('active', soundOn);
+  this.textContent = soundOn ? '🔔 Звук' : '🔕 Звук';
+  if (soundOn && !audioCtx)
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+});
+
+connect();
+</script>
+</body>
+</html>

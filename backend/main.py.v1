@@ -1,0 +1,68 @@
+import asyncio
+import json
+import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+from .screener.state import state
+from .screener.manager import start_screener
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(start_screener())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
+app = FastAPI(title="Crypto Screener", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.get("/")
+async def root():
+    return FileResponse(str(STATIC_DIR / "index.html"))
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
+    state.ws_clients.add(ws)
+    logger.info("Client connected. Total: %d", len(state.ws_clients))
+
+    # Send current state to newly connected client
+    initial = [d.to_dict() for d in state.active_densities.values()]
+    await ws.send_text(json.dumps({"type": "initial_state", "data": initial}))
+
+    try:
+        while True:
+            # Keep connection alive; client can send pings
+            msg = await ws.receive_text()
+            if msg == "ping":
+                await ws.send_text("pong")
+    except WebSocketDisconnect:
+        pass
+    finally:
+        state.ws_clients.discard(ws)
+        logger.info("Client disconnected. Total: %d", len(state.ws_clients))
+
+
+@app.get("/api/densities")
+async def get_densities():
+    return [d.to_dict() for d in state.active_densities.values()]

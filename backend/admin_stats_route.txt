@@ -1,0 +1,12 @@
+# Add this route next to the existing "@app.get('/api/admin/metrics')" in backend/main.py.
+# It reuses the same soft-admin gate pattern. Then restart the web service.
+
+@app.get("/api/admin/stats")
+async def admin_stats(email: str = Query(default="")):
+    # Soft admin gate — mirrors /api/admin/metrics. A supplied caller email must be
+    # an admin; an omitted email is allowed (non-secret aggregate business telemetry).
+    if email and not referral_service.is_admin(email):
+        return JSONResponse({"ok": False, "error": "forbidden"}, status_code=403)
+    from .admin_stats import gather_stats
+    import asyncio as _aio
+    return JSONResponse(await _aio.to_thread(gather_stats))

@@ -1,0 +1,258 @@
+"""
+ScreenerManager: starts all exchange connectors, runs detection loop,
+broadcasts events to connected WebSocket clients.
+"""
+import asyncio
+import json
+import logging
+import time
+
+from ..config import config
+from ..database import upsert_density, mark_density_removed, cleanup_old_history, init_db
+from .state import state, make_density
+from .density_detector import detect_densities
+from .exchanges.binance import BinanceExchange, fetch_usdt_futures_symbols
+from .exchanges.bybit import BybitExchange, fetch_bybit_symbols
+from .exchanges.okx import OKXExchange, fetch_okx_info
+from .exchanges.gate import GateExchange, fetch_gate_info, fetch_gate_symbols
+from .exchanges.bitget import BitgetExchange, fetch_bitget_symbols
+
+logger = logging.getLogger(__name__)
+
+
+# ── callbacks ────────────────────────────────────────────────────────────────
+
+async def _on_trade(exchange: str, symbol: str, vol_usd: float):
+    pass  # volume tracking removed; trades still subscribed for potential future use
+
+
+async def _on_depth(exchange: str, symbol: str,
+                    bids: dict[float, float], asks: dict[float, float]):
+    key = f"{exchange}:{symbol}"
+    state.orderbooks[key] = {"bids": bids, "asks": asks, "ts": time.time()}
+
+
+# ── broadcast ────────────────────────────────────────────────────────────────
+
+async def _broadcast(msg: dict):
+    if not state.ws_clients:
+        return
+    text = json.dumps(msg)
+    dead = set()
+    for ws in list(state.ws_clients):
+        try:
+            await ws.send_text(text)
+        except Exception:
+            dead.add(ws)
+    state.ws_clients -= dead
+
+
+# ── detection loop ────────────────────────────────────────────────────────────
+
+async def _detection_loop():
+    last_cleanup = time.time()
+    while True:
+        await asyncio.sleep(config.DETECTION_INTERVAL)
+        try:
+            await _run_detection()
+        except Exception as e:
+            logger.error("Detection error: %s", e)
+
+        if time.time() - last_cleanup > config.DB_CLEANUP_INTERVAL:
+            await cleanup_old_history(config.DB_HISTORY_TTL)
+            last_cleanup = time.time()
+
+
+def _find_match(raw: dict, scope: dict[str, object], tol_pct: float = 0.3) -> str | None:
+    """Find the closest existing density matching raw on same side within tol_pct."""
+    best_id, best_dist = None, float("inf")
+    for eid, ed in scope.items():
+        if ed.side != raw["side"]:
+            continue
+        dist = abs(ed.price - raw["price"]) / raw["price"]
+        if dist < tol_pct / 100 and dist < best_dist:
+            best_id, best_dist = eid, dist
+    return best_id
+
+
+async def _run_detection():
+    now = time.time()
+
+    pairs: set[tuple[str, str]] = set()
+    for key in state.orderbooks:
+        exch, sym = key.split(":", 1)
+        pairs.add((exch, sym))
+
+    for exchange, symbol in pairs:
+        book = state.orderbooks.get(f"{exchange}:{symbol}")
+        if not book:
+            continue
+
+        raw_list = detect_densities(
+            exchange=exchange,
+            symbol=symbol,
+            bids=book["bids"],
+            asks=book["asks"],
+            range_pct=config.DENSITY_RANGE_PCT,
+            multiplier=config.DENSITY_MULTIPLIER,
+            min_usd=config.min_density_usd(symbol, exchange),
+            near_levels=config.NEAR_LEVELS,
+            near_levels_for_avg=(exchange == "bybit"),
+        )
+
+        active_scope  = {k: v for k, v in state.active_densities.items()
+                         if v.exchange == exchange and v.symbol == symbol}
+        pending_scope = {k: v for k, v in state.pending_densities.items()
+                         if v.exchange == exchange and v.symbol == symbol}
+
+        matched_active:  set[str] = set()
+        matched_pending: set[str] = set()
+
+        for raw in raw_list:
+            # 1. Try to match against active
+            aid = _find_match(raw, active_scope)
+            if aid:
+                d = state.active_densities[aid]
+                d.price          = raw["price"]
+                d.volume_usd     = raw["volume_usd"]
+                d.pct_from_price = raw["pct_from_price"]
+                d.three_min_vol  = raw.get("avg_level_usd", 0)
+                d.last_seen      = now
+                matched_active.add(aid)
+                await upsert_density(d.to_dict())
+                await _broadcast({"type": "density_update", "data": d.to_dict()})
+                continue
+
+            # 2. Try to match against pending
+            pid = _find_match(raw, pending_scope)
+            if pid:
+                d = state.pending_densities[pid]
+                d.price          = raw["price"]
+                d.volume_usd     = raw["volume_usd"]
+                d.pct_from_price = raw["pct_from_price"]
+                d.three_min_vol  = raw.get("avg_level_usd", 0)
+                d.last_seen      = now
+                matched_pending.add(pid)
+                continue
+
+            # 3. Completely new — goes into pending
+            nd = make_density(
+                symbol=raw["symbol"], exchange=raw["exchange"],
+                side=raw["side"], price=raw["price"],
+                volume_usd=raw["volume_usd"], pct=raw["pct_from_price"],
+                three_min_vol=raw.get("avg_level_usd", 0),
+            )
+            state.pending_densities[nd.id] = nd
+            matched_pending.add(nd.id)
+
+        # Remove active densities that vanished
+        for eid in list(active_scope):
+            if eid not in matched_active:
+                state.active_densities.pop(eid, None)
+                await mark_density_removed(eid)
+                await _broadcast({"type": "density_remove", "data": {"id": eid}})
+
+        # Remove pending densities that vanished before confirmation
+        for eid in list(pending_scope):
+            if eid not in matched_pending:
+                state.pending_densities.pop(eid, None)
+
+        # Promote pending → active after MIN_AGE seconds (with MM distance+volume filter)
+        ready_map = {
+            eid: state.pending_densities[eid]
+            for eid in matched_pending
+            if (d := state.pending_densities.get(eid))
+            and (now - d.first_seen) >= config.DENSITY_MIN_AGE_SEC
+        }
+
+        for eid, d in ready_map.items():
+            opposite = "ask" if d.side == "bid" else "bid"
+            counterparts = [v for v in ready_map.values() if v.side == opposite]
+            counterparts += [v for v in active_scope.values() if v.side == opposite]
+
+            is_mm = False
+            for cp in counterparts:
+                # Condition 1: distances from price differ by ≤ MM_DISTANCE_DIFF_PCT
+                dist_diff = abs(abs(d.pct_from_price) - abs(cp.pct_from_price))
+                if dist_diff > config.MM_DISTANCE_DIFF_PCT:
+                    continue
+                # Condition 2: opposite sides (guaranteed by filter above)
+                # Condition 3: volumes within MM_VOLUME_RATIO (20%)
+                vol_ratio = max(d.volume_usd, cp.volume_usd) / max(min(d.volume_usd, cp.volume_usd), 1)
+                if vol_ratio <= config.MM_VOLUME_RATIO:
+                    is_mm = True
+                    break
+
+            if is_mm:
+                logger.debug("MM suppressed %s %s %s %.0f$ pct=%.2f%%",
+                             exchange, symbol, d.side, d.volume_usd, d.pct_from_price)
+                continue
+
+            state.pending_densities.pop(eid, None)
+            state.active_densities[eid] = d
+            await upsert_density(d.to_dict())
+            await _broadcast({"type": "density_new", "data": d.to_dict()})
+            logger.debug("CONFIRMED %s %s %s %.0f$", exchange, symbol, d.side, d.volume_usd)
+
+
+# ── startup ──────────────────────────────────────────────────────────────────
+
+async def start_screener():
+    await init_db()
+    logger.info("Fetching symbol lists…")
+
+    # Master list from Binance futures
+    binance_syms = await fetch_usdt_futures_symbols()
+    binance_set = set(binance_syms) - config.EXCLUDED_SYMBOLS
+    binance_syms = sorted(binance_set)
+    logger.info("Binance futures symbols: %d", len(binance_syms))
+
+    async def get_intersection(fetch_fn, name: str) -> list[str]:
+        try:
+            syms = await fetch_fn()
+            common = sorted(binance_set & syms)
+            logger.info("[%s] %d symbols in common with Binance", name, len(common))
+            return common
+        except Exception as e:
+            logger.warning("[%s] symbol fetch failed: %s — skipping exchange", name, e)
+            return []
+
+    bybit_syms = await get_intersection(fetch_bybit_symbols, "bybit")
+    bitget_syms = await get_intersection(fetch_bitget_symbols, "bitget")
+
+    # Fetch contract multipliers
+    try:
+        okx_info = await fetch_okx_info()
+        okx_syms = sorted(binance_set & set(okx_info.keys()))
+        logger.info("[okx] %d symbols", len(okx_syms))
+    except Exception as e:
+        logger.warning("[okx] info fetch failed: %s", e)
+        okx_info, okx_syms = {}, []
+
+    try:
+        gate_qt = await fetch_gate_info()
+        gate_syms_all = await fetch_gate_symbols()
+        gate_syms = sorted(binance_set & gate_syms_all)
+        logger.info("[gate] %d symbols", len(gate_syms))
+    except Exception as e:
+        logger.warning("[gate] info fetch failed: %s", e)
+        gate_qt, gate_syms = {}, []
+
+    # Instantiate connectors
+    connectors = []
+    if binance_syms:
+        connectors.append(BinanceExchange(binance_syms, _on_trade, _on_depth))
+    if bybit_syms:
+        connectors.append(BybitExchange(bybit_syms, _on_trade, _on_depth))
+    if okx_syms:
+        connectors.append(OKXExchange(okx_syms, _on_trade, _on_depth, ct_vals=okx_info))
+    if gate_syms:
+        connectors.append(GateExchange(gate_syms, _on_trade, _on_depth, qt_mult=gate_qt))
+    if bitget_syms:
+        connectors.append(BitgetExchange(bitget_syms, _on_trade, _on_depth))
+
+    logger.info("Starting %d exchange connectors…", len(connectors))
+
+    tasks = [asyncio.create_task(c.start()) for c in connectors]
+    tasks.append(asyncio.create_task(_detection_loop()))
+    await asyncio.gather(*tasks)

@@ -1,0 +1,55 @@
+☄️☄️☄️ 28.05.2026
+
+⏰ 10:00
+✅ LAB3LUSDT: Gate (S) 1️⃣
+✅ LAB3SUSDT: Gate (S) 1️⃣
+✅ OKB3LUSDT: Gate (S) 1️⃣
+✅ OKB3SUSDT: Gate (S) 1️⃣
+✅ WALLIUSDT: MEXC (S), Kucoin (S), BingX (S), HTX (S) 1️⃣
+
+⏰ 12:00
+✅ AMATUSDT: OKX (F)
+✅ NCSKIBMR2USDUSDT: BingX (F) 1️⃣
+✅ NCSKINFQ2USDUSDT: BingX (F) 1️⃣
+✅ PRESPCXUSDT: BitGet (S) 1️⃣
+✅ UNIONUSDT: Kucoin (S)
+
+⏰ 12:15
+✅ DELLUSDT: OKX (F)
+
+⏰ 12:28
+✅ DELLSTOCKUSDT: MEXC (F) 1️⃣
+
+⏰ 12:30
+✅ CTRUSDT: Binance (F)
+✅ VRTUSDT: OKX (F)
+
+⏰ 13:00
+✅ CLAWUSDT: MEXC (S) 1️⃣
+✅ OPENAIUSDT: Aster (F)
+
+⏰ 13:30
+✅ CTRUSDT: XT (F)
+
+⏰ 16:00
+✅ QAITUSDT: Gate (S), Kucoin (S) 1️⃣
+
+⏰ 16:30
+✅ CTRUSDT: Aster (F)
+
+⏰ 17:00
+✅ 光源USDT: Bitmart (S) 1️⃣
+
+⏰ 17:10
+✅ QAITUSDT: MEXC (F)
+
+⏰ 18:20
+✅ QAIT_USDT: Gate (S)
+
+⏰ 18:30
+✅ QAITUSDT: MEXC (S)
+
+⏰ 07:00
+✅ STOCUSDT: XT (S)
+
+*Time zone: UTC+3 (Moscow)

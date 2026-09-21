@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b14">
+  <meta name="description" content="Crypto Screener — a fast workspace for crypto market analysis.">
+  <link rel="canonical" href="https://cryptoscreener.live/">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <title>Crypto Screener</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070a12;
+      --panel: rgba(17, 22, 36, .88);
+      --line: rgba(160, 170, 205, .16);
+      --text: #f7f8ff;
+      --muted: #a6adc4;
+      --violet: #8b5cf6;
+      --green: #30d98b;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      overflow: hidden;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 52% -15%, rgba(113, 68, 238, .24), transparent 36rem),
+        radial-gradient(circle at 8% 58%, rgba(48, 159, 255, .08), transparent 28rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .14;
+      background-image:
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: linear-gradient(to bottom, black, transparent 80%);
+    }
+    .wrap { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+    .nav {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      position: relative;
+      z-index: 10;
+    }
+    .brand {
+      color: white;
+      text-decoration: none;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -.045em;
+      white-space: nowrap;
+    }
+    .brand span { color: #9d70ff; }
+    .language {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 10px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgba(15, 19, 31, .82);
+      backdrop-filter: blur(14px);
+    }
+    .language svg { width: 16px; height: 16px; color: #a87cff; flex: 0 0 auto; }
+    .language select {
+      min-width: 126px;
+      border: 0;
+      outline: 0;
+      color: #eef0fb;
+      background: transparent;
+      font: 750 12px/1 inherit;
+      cursor: pointer;
+    }
+    .language option { color: #eef0fb; background: #131725; }
+    .hero {
+      height: calc(100svh - 64px);
+      padding: clamp(20px, 3.2vh, 34px) 0 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0 auto clamp(8px, 1.3vh, 13px);
+      font-size: clamp(39px, 5.2vw, 68px);
+      line-height: .99;
+      letter-spacing: -.062em;
+      text-wrap: balance;
+    }
+    h1 em {
+      display: inline-block;
+      font-style: normal;
+      color: transparent;
+      background: linear-gradient(100deg, #ffffff 7%, #b99cff 58%, #65c8ff 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+    }
+    .lead {
+      max-width: 730px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: clamp(14px, 1.45vw, 18px);
+      text-wrap: balance;
+    }
+    .access {
+      width: min(660px, 100%);
+      margin: clamp(14px, 2.2vh, 23px) auto 0;
+      padding: 7px 7px 7px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border: 1px solid rgba(152,118,255,.34);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: 0 18px 55px rgba(28, 12, 77, .3), inset 0 1px rgba(255,255,255,.04);
+      text-align: left;
+    }
+    .access-copy { flex: 1; min-width: 0; }
+    .access-label {
+      color: #858da6;
+      font-size: 10px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+    }
+    .access-url {
+      display: block;
+      margin-top: 1px;
+      font-size: clamp(15px, 1.7vw, 18px);
+      font-weight: 850;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cta {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 17px;
+      border-radius: 11px;
+      color: white;
+      background: linear-gradient(135deg, #8e60fa, #6742df);
+      box-shadow: 0 11px 28px rgba(108,64,228,.34);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 850;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 15px 34px rgba(108,64,228,.46); }
+    .cta svg { width: 16px; height: 16px; }
+    .product-shot {
+      width: min(1040px, 100%, calc((100svh - 335px) * 1.7778));
+      min-height: 0;
+      margin: clamp(15px, 2.4vh, 25px) auto 0;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(150,118,255,.32);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(142,96,250,.22), rgba(20,24,39,.68) 28%, rgba(74,198,255,.12));
+      box-shadow: 0 28px 80px rgba(0,0,0,.54), 0 0 70px rgba(111,70,232,.11);
+    }
+    .shot-bar {
+      height: 28px;
+      min-height: 28px;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #838ba4;
+      font-size: 9px;
+      font-weight: 750;
+    }
+    .shot-bar strong { color: #afb6ca; font: inherit; }
+    .dots { display: flex; gap: 5px; }
+    .dots i { width: 6px; height: 6px; border-radius: 50%; background: #343b50; }
+    .dots i:first-child { background: #8d5df4; }
+    .product-shot img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 11px;
+      background: #080b13;
+    }
+    @media (max-height: 760px) and (min-width: 621px) {
+      .hero { padding-top: 16px; }
+      h1 { font-size: clamp(36px, 4.6vw, 57px); }
+      .lead { font-size: 14px; }
+      .access { margin-top: 13px; }
+      .product-shot { width: min(880px, 86%, calc((100svh - 380px) * 1.7778)); margin-top: 14px; }
+    }
+    @media (max-width: 620px) {
+      body { overflow-y: auto; }
+      .wrap { width: min(100% - 24px, 1180px); }
+      .nav { height: 58px; gap: 8px; }
+      .brand { font-size: 15px; }
+      .language { height: 34px; padding: 0 7px; gap: 4px; }
+      .language select { min-width: 74px; width: 74px; font-size: 11px; }
+      .hero { min-height: calc(100svh - 58px); height: auto; padding: 28px 0 10px; }
+      h1 { font-size: clamp(35px, 10.5vw, 45px); overflow-wrap: anywhere; }
+      .lead { font-size: 14px; }
+      .access { margin-top: 18px; padding: 13px; align-items: stretch; flex-direction: column; gap: 11px; }
+      .cta { width: 100%; }
+      .product-shot { margin-top: 20px; padding: 4px; border-radius: 13px; }
+      .shot-bar { height: 24px; min-height: 24px; }
+      .shot-bar strong { display: none; }
+      .product-shot img { border-radius: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .cta { transition: none; } }
+  </style>
+  <!-- Meta Pixel Code -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '4498140553789390');
+    fbq('track', 'PageView');
+  </script>
+  <!-- End Meta Pixel Code -->
+</head>
+<body>
+  <noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=4498140553789390&amp;ev=PageView&amp;noscript=1"
+  alt=""></noscript>
+  <header class="wrap nav">
+    <a class="brand" href="https://cryptoscreener.site" aria-label="Crypto Screener">CRYPTO <span>SCREENER</span></a>
+    <label class="language">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.5 3.6 5.5 3.6 9S14.4 18.5 12 21c-2.4-2.5-3.6-5.5-3.6-9S9.6 5.5 12 3Z"/></svg>
+      <select id="language-select" aria-label="Language">
+        <option value="en">EN · English</option>
+        <option value="es">ES · Español</option>
+        <option value="ru">RU · Русский</option>
+        <option value="uk">UK · Українська</option>
+        <option value="de">DE · Deutsch</option>
+        <option value="fr">FR · Français</option>
+        <option value="pt">PT · Português</option>
+        <option value="tr">TR · Türkçe</option>
+        <option value="zh">ZH · 中文</option>
+        <option value="ja">JA · 日本語</option>
+      </select>
+    </label>
+  </header>
+
+  <main class="hero wrap">
+    <h1 data-i18n-html="title">The whole market.<br><em>One workspace.</em></h1>
+    <p class="lead" data-i18n="lead">Charts, market screener, cross-exchange arbitrage, listings and formations — everything you need to analyze the market in one fast interface.</p>
+
+    <div class="access">
+      <div class="access-copy">
+        <div class="access-label" data-i18n="available">Crypto Screener is available at</div>
+        <span class="access-url">cryptoscreener.site</span>
+      </div>
+      <a class="cta" href="https://cryptoscreener.site">
+        <span data-i18n="open">Open screener</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <div class="product-shot">
+      <div class="shot-bar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <strong data-i18n="workspace">Crypto Screener workspace</strong>
+        <span>cryptoscreener.site</span>
+      </div>
+      <img src="preview-formations.png" alt="Live Crypto Screener Formations interface" width="1280" height="720">
+    </div>
+  </main>
+
+  <script>
+    const translations = {
+      en: {
+        title: 'The whole market.<br><em>One workspace.</em>',
+        lead: 'Charts, market screener, cross-exchange arbitrage, listings and formations — everything you need to analyze the market in one fast interface.',
+        available: 'Crypto Screener is available at', open: 'Open screener', workspace: 'Crypto Screener workspace'
+      },
+      es: {
+        title: 'Todo el mercado.<br><em>Un solo espacio.</em>',
+        lead: 'Gráficos, screener, arbitraje entre exchanges, listados y formaciones: todo lo necesario para analizar el mercado en una interfaz rápida.',
+        available: 'Crypto Screener está disponible en', open: 'Abrir screener', workspace: 'Espacio de trabajo Crypto Screener'
+      },
+      ru: {
+        title: 'Рынок целиком.<br><em>В одном пространстве.</em>',
+        lead: 'Графики, скринер, межбиржевой арбитраж, листинги и формации — всё необходимое для анализа рынка в одном быстром интерфейсе.',
+        available: 'Crypto Screener доступен по адресу', open: 'Открыть скринер', workspace: 'Рабочее пространство Crypto Screener'
+      },
+      uk: {
+        title: 'Увесь ринок.<br><em>В одному просторі.</em>',
+        lead: 'Графіки, скринер, міжбіржовий арбітраж, лістинги та формації — усе необхідне для аналізу ринку в одному швидкому інтерфейсі.',
+        available: 'Crypto Screener доступний за адресою', open: 'Відкрити скринер', workspace: 'Робочий простір Crypto Screener'
+      },
+      de: {
+        title: 'Der gesamte Markt.<br><em>In einem Workspace.</em>',
+        lead: 'Charts, Markt-Screener, börsenübergreifende Arbitrage, Listings und Formationen — alles für die Marktanalyse in einer schnellen Oberfläche.',
+        available: 'Crypto Screener ist verfügbar unter', open: 'Screener öffnen', workspace: 'Crypto Screener Workspace'
+      },
+      fr: {
+        title: 'Tout le marché.<br><em>Dans un seul espace.</em>',
+        lead: 'Graphiques, screener, arbitrage inter-exchanges, listings et formations — tout le nécessaire pour analyser le marché dans une interface rapide.',
+        available: 'Crypto Screener est disponible sur', open: 'Ouvrir le screener', workspace: 'Espace de travail Crypto Screener'
+      },
+      pt: {
+        title: 'Todo o mercado.<br><em>Em um só espaço.</em>',
+        lead: 'Gráficos, screener, arbitragem entre exchanges, listagens e formações — tudo para analisar o mercado em uma interface rápida.',
+        available: 'Crypto Screener está disponível em', open: 'Abrir screener', workspace: 'Espaço de trabalho Crypto Screener'
+      },
+      tr: {
+        title: 'Tüm piyasa.<br><em>Tek bir çalışma alanında.</em>',
+        lead: 'Grafikler, piyasa tarayıcı, borsalar arası arbitraj, listelemeler ve formasyonlar — hızlı bir arayüzde piyasa analizi için gereken her şey.',
+        available: 'Crypto Screener şu adreste', open: 'Tarayıcıyı aç', workspace: 'Crypto Screener çalışma alanı'
+      },
+      zh: {
+        title: '整个市场。<br><em>尽在一个工作空间。</em>',
+        lead: '图表、市场筛选器、跨交易所套利、上币信息和形态分析——一个快速界面，满足你的市场分析需求。',
+        available: 'Crypto Screener 访问地址', open: '打开筛选器', workspace: 'Crypto Screener 工作空间'
+      },
+      ja: {
+        title: '市場のすべてを、<br><em>ひとつの画面に。</em>',
+        lead: 'チャート、スクリーナー、取引所間アービトラージ、上場情報、フォーメーション分析を、ひとつの高速な画面に集約。',
+        available: 'Crypto Screener のアクセス先', open: 'スクリーナーを開く', workspace: 'Crypto Screener ワークスペース'
+      }
+    };
+
+    const selector = document.getElementById('language-select');
+    function setLanguage(language) {
+      const lang = translations[language] ? language : 'en';
+      const text = translations[lang];
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+      document.querySelectorAll('[data-i18n]').forEach(node => {
+        if (text[node.dataset.i18n]) node.textContent = text[node.dataset.i18n];
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach(node => {
+        if (text[node.dataset.i18nHtml]) node.innerHTML = text[node.dataset.i18nHtml];
+      });
+      selector.value = lang;
+      localStorage.setItem('cs_landing_lang', lang);
+    }
+    selector.addEventListener('change', event => setLanguage(event.target.value));
+    const saved = localStorage.getItem('cs_landing_lang');
+    const preferred = (navigator.language || 'en').slice(0, 2).toLowerCase();
+    setLanguage(saved || (translations[preferred] ? preferred : 'en'));
+  </script>
+</body>
+</html>

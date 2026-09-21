@@ -1,0 +1,111 @@
+import asyncio
+import json
+import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+from .screener.state import state
+from .screener.manager import start_screener
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(start_screener())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
+app = FastAPI(title="Crypto Screener", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.get("/")
+async def root():
+    return FileResponse(str(STATIC_DIR / "index.html"))
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
+    state.ws_clients.add(ws)
+    logger.info("Client connected. Total: %d", len(state.ws_clients))
+
+    # Send current state to newly connected client
+    initial = [d.to_dict() for d in state.active_densities.values()]
+    await ws.send_text(json.dumps({"type": "initial_state", "data": initial}))
+
+    try:
+        while True:
+            # Keep connection alive; client can send pings
+            msg = await ws.receive_text()
+            if msg == "ping":
+                await ws.send_text("pong")
+    except WebSocketDisconnect:
+        pass
+    finally:
+        state.ws_clients.discard(ws)
+        logger.info("Client disconnected. Total: %d", len(state.ws_clients))
+
+
+@app.get("/api/densities")
+async def get_densities():
+    return [d.to_dict() for d in state.active_densities.values()]
+
+
+@app.get("/api/debug")
+async def debug_state():
+    import statistics
+    from .config import config
+    result = {}
+    books_count = len(state.orderbooks)
+    result["orderbooks"] = books_count
+    result["active_densities"] = len(state.active_densities)
+    result["pending_densities"] = len(state.pending_densities)
+
+    samples = []
+    for key, book in list(state.orderbooks.items())[:5]:
+        bids = book.get("bids", {})
+        asks = book.get("asks", {})
+        if not bids and not asks:
+            continue
+        best_bid = max(bids.keys()) if bids else None
+        best_ask = min(asks.keys()) if asks else None
+        cur = best_bid if best_ask is None else (best_ask if best_bid is None else (best_bid + best_ask) / 2)
+        lo = cur * (1 - config.DENSITY_RANGE_PCT / 100)
+        hi = cur * (1 + config.DENSITY_RANGE_PCT / 100)
+        bid_range = {p: v for p, v in bids.items() if lo <= p <= cur * 1.001}
+        ask_range = {p: v for p, v in asks.items() if cur * 0.999 <= p <= hi}
+        bid_near = dict(sorted(bid_range.items(), reverse=True)[:config.NEAR_LEVELS])
+        ask_near = dict(sorted(ask_range.items())[:config.NEAR_LEVELS])
+        med_bid = statistics.median(bid_near.values()) if bid_near else 0
+        med_ask = statistics.median(ask_near.values()) if ask_near else 0
+        thr_bid = max(med_bid * config.DENSITY_MULTIPLIER, config.MIN_DENSITY_USD)
+        thr_ask = max(med_ask * config.DENSITY_MULTIPLIER, config.MIN_DENSITY_USD)
+        samples.append({
+            "key": key,
+            "price": round(cur, 4),
+            "bid_levels": len(bid_near),
+            "ask_levels": len(ask_near),
+            "median_bid_usd": round(med_bid),
+            "median_ask_usd": round(med_ask),
+            "threshold_bid_usd": round(thr_bid),
+            "threshold_ask_usd": round(thr_ask),
+        })
+    result["samples"] = samples
+    return result

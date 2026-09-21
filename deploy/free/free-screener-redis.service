@@ -1,0 +1,15 @@
+[Unit]
+Description=Free Screener isolated Redis
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/redis-server --bind 127.0.0.1 --port 6381 --dir /opt/free-screener/runtime/redis --dbfilename dump.rdb --appendonly yes --appendfilename appendonly.aof --protected-mode yes
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+

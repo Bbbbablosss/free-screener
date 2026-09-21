@@ -1,0 +1,817 @@
+"""
+ScreenerManager: starts all exchange connectors, runs detection loop,
+broadcasts events to connected WebSocket clients.
+"""
+import asyncio
+import json
+import logging
+import time
+
+from ..config import config
+from ..database import (upsert_density, mark_density_removed, cleanup_old_history, init_db,
+                        bulk_upsert_densities, bulk_mark_removed, load_active_densities)
+from .state import state, make_density, Density
+from .density_detector import detect_densities
+from .splash_detector import splash_detector, STARTUP_WARMUP
+from .exchanges.binance import (BinanceExchange, fetch_usdt_futures_symbols, BinanceSpotExchange,
+                                 fetch_binance_spot_symbols,
+                                 fetch_usdt_futures_symbols_all, fetch_binance_spot_symbols_all)
+from .exchanges.bybit import (BybitExchange, fetch_bybit_symbols, BybitSpotExchange,
+                               fetch_bybit_spot_symbols,
+                               fetch_bybit_all_symbols, fetch_bybit_all_spot_symbols)
+from .exchanges.okx import (OKXExchange, fetch_okx_info, OKXSpotExchange, fetch_okx_spot_symbols,
+                             fetch_okx_all_info, fetch_okx_all_spot_symbols)
+from .exchanges.gate import (GateExchange, fetch_gate_info, fetch_gate_symbols, GateSpotExchange,
+                              fetch_gate_spot_symbols,
+                              fetch_gate_all_info, fetch_gate_all_symbols, fetch_gate_all_spot_symbols)
+from .exchanges.bitget import (BitgetExchange, fetch_bitget_symbols, BitgetSpotExchange,
+                                fetch_bitget_spot_symbols,
+                                fetch_bitget_all_symbols, fetch_bitget_all_spot_symbols)
+
+logger = logging.getLogger(__name__)
+
+
+
+# ── callbacks ────────────────────────────────────────────────────────────────
+
+async def _on_trade(exchange: str, symbol: str, vol_usd: float):
+    pass  # volume tracking removed; trades still subscribed for potential future use
+
+
+async def _on_depth_perp(exchange: str, symbol: str,
+                         bids: dict[float, float], asks: dict[float, float]):
+    key = f"{exchange}:{symbol}:perp"
+    state.orderbooks[key] = {"bids": bids, "asks": asks, "ts": time.time()}
+
+
+async def _on_depth_spot(exchange: str, symbol: str,
+                         bids: dict[float, float], asks: dict[float, float]):
+    key = f"{exchange}:{symbol}:spot"
+    state.orderbooks[key] = {"bids": bids, "asks": asks, "ts": time.time()}
+
+
+# ── broadcast ────────────────────────────────────────────────────────────────
+
+async def _broadcast(msg: dict):
+    if not state.ws_clients:
+        return
+    text = json.dumps(msg)
+    dead = set()
+    for ws in list(state.ws_clients):
+        try:
+            await ws.send_text(text)
+        except Exception:
+            dead.add(ws)
+    state.ws_clients -= dead
+
+
+# ── detection loop ────────────────────────────────────────────────────────────
+
+async def _detection_loop():
+    last_cleanup = time.time()
+    _diag_counter = 0
+    while True:
+        await asyncio.sleep(config.DETECTION_INTERVAL)
+        _t0 = time.time()
+        try:
+            await _run_detection()
+        except Exception as e:
+            logger.error("Detection error: %s", e)
+        _elapsed = time.time() - _t0
+        _diag_counter += 1
+        # Periodic lightweight pct_from_price refresh — avoids flooding with full updates
+        if _diag_counter % 5 == 0:
+            pct_data = [{"id": d.id, "pct": round(d.pct_from_price, 3),
+                         "vol": round(d.volume_usd)}
+                        for d in state.active_densities.values()]
+            if pct_data:
+                await _broadcast({"type": "density_pct_batch", "data": pct_data})
+
+        if _diag_counter % 10 == 0:   # every ~20s
+            _now2 = time.time()
+            _ready = sum(1 for d in state.pending_densities.values()
+                         if (_now2 - d.first_seen) >= config.DENSITY_MIN_AGE_SEC)
+            logger.info("[detection] iter=%d elapsed=%.2fs books=%d active=%d pending=%d ready=%d",
+                        _diag_counter, _elapsed,
+                        len(state.orderbooks), len(state.active_densities),
+                        len(state.pending_densities), _ready)
+
+        if time.time() - last_cleanup > config.DB_CLEANUP_INTERVAL:
+            await cleanup_old_history(config.DB_HISTORY_TTL)
+            last_cleanup = time.time()
+
+
+def _find_match(raw: dict, scope: dict[str, object], tol_pct: float = 0.3) -> str | None:
+    """Find the closest existing density matching raw on same side within tol_pct."""
+    best_id, best_dist = None, float("inf")
+    for eid, ed in scope.items():
+        if ed.side != raw["side"]:
+            continue
+        dist = abs(ed.price - raw["price"]) / raw["price"]
+        if dist < tol_pct / 100 and dist < best_dist:
+            best_id, best_dist = eid, dist
+    return best_id
+
+
+MAX_PROMOTIONS_PER_CYCLE = 300   # cap initial burst; old densities promoted over ~3 cycles
+_perf_counter = 0
+
+
+async def _run_detection():
+    global _perf_counter
+    _perf_counter += 1
+    now = time.time()
+
+    STALE_SEC = 60
+
+    # Build per-key scopes ONCE — O(n)
+    active_by_key:  dict[str, dict] = {}
+    for eid, d in state.active_densities.items():
+        k = f"{d.exchange}:{d.symbol}:{d.market}"
+        active_by_key.setdefault(k, {})[eid] = d
+
+    pending_by_key: dict[str, dict] = {}
+    for eid, d in state.pending_densities.items():
+        k = f"{d.exchange}:{d.symbol}:{d.market}"
+        pending_by_key.setdefault(k, {})[eid] = d
+
+    # Collect all DB writes for the cycle — flush in ONE bulk transaction at the end
+    db_upserts:  list[dict] = []   # densities to upsert (active updates + new promotions)
+    db_removals: list[str]  = []   # density ids to mark removed
+    ws_events:   list[dict] = []   # websocket messages to broadcast after DB flush
+    _promotions_this_cycle = 0     # counter to cap the promotion burst
+
+    # Yield once at start so exchange callbacks can process incoming data,
+    # then run the full book scan without interruption (0.4s CPU burst is acceptable)
+    await asyncio.sleep(0)
+
+    for key, book in list(state.orderbooks.items()):
+        parts = key.split(":", 2)
+        if len(parts) == 3:
+            exchange, symbol, market = parts
+        else:
+            exchange, symbol, market = parts[0], parts[1], "perp"
+
+        if now - book.get("ts", 0) > STALE_SEC:
+            continue
+
+        min_usd = config.min_density_usd(symbol, exchange)
+
+        raw_list = detect_densities(
+            exchange=exchange,
+            symbol=symbol,
+            bids=book["bids"],
+            asks=book["asks"],
+            range_pct=config.DENSITY_RANGE_PCT,
+            multiplier=config.DENSITY_MULTIPLIER,
+            min_usd=min_usd,
+            near_levels=config.NEAR_LEVELS,
+            near_levels_for_avg=(exchange == "bybit"),
+        )
+
+        active_scope  = active_by_key.get(key, {})
+        pending_scope = pending_by_key.get(key, {})
+
+        matched_active:  set[str] = set()
+        matched_pending: set[str] = set()
+
+        for raw in raw_list:
+            # 1. Try to match against active
+            aid = _find_match(raw, active_scope)
+            if aid:
+                d = state.active_densities[aid]
+                # DB write only when price or volume changes significantly (pct_from_price
+                # changes every tick due to market movement — skip to reduce DB writes)
+                d.price          = raw["price"]
+                d.volume_usd     = raw["volume_usd"]
+                d.pct_from_price = raw["pct_from_price"]
+                d.three_min_vol  = raw.get("avg_level_usd", 0)
+                d.last_seen      = now
+                matched_active.add(aid)
+                continue
+
+            # 2. Try to match against pending
+            pid = _find_match(raw, pending_scope)
+            if pid:
+                d = state.pending_densities[pid]
+                d.price          = raw["price"]
+                d.volume_usd     = raw["volume_usd"]
+                d.pct_from_price = raw["pct_from_price"]
+                d.three_min_vol  = raw.get("avg_level_usd", 0)
+                d.last_seen      = now
+                matched_pending.add(pid)
+                continue
+
+            # 3. Completely new — goes into pending
+            nd = make_density(
+                symbol=raw["symbol"], exchange=raw["exchange"],
+                market=market,
+                side=raw["side"], price=raw["price"],
+                volume_usd=raw["volume_usd"], pct=raw["pct_from_price"],
+                three_min_vol=raw.get("avg_level_usd", 0),
+                binance_f=raw["symbol"] in state.binance_f_symbols,
+            )
+            state.pending_densities[nd.id] = nd
+            matched_pending.add(nd.id)
+
+        # Remove active densities that vanished
+        for eid in list(active_scope):
+            if eid not in matched_active:
+                d = state.active_densities.get(eid)
+                if d:
+                    d.miss_count += 1
+                    if d.miss_count >= 3:   # grace: remove only after 3 consecutive missed cycles (~6s)
+                        state.active_densities.pop(eid, None)
+                        db_removals.append(eid)
+                        ws_events.append({"type": "density_remove", "data": {"id": eid}})
+            else:
+                # Reset miss counter when found again
+                d = state.active_densities.get(eid)
+                if d:
+                    d.miss_count = 0
+
+        # Remove pending densities that vanished before confirmation
+        for eid in list(pending_scope):
+            if eid not in matched_pending:
+                state.pending_densities.pop(eid, None)
+
+        # Promote pending → active after MIN_AGE seconds (capped per cycle to avoid burst blocking)
+        for eid in list(matched_pending):
+            if _promotions_this_cycle >= MAX_PROMOTIONS_PER_CYCLE:
+                break   # remaining promotions handled in the next cycle
+            d = state.pending_densities.get(eid)
+            if not d or (now - d.first_seen) < config.DENSITY_MIN_AGE_SEC:
+                continue
+            state.pending_densities.pop(eid, None)
+            state.active_densities[eid] = d
+            db_upserts.append(d.to_dict())
+            ws_events.append({"type": "density_new", "data": d.to_dict()})
+            _promotions_this_cycle += 1
+            logger.debug("CONFIRMED %s %s %s %s %.0f$", exchange, symbol, market, d.side, d.volume_usd)
+
+    _t_scan = time.time()
+
+    # ── Flush all DB writes in two bulk transactions (fast) ──────────────────
+    await bulk_upsert_densities(db_upserts)
+    await bulk_mark_removed(db_removals)
+
+    _t_db = time.time()
+
+    # ── Broadcast WS events ───────────────────────────────────────────────────
+    # Batch new + update events to avoid flooding the socket with thousands of individual messages
+    new_batch = [e["data"] for e in ws_events if e["type"] == "density_new"]
+    removes   = [e for e in ws_events if e["type"] == "density_remove"]
+
+    if new_batch:
+        await _broadcast({"type": "density_new_batch", "data": new_batch})
+    for evt in removes:
+        await _broadcast(evt)
+
+    _t_ws = time.time()
+    if _perf_counter % 10 == 0:
+        logger.info("[perf] scan=%.3fs db=%.3fs ws=%.3fs upserts=%d removes=%d new=%d",
+                    _t_scan - now, _t_db - _t_scan, _t_ws - _t_db,
+                    len(db_upserts), len(db_removals), len(new_batch))
+
+
+# ── startup ──────────────────────────────────────────────────────────────────
+
+# Registry: list of (label, connector, task) – used by the watchdog
+_connector_registry: list[tuple[str, object, asyncio.Task]] = []
+
+
+_splash_task: asyncio.Task | None = None
+_vol_cache:   dict[str, float] = {}   # symbol -> 24h volume USD
+
+
+async def _refresh_vol_cache():
+    """Fetch 24h USDT volumes from all exchanges in parallel, update _vol_cache."""
+    global _vol_cache
+    import aiohttp as _aio
+    result: dict[str, float] = {}
+
+    async def _binance_f(s):
+        try:
+            async with s.get("https://fapi.binance.com/fapi/v1/ticker/24hr",
+                             timeout=_aio.ClientTimeout(total=12)) as r:
+                for t in await r.json():
+                    sym = t.get("symbol", "")
+                    if sym.endswith("USDT"):
+                        result[sym] = max(result.get(sym, 0), float(t.get("quoteVolume") or 0))
+        except Exception as e:
+            logger.debug("[vol] binance_f: %s", e)
+
+    async def _binance_spot(s):
+        try:
+            async with s.get("https://api.binance.com/api/v3/ticker/24hr",
+                             timeout=_aio.ClientTimeout(total=12)) as r:
+                for t in await r.json():
+                    sym = t.get("symbol", "")
+                    if sym.endswith("USDT"):
+                        result[sym] = result.get(sym, 0) + float(t.get("quoteVolume") or 0)
+        except Exception as e:
+            logger.debug("[vol] binance_spot: %s", e)
+
+    async def _bybit(s):
+        try:
+            async with s.get("https://api.bybit.com/v5/market/tickers?category=linear",
+                             timeout=_aio.ClientTimeout(total=12)) as r:
+                for t in ((await r.json()).get("result", {}).get("list") or []):
+                    sym = t.get("symbol", "")
+                    if sym.endswith("USDT"):
+                        v = float(t.get("turnover24h") or 0)
+                        if v > 0: result[sym] = max(result.get(sym, 0), v)
+        except Exception as e:
+            logger.debug("[vol] bybit: %s", e)
+
+    async def _okx(s):
+        try:
+            async with s.get("https://www.okx.com/api/v5/market/tickers?instType=SWAP",
+                             timeout=_aio.ClientTimeout(total=12)) as r:
+                for t in ((await r.json()).get("data") or []):
+                    inst = t.get("instId", "")
+                    if not inst.endswith("-USDT-SWAP"): continue
+                    sym = inst[:-len("-USDT-SWAP")] + "USDT"
+                    v = float(t.get("volCcy24h") or 0)  # already in USDT for linear swaps
+                    if v > 0: result[sym] = max(result.get(sym, 0), v)
+        except Exception as e:
+            logger.debug("[vol] okx: %s", e)
+
+    async def _gate(s):
+        try:
+            async with s.get("https://api.gateio.ws/api/v4/futures/usdt/tickers",
+                             timeout=_aio.ClientTimeout(total=12)) as r:
+                for t in (await r.json() or []):
+                    c = t.get("contract", "")
+                    if not c.endswith("_USDT"): continue
+                    sym = c.replace("_", "")   # AIN_USDT -> AINUSDT
+                    v = float(t.get("volume_24h_settle") or 0)
+                    if v > 0: result[sym] = max(result.get(sym, 0), v)
+        except Exception as e:
+            logger.debug("[vol] gate: %s", e)
+
+    async def _bitget(s):
+        try:
+            async with s.get("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES",
+                             timeout=_aio.ClientTimeout(total=12)) as r:
+                for t in ((await r.json()).get("data") or []):
+                    sym = t.get("symbol", "")
+                    if sym.endswith("USDT"):
+                        v = float(t.get("usdtVolume") or 0)
+                        if v > 0: result[sym] = max(result.get(sym, 0), v)
+        except Exception as e:
+            logger.debug("[vol] bitget: %s", e)
+
+    try:
+        connector = _aio.TCPConnector(resolver=_aio.ThreadedResolver())
+        async with _aio.ClientSession(connector=connector) as s:
+            await asyncio.gather(_binance_f(s), _binance_spot(s),
+                                 _bybit(s), _okx(s), _gate(s), _bitget(s))
+        if result:
+            _vol_cache = result
+            logger.info("[vol] cache updated: %d symbols", len(result))
+        else:
+            logger.warning("[vol] all fetches returned empty")
+    except Exception as e:
+        logger.error("[vol] refresh error: %s", e)
+
+
+async def restart_splash():
+    """Reset SplashDetector and restart the splash supervisor task (density loop unaffected)."""
+    global _splash_task
+    splash_detector.reset()
+    if _splash_task and not _splash_task.done():
+        _splash_task.cancel()
+        try:
+            await asyncio.wait_for(asyncio.shield(_splash_task), timeout=3.0)
+        except (asyncio.CancelledError, asyncio.TimeoutError, Exception):
+            pass
+    _splash_task = asyncio.create_task(_splash_supervisor())
+    logger.info("[splash] restarted — new task created")
+
+
+async def _splash_supervisor():
+    """Outer supervisor: keeps _splash_loop alive, restarts it after any crash."""
+    while True:
+        try:
+            await _splash_loop()
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.error("[splash] loop crashed, restarting in 5s: %s", e, exc_info=True)
+            await asyncio.sleep(5)
+
+
+async def _splash_loop():
+    """Every 1s: update futures prices, check thresholds, broadcast events."""
+    _tick = 0
+    # Kick off initial vol fetch immediately (non-blocking background task)
+    asyncio.create_task(_refresh_vol_cache())
+
+    while True:
+        await asyncio.sleep(1.0)
+        _tick += 1
+        try:
+            # 1. Update anchors from futures orderbooks only
+            for key, book in list(state.orderbooks.items()):
+                if not key.endswith(":perp"):
+                    continue
+                bids, asks = book.get("bids", {}), book.get("asks", {})
+                bb = float(max(bids.keys(), key=float)) if bids else None
+                ba = float(min(asks.keys(), key=float)) if asks else None
+                if bb is None and ba is None:
+                    continue
+                price = (bb + ba) / 2 if (bb and ba) else (bb or ba)
+                parts = key.split(":", 2)
+                if len(parts) != 3:
+                    continue
+                exchange, symbol, _ = parts
+                splash_detector.update(exchange, symbol, price)
+
+            # Refresh vol cache every 60s
+            if _tick % 60 == 0:
+                asyncio.create_task(_refresh_vol_cache())
+                wl = max(0, STARTUP_WARMUP - (time.time() - splash_detector._start))
+                logger.info("[splash] tick=%d tracked=%d warmup=%.0fs vol_cache=%d",
+                            _tick, len(splash_detector.last_price), wl, len(_vol_cache))
+
+            # 2. Fire checks — only when clients connected
+            if not state.ws_clients:
+                continue
+            events = []
+            for key in list(splash_detector.last_price.keys()):
+                parts = key.split(":", 1)
+                if len(parts) != 2:
+                    continue
+                exchange, symbol = parts
+                vol = _vol_cache.get(symbol, 0.0)
+                events.extend(splash_detector.check(exchange, symbol, vol))
+
+            if events:
+                await _broadcast({"type": "splash_new", "data": events})
+        except Exception as e:
+            logger.error("[splash] error: %s", e, exc_info=True)
+
+
+async def _exchange_watchdog():
+    """Every 30 s: log exchange health and auto-restart any dead connector tasks."""
+    global _connector_registry
+    while True:
+        await asyncio.sleep(30)
+        try:
+            now = time.time()
+
+            # ── per-exchange freshness stats ──────────────────────────────────
+            ex_stats: dict[str, dict] = {}
+            for key, book in list(state.orderbooks.items()):
+                exch = key.split(":")[0]
+                age  = now - book.get("ts", 0)
+                s    = ex_stats.setdefault(exch, {"fresh": 0, "stale": 0, "max_age": 0.0})
+                if age < 60:
+                    s["fresh"] += 1
+                else:
+                    s["stale"] += 1
+                s["max_age"] = max(s["max_age"], age)
+
+            for exch, s in sorted(ex_stats.items()):
+                flag = "✓" if s["stale"] == 0 else f"⚠ STALE={s['stale']}"
+                logger.info("[watchdog] %-12s  fresh=%d  stale=%d  oldest=%.0fs  %s",
+                            exch, s["fresh"], s["stale"], s["max_age"], flag)
+
+            # ── connector task health check + auto-restart ────────────────────
+            # Also force-restart connectors whose exchange has persistently stale books
+            stale_exchanges = {
+                exch for exch, s in ex_stats.items()
+                if s["max_age"] > 120 and
+                   s["stale"] / max(1, s["fresh"] + s["stale"]) > 0.05
+            }
+
+            new_reg: list[tuple[str, object, asyncio.Task]] = []
+            for label, connector, task in _connector_registry:
+                exch = label.split("/")[0]
+                force_restart = exch in stale_exchanges
+                if task.done() or force_restart:
+                    reason = "stale books" if force_restart and not task.done() else "task died"
+                    exc = None
+                    if task.done():
+                        try:
+                            exc = task.exception() if not task.cancelled() else "cancelled"
+                        except Exception:
+                            pass
+                    logger.warning("[watchdog] %s — restarting (%s, exc=%s)", label, reason, exc)
+                    if not task.done():
+                        task.cancel()
+                    connector._running = True
+                    new_task = asyncio.create_task(connector.start())
+                    new_reg.append((label, connector, new_task))
+                else:
+                    new_reg.append((label, connector, task))
+            _connector_registry[:] = new_reg
+
+        except Exception as e:
+            logger.error("[watchdog] error: %s", e)
+
+
+def _log_and_start(connectors: list) -> list[asyncio.Task]:
+    global _connector_registry
+    spot_types = (BinanceSpotExchange, BybitSpotExchange, OKXSpotExchange,
+                  GateSpotExchange, BitgetSpotExchange)
+    n_perp = sum(1 for c in connectors if not isinstance(c, spot_types))
+    n_spot = sum(1 for c in connectors if isinstance(c, spot_types))
+    logger.info("Starting %d exchange connectors (%d futures + %d spot)…",
+                len(connectors), n_perp, n_spot)
+
+    tasks = []
+    _connector_registry.clear()
+    for c in connectors:
+        mkt  = "spot" if isinstance(c, spot_types) else "perp"
+        label = f"{c.name}/{mkt}"
+        task  = asyncio.create_task(c.start())
+        tasks.append(task)
+        _connector_registry.append((label, c, task))
+
+    global _splash_task
+    tasks.append(asyncio.create_task(_detection_loop()))
+    _splash_task = asyncio.create_task(_splash_supervisor())
+    tasks.append(_splash_task)
+    tasks.append(asyncio.create_task(_exchange_watchdog()))
+    return tasks
+
+
+async def start_screener():
+    await init_db()
+    await _restore_from_db()
+    await _start_all_mode()
+
+
+async def _restore_from_db():
+    """Pre-populate active_densities from DB so clients see data immediately on restart."""
+    rows = await load_active_densities(max_age_sec=300)
+    if not rows:
+        logger.info("[restore] no recent densities in DB")
+        return
+    for r in rows:
+        d = Density(
+            id=r["id"], symbol=r["symbol"], exchange=r["exchange"],
+            market=r["market"], side=r["side"], price=r["price"],
+            volume_usd=r["volume_usd"], pct_from_price=r["pct_from_price"],
+            three_min_vol=r["three_min_vol"], first_seen=r["first_seen"],
+            last_seen=r["last_seen"], binance_f=r["binance_f"],
+            miss_count=0,
+        )
+        state.active_densities[d.id] = d
+    logger.info("[restore] loaded %d densities from DB", len(rows))
+
+
+async def _start_binance_only_mode():
+    logger.info("Fetching symbol lists (binance_only mode)…")
+
+    # Master list from Binance futures
+    binance_syms = await fetch_usdt_futures_symbols()
+    binance_set = set(binance_syms) - config.EXCLUDED_SYMBOLS
+    binance_syms = sorted(binance_set)
+    logger.info("Binance futures symbols: %d", len(binance_syms))
+
+    async def get_intersection(fetch_fn, name: str) -> list[str]:
+        try:
+            syms = await fetch_fn()
+            common = sorted(binance_set & syms)
+            logger.info("[%s] %d symbols in common with Binance", name, len(common))
+            return common
+        except Exception as e:
+            logger.warning("[%s] symbol fetch failed: %s — skipping", name, e)
+            return []
+
+    # ── Futures symbols ──────────────────────────────────────────────────────
+    bybit_syms  = await get_intersection(fetch_bybit_symbols,  "bybit")
+    bitget_syms = await get_intersection(fetch_bitget_symbols, "bitget")
+
+    try:
+        okx_info = await fetch_okx_info()
+        okx_syms = sorted(binance_set & set(okx_info.keys()))
+        logger.info("[okx] %d symbols", len(okx_syms))
+    except Exception as e:
+        logger.warning("[okx] info fetch failed: %s", e)
+        okx_info, okx_syms = {}, []
+
+    try:
+        gate_qt       = await fetch_gate_info()
+        gate_syms_all = await fetch_gate_symbols()
+        gate_syms     = sorted(binance_set & gate_syms_all)
+        logger.info("[gate] %d symbols", len(gate_syms))
+    except Exception as e:
+        logger.warning("[gate] info fetch failed: %s", e)
+        gate_qt, gate_syms = {}, []
+
+    # ── Spot symbols ─────────────────────────────────────────────────────────
+    binance_spot_syms = await get_intersection(fetch_binance_spot_symbols, "binance_spot")
+    bybit_spot_syms   = await get_intersection(fetch_bybit_spot_symbols,   "bybit_spot")
+    okx_spot_syms     = await get_intersection(fetch_okx_spot_symbols,     "okx_spot")
+    gate_spot_syms    = await get_intersection(fetch_gate_spot_symbols,    "gate_spot")
+    bitget_spot_syms  = await get_intersection(fetch_bitget_spot_symbols,  "bitget_spot")
+
+    # ── Instantiate futures connectors ───────────────────────────────────────
+    connectors = []
+    if binance_syms:
+        connectors.append(BinanceExchange(binance_syms, _on_trade, _on_depth_perp))
+    if bybit_syms:
+        connectors.append(BybitExchange(bybit_syms, _on_trade, _on_depth_perp))
+    if okx_syms:
+        connectors.append(OKXExchange(okx_syms, _on_trade, _on_depth_perp, ct_vals=okx_info))
+    if gate_syms:
+        connectors.append(GateExchange(gate_syms, _on_trade, _on_depth_perp, qt_mult=gate_qt))
+    if bitget_syms:
+        connectors.append(BitgetExchange(bitget_syms, _on_trade, _on_depth_perp))
+
+    # ── Instantiate spot connectors ──────────────────────────────────────────
+    if binance_spot_syms:
+        connectors.append(BinanceSpotExchange(binance_spot_syms, _on_trade, _on_depth_spot))
+    if bybit_spot_syms:
+        connectors.append(BybitSpotExchange(bybit_spot_syms, _on_trade, _on_depth_spot))
+    if okx_spot_syms:
+        connectors.append(OKXSpotExchange(okx_spot_syms, _on_trade, _on_depth_spot))
+    if gate_spot_syms:
+        connectors.append(GateSpotExchange(gate_spot_syms, _on_trade, _on_depth_spot))
+    if bitget_spot_syms:
+        connectors.append(BitgetSpotExchange(bitget_spot_syms, _on_trade, _on_depth_spot))
+
+    await asyncio.gather(*_log_and_start(connectors))
+
+
+async def _start_all_mode():
+    """Each exchange fetches its own full symbol list independently."""
+    logger.info("Fetching symbol lists (all mode)…")
+
+    async def safe_retry(coro_fn, name, default, retries=4, base_delay=3):
+        """Call coro_fn() with exponential-backoff retries.  Returns default if all fail."""
+        for attempt in range(retries + 1):
+            try:
+                result = await coro_fn()
+                logger.info("[%s] fetched %d symbols", name, len(result))
+                return result
+            except Exception as e:
+                if attempt < retries:
+                    wait = base_delay * (2 ** attempt)   # 3 → 6 → 12 → 24 s
+                    logger.warning("[%s] fetch failed (attempt %d/%d): %s — retry in %ds",
+                                   name, attempt + 1, retries + 1, e, wait)
+                    await asyncio.sleep(wait)
+                else:
+                    logger.warning("[%s] fetch failed after %d attempts: %s — skipping",
+                                   name, retries + 1, e)
+                    return default
+
+    # ── BinanceF symbol set (for client-side mode filter) ────────────────────
+    try:
+        _bf = await fetch_usdt_futures_symbols()
+        state.binance_f_symbols = set(_bf) - config.EXCLUDED_SYMBOLS
+    except Exception:
+        state.binance_f_symbols = set()
+
+    # ── Futures ──────────────────────────────────────────────────────────────
+    binance_syms_raw = await safe_retry(fetch_usdt_futures_symbols_all, "binance_all", [])
+    binance_syms = sorted(set(binance_syms_raw) - config.EXCLUDED_SYMBOLS)
+
+    bybit_syms  = sorted(await safe_retry(fetch_bybit_all_symbols, "bybit_all", set()) - config.EXCLUDED_SYMBOLS)
+
+    okx_all_info = await safe_retry(fetch_okx_all_info, "okx_all", {})
+    okx_syms = sorted(set(okx_all_info.keys()) - config.EXCLUDED_SYMBOLS)
+
+    gate_all_qt       = await safe_retry(fetch_gate_all_info,    "gate_all",      {})
+    gate_syms_all_set = await safe_retry(fetch_gate_all_symbols, "gate_all_syms", set())
+
+    # If qt_mult fetch failed but symbol list succeeded, fall back to all symbols
+    # with a minimal default multiplier so the connector still runs.
+    # (Volumes will be imprecise until gate_all_qt is populated on the next restart.)
+    if gate_syms_all_set and not gate_all_qt:
+        logger.warning("[gate] qt_mult unavailable — using fallback multiplier 0.0001 for all symbols")
+        gate_all_qt = {s: 0.0001 for s in gate_syms_all_set}
+
+    gate_syms_usdt = sorted((gate_syms_all_set & set(gate_all_qt.keys())) - config.EXCLUDED_SYMBOLS
+                             if gate_syms_all_set else set())
+    # Gate USDT futures only (USDC WS is a separate endpoint)
+    gate_syms_usdt_only = [s for s in gate_syms_usdt if s.endswith("USDT")]
+    gate_syms_usdc_only = [s for s in gate_syms_usdt if s.endswith("USDC")]
+
+    bitget_all_raw = await safe_retry(fetch_bitget_all_symbols, "bitget_all", set())
+    bitget_syms_usdt = sorted({s for s in bitget_all_raw if s.endswith("USDT")} - config.EXCLUDED_SYMBOLS)
+    bitget_syms_usdc = sorted({s for s in bitget_all_raw if s.endswith("USDC")} - config.EXCLUDED_SYMBOLS)
+
+    # ── Spot ─────────────────────────────────────────────────────────────────
+    binance_spot_syms = sorted(await safe_retry(fetch_binance_spot_symbols_all, "binance_spot_all", set()) - config.EXCLUDED_SYMBOLS)
+    bybit_spot_syms   = sorted(await safe_retry(fetch_bybit_all_spot_symbols,   "bybit_spot_all",   set()) - config.EXCLUDED_SYMBOLS)
+    okx_spot_syms     = sorted(await safe_retry(fetch_okx_all_spot_symbols,     "okx_spot_all",     set()) - config.EXCLUDED_SYMBOLS)
+    gate_spot_syms    = sorted(await safe_retry(fetch_gate_all_spot_symbols,    "gate_spot_all",    set()) - config.EXCLUDED_SYMBOLS)
+    bitget_spot_syms  = sorted(await safe_retry(fetch_bitget_all_spot_symbols,  "bitget_spot_all",  set()) - config.EXCLUDED_SYMBOLS)
+
+    # ── Instantiate futures connectors ───────────────────────────────────────
+    connectors = []
+    if binance_syms:
+        connectors.append(BinanceExchange(binance_syms, _on_trade, _on_depth_perp))
+    if bybit_syms:
+        connectors.append(BybitExchange(bybit_syms, _on_trade, _on_depth_perp))
+    if okx_syms:
+        connectors.append(OKXExchange(okx_syms, _on_trade, _on_depth_perp, ct_vals=okx_all_info))
+    # Gate USDT futures use wss://fx-ws.gateio.ws/v4/ws/usdt
+    if gate_syms_usdt_only:
+        connectors.append(GateExchange(gate_syms_usdt_only, _on_trade, _on_depth_perp, qt_mult=gate_all_qt))
+    # Gate USDC futures use a separate WS endpoint
+    if gate_syms_usdc_only:
+        from .exchanges.gate import GateExchange as _GateExchange
+        class GateUsdcExchange(_GateExchange):
+            async def _run(self):
+                import websockets as _ws
+                import time as _time
+                ws_url = "wss://fx-ws.gateio.ws/v4/ws/usdc"
+                async with _ws.connect(ws_url, ping_interval=None, open_timeout=30) as ws:
+                    logger.info("[gate_usdc] connected, %d symbols", len(self.symbols))
+                    ts = int(_time.time())
+                    gate_syms_local = [self.to_gate(s) for s in self.symbols]
+                    import json as _json
+                    import asyncio as _asyncio
+                    # ── Ping FIRST — before subscriptions ───────────────────
+                    async def _usdc_ping():
+                        while True:
+                            await _asyncio.sleep(10)
+                            try:
+                                await ws.send(_json.dumps({"time": int(_time.time()),
+                                                            "channel": "futures.ping"}))
+                            except Exception:
+                                break
+                    _asyncio.create_task(_usdc_ping())
+                    for i in range(0, len(gate_syms_local), 100):
+                        await ws.send(_json.dumps({
+                            "time": ts, "channel": "futures.trades",
+                            "event": "subscribe", "payload": gate_syms_local[i:i + 100]
+                        }))
+                    for gsym in gate_syms_local:
+                        await ws.send(_json.dumps({
+                            "time": ts, "channel": "futures.order_book",
+                            "event": "subscribe", "payload": [gsym, "50", "0"]
+                        }))
+                        await _asyncio.sleep(0.01)
+                    async for raw in ws:
+                        try:
+                            msg = _json.loads(raw)
+                            channel = msg.get("channel", "")
+                            event = msg.get("event", "")
+                            result = msg.get("result", {})
+                            if channel == "futures.trades" and event == "update":
+                                items = result if isinstance(result, list) else [result]
+                                for t in items:
+                                    contract = t.get("contract", "")
+                                    sym = self.from_gate(contract)
+                                    qm = self.qt_mult.get(sym, 0)
+                                    if qm:
+                                        vol = abs(int(t.get("size", 0))) * qm * float(t.get("price", 0))
+                                        if vol > 0:
+                                            await self.on_trade(self.name, sym, vol)
+                            elif channel == "futures.order_book":
+                                contract = result.get("contract", "")
+                                sym = self.from_gate(contract)
+                                qm = self.qt_mult.get(sym, 0)
+                                if not qm:
+                                    continue
+                                if sym not in self._books:
+                                    self._books[sym] = {"bids": {}, "asks": {}}
+                                book = self._books[sym]
+                                if event in ("all", "update"):
+                                    if event == "all":
+                                        book["bids"] = {}
+                                        book["asks"] = {}
+                                    for item in result.get("bids", []):
+                                        p, s = float(item["p"]), int(item["s"])
+                                        if s == 0:
+                                            book["bids"].pop(p, None)
+                                        else:
+                                            book["bids"][p] = s * qm * p
+                                    for item in result.get("asks", []):
+                                        p, s = float(item["p"]), int(item["s"])
+                                        if s == 0:
+                                            book["asks"].pop(p, None)
+                                        else:
+                                            book["asks"][p] = s * qm * p
+                                    await self.on_depth(self.name, sym,
+                                                        dict(book["bids"]), dict(book["asks"]))
+                        except Exception as e:
+                            logger.debug("[gate_usdc] parse error: %s", e)
+
+        connectors.append(GateUsdcExchange(gate_syms_usdc_only, _on_trade, _on_depth_perp, qt_mult=gate_all_qt))
+
+    if bitget_syms_usdt:
+        connectors.append(BitgetExchange(bitget_syms_usdt, _on_trade, _on_depth_perp, inst_type="USDT-FUTURES"))
+    if bitget_syms_usdc:
+        connectors.append(BitgetExchange(bitget_syms_usdc, _on_trade, _on_depth_perp, inst_type="USDC-FUTURES"))
+
+    # ── Instantiate spot connectors ──────────────────────────────────────────
+    if binance_spot_syms:
+        connectors.append(BinanceSpotExchange(binance_spot_syms, _on_trade, _on_depth_spot))
+    if bybit_spot_syms:
+        connectors.append(BybitSpotExchange(bybit_spot_syms, _on_trade, _on_depth_spot))
+    if okx_spot_syms:
+        connectors.append(OKXSpotExchange(okx_spot_syms, _on_trade, _on_depth_spot))
+    if gate_spot_syms:
+        connectors.append(GateSpotExchange(gate_spot_syms, _on_trade, _on_depth_spot))
+    if bitget_spot_syms:
+        connectors.append(BitgetSpotExchange(bitget_spot_syms, _on_trade, _on_depth_spot))
+
+    await asyncio.gather(*_log_and_start(connectors))

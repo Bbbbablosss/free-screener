@@ -1,0 +1,20 @@
+[Unit]
+Description=Crypto Screener — ingestion worker 1 (gate, okx, bingx)
+After=network-online.target redis-server.service
+Wants=network-online.target
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/screener
+Environment=ROLE=worker
+Environment=WORKER_EXCHANGES=gate,okx,bingx
+ExecStart=/opt/screener/venv/bin/python run_worker.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

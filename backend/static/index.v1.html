@@ -1,0 +1,3130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCTA Screener</title>
+<style>
+:root {
+  --bg:           #060d09;
+  --sidebar-bg:   #040a06;
+  --header-bg:    #060d09;
+  --card-bg:      #080f0a;
+  --card-border:  #111a12;
+  --accent:       #90CC00;
+  --accent-dim:   rgba(144,204,0,0.09);
+  --accent-glow:  rgba(144,204,0,0.18);
+  --ask:          #CC4444;
+  --ask-dim:      rgba(204,68,68,0.09);
+  --text:         #a8bca2;
+  --muted:        #384f32;
+  --muted2:       #647a5a;
+  --border:       #111a12;
+  --input-bg:     #0a1209;
+  --row-hover:    rgba(255,255,255,0.025);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+input, select, textarea, button { font-family: inherit; }
+
+/* ── Custom checkboxes ─────────────────────────────────────── */
+input[type=checkbox] {
+  appearance: none; -webkit-appearance: none;
+  width: 14px; height: 14px; flex-shrink: 0;
+  border-radius: 3px; border: 1.5px solid #2e422e;
+  background: #1c2a1c; cursor: pointer;
+  position: relative; transition: background .15s, border-color .15s;
+  vertical-align: middle;
+}
+input[type=checkbox]:checked {
+  background: var(--accent); border-color: var(--accent);
+}
+input[type=checkbox]:checked::after {
+  content: '';
+  position: absolute; left: 2px; top: 0px;
+  width: 7px; height: 4px;
+  border-left: 2px solid #060d09;
+  border-bottom: 2px solid #060d09;
+  transform: rotate(-45deg);
+}
+input[type=checkbox]:hover:not(:checked) { border-color: #4a6a4a; background: #243024; }
+html, body { /* base +2px */
+  height: 100%; background: var(--bg); color: var(--text);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px; overflow: hidden;
+}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+#app {
+  display: grid;
+  grid-template-columns: var(--sb-w, 232px) 1fr;
+  height: 100vh; width: 100vw;
+  transition: grid-template-columns .04s linear;
+  will-change: grid-template-columns;
+}
+#app.sb-collapsed { --sb-w: 68px; }
+#right {
+  display: grid;
+  grid-template-rows: 58px 72px 1fr 48px;
+  height: 100vh; overflow: hidden; min-width: 0;
+}
+#bottom-bar {
+  background: var(--bg); border-top: 1px solid #192418;
+  flex-shrink: 0; position: relative;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────── */
+#sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  height: 100vh; overflow: hidden;
+  width: var(--sb-w, 232px); transition: width .04s linear; will-change: width;
+}
+#app.sb-collapsed #sidebar { width: 68px; }
+
+/* toggle button */
+.sb-toggle {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 7px; cursor: pointer;
+  color: var(--muted2); border: 1px solid transparent;
+  transition: background .15s, color .15s, border-color .15s; flex-shrink: 0;
+}
+.sb-toggle:hover { background: rgba(255,255,255,0.06); color: var(--text); border-color: var(--border); }
+
+.sb-logo {
+  height: 52px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px; flex-shrink: 0;
+  transition: padding .04s linear;
+}
+#app.sb-collapsed .sb-logo { justify-content: center; padding: 0; }
+
+.sb-nav { padding: 10px; flex: 1; overflow: hidden; transition: padding .04s linear; }
+.sb-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 14px; height: 40px; border-radius: 9px; cursor: pointer;
+  color: var(--muted2); font-size: 14px; font-weight: 500;
+  transition: gap .04s linear, background .15s, color .15s, border-color .15s;
+  margin-bottom: 3px; user-select: none; border: 1px solid transparent;
+  position: relative; white-space: nowrap; overflow: hidden;
+}
+.sb-nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+.sb-nav-item.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(144,204,0,0.20); }
+.sb-nav-item svg { width: 17px; height: 17px; flex-shrink: 0; opacity: .7; }
+.sb-nav-item.active svg { opacity: 1; }
+.sb-nav-item-label { transition: opacity .04s linear, transform .04s linear; transform: translateX(0); }
+
+/* collapsed */
+#app.sb-collapsed .sb-nav { padding: 8px 10px; }
+#app.sb-collapsed .sb-nav-item {
+  gap: 0;
+}
+#app.sb-collapsed .sb-nav-item svg { width: 17px; height: 17px; }
+#app.sb-collapsed .sb-nav-item-label { opacity: 0; pointer-events: none; transform: translateX(-10px); transition: opacity .04s linear, transform .04s linear; }
+#app.sb-collapsed .sb-toggle { width: 34px; height: 34px; }
+#app.sb-collapsed .sb-toggle svg { width: 16px; height: 16px; }
+
+/* tooltip in collapsed mode */
+.sb-nav-item .sb-tip {
+  position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%);
+  background: #0e1c0e; border: 1px solid #1e2e1e; border-radius: 7px;
+  padding: 5px 11px; font-size: 12px; font-weight: 600; color: var(--text);
+  white-space: nowrap; pointer-events: none; opacity: 0;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  transition: opacity .12s; z-index: 900;
+}
+#app.sb-collapsed .sb-nav-item:hover .sb-tip { opacity: 1; }
+
+/* hide decorative elements when collapsed */
+#app.sb-collapsed .sb-social,
+#app.sb-collapsed .sb-user-name,
+#app.sb-collapsed .sb-user-badge,
+#app.sb-collapsed .sb-user-chevron { display: none; }
+#app.sb-collapsed .sb-user { justify-content: center; padding: 9px 0; }
+
+.sb-eye-small {
+  width: 30px; height: 30px; flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(144,204,0,0.35));
+}
+#app.sb-collapsed .sb-eye-small { display: none; }
+.sb-social {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 8px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.sb-social a { color: var(--muted2); display: flex; transition: color .15s; cursor: pointer; }
+.sb-social a:hover { color: var(--accent); }
+.sb-user {
+  display: flex; align-items: center; gap: 10px;
+  height: 48px; padding: 0 14px;
+  border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.sb-user-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid rgba(144,204,0,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--accent); font-weight: 800; flex-shrink: 0;
+}
+.sb-user-name  { font-size: 13px; font-weight: 600; color: var(--text); }
+.sb-user-badge {
+  font-size: 8px; font-weight: 800; background: var(--accent);
+  color: #000; padding: 2px 5px; border-radius: 3px; margin-left: 5px;
+}
+.sb-user-chevron { margin-left: auto; color: var(--muted); }
+
+/* ── Brand bar ──────────────────────────────────────────────── */
+#brandbar {
+  background: var(--header-bg); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 18px; gap: 10px;
+}
+.brand-octa-icon { width: 30px; height: 30px; flex-shrink: 0; }
+.brand-name {
+  font-size: 28px; font-weight: 900; font-style: italic; color: var(--accent); letter-spacing: 12px;
+  filter: drop-shadow(0 0 8px rgba(144,204,0,0.18));
+}
+.brand-spacer { flex: 1; }
+.sb-divider { width:1px; height:34px; background:var(--border); flex-shrink:0; margin:0 8px; }
+/* Filter boxes inside statsbar — match Customize button height */
+#statsbar .fb-box { height: 40px; border-radius: 9px; }
+#statsbar .fb-search-box { width: 180px; }
+#statsbar .fb-select-box { padding: 4px 12px; min-width: 82px; }
+#statsbar .fb-box-lbl { margin-bottom: 2px; }
+#statsbar .fdd { margin: 0 1px; }
+#statsbar #favs-btn { width:40px; height:40px; border-radius:9px; font-size:17px; flex-shrink:0; }
+#conn-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted); transition: background .3s;
+}
+#conn-dot.on { background: var(--accent); box-shadow: 0 0 5px rgba(144,204,0,0.4); }
+#conn-label { color: var(--muted2); font-size: 10.5px; margin-right: 4px; }
+
+.hdr-btn {
+  background: transparent; border: 1px solid #1e2e1e; color: var(--muted2);
+  padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 500;
+  transition: border-color .15s, color .15s; white-space: nowrap; height: 36px;
+  display: flex; align-items: center;
+}
+.hdr-btn:hover, .hdr-btn.on { border-color: var(--accent); color: var(--accent); }
+.hdr-icon-btn {
+  width: 34px; height: 34px; background: transparent; border: 1px solid #1e2e1e;
+  border-radius: 8px; color: var(--muted2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  transition: border-color .15s, color .15s;
+}
+.hdr-icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+#settings-btn {
+  display: flex; align-items: center; gap: 7px; height: 36px;
+  background: var(--accent-dim); border: 1px solid rgba(144,204,0,0.25);
+  color: var(--accent); padding: 0 14px; border-radius: 8px;
+  cursor: pointer; font-size: 12px; font-weight: 600; transition: all .15s;
+}
+#settings-btn:hover { background: rgba(144,204,0,0.14); border-color: var(--accent); }
+#settings-btn svg { transition: transform .4s; }
+#settings-btn:hover svg { transform: rotate(45deg); }
+.hdr-plus {
+  width: 36px; height: 36px; background: var(--accent); border: none; border-radius: 8px;
+  color: #000; font-size: 22px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: filter .15s;
+  box-shadow: 0 0 14px rgba(144,204,0,0.28);
+}
+.hdr-plus:hover { filter: brightness(1.1); }
+/* Workspace custom dropdown */
+.ws-dropdown { position: relative; }
+.ws-trigger {
+  display: flex; align-items: center; gap: 10px;
+  height: 44px; padding: 0 16px;
+  background: #0a1209; border: 1px solid #1e2e1e;
+  border-radius: 10px; cursor: pointer; color: var(--text);
+  font-size: 13px; font-weight: 600; min-width: 200px;
+  transition: border-color .15s, box-shadow .15s; outline: none;
+}
+.ws-trigger:hover { border-color: rgba(144,204,0,0.3); box-shadow: 0 0 0 1px rgba(144,204,0,0.06); }
+.ws-trigger-name { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-trigger-chevron { color: var(--muted2); flex-shrink: 0; transition: transform .2s; }
+.ws-trigger-chevron.open { transform: rotate(180deg); }
+
+.ws-menu {
+  position: absolute; right: 0; top: calc(100% + 7px);
+  background: #0c1610; border: 1px solid #1e2e1e;
+  border-radius: 12px; min-width: 230px; z-index: 500;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(144,204,0,0.04);
+  overflow: hidden; animation: modalIn .15s ease-out;
+}
+.ws-action {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; cursor: pointer; font-size: 13px;
+  color: var(--text); transition: background .12s;
+}
+.ws-action:hover { background: rgba(255,255,255,0.045); }
+#ws-delete-btn:hover { background: rgba(220,50,50,0.1); color: #e05555; }
+#ws-delete-btn:hover svg { color: #e05555; }
+.ws-action svg { flex-shrink: 0; color: var(--muted2); }
+.ws-divider { height: 1px; background: #192418; margin: 4px 0; }
+.ws-list-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.5px; color: var(--muted2); padding: 8px 16px 5px;
+}
+.ws-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px; cursor: pointer; font-size: 13px;
+  color: var(--text); transition: background .12s;
+}
+.ws-item:hover { background: rgba(255,255,255,0.04); }
+.ws-item.active { color: var(--accent); }
+.ws-item-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.ws-item.active .ws-item-dot { background: var(--accent); box-shadow: 0 0 6px rgba(144,204,0,0.5); }
+
+/* ── Stats bar ──────────────────────────────────────────────── */
+#statsbar {
+  background: #050c07; border-bottom: 1px solid #192418;
+  display: flex; align-items: center; padding: 0 18px; gap: 10px;
+}
+.stat-block {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 10px 20px; flex-shrink: 0; min-width: 110px;
+}
+.stat-block + .stat-block { border-left: 1px solid var(--border); }
+.stat-lbl {
+  font-size: 8px; font-weight: 700; letter-spacing: 1.8px;
+  text-transform: uppercase; color: var(--muted2); margin-bottom: 5px; white-space: nowrap;
+}
+.stat-val {
+  font-size: 22px; font-weight: 600; color: #d4e0ce;
+  font-variant-numeric: tabular-nums; line-height: 1;
+  letter-spacing: -0.3px;
+  display: flex; align-items: center; gap: 6px;
+}
+.stat-arr { font-size: 13px; }
+.stat-val.green { color: var(--accent); }
+.stat-val.blue  { color: #5288C0; }
+.stats-spacer { flex: 1; }
+.stats-right  { display: flex; align-items: center; gap: 8px; }
+.stats-icon-btn {
+  width: 46px; height: 46px; background: var(--card-bg); border: 1px solid #1e301e;
+  border-radius: 9px; color: var(--muted2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s, color .15s;
+}
+.stats-icon-btn svg { width: 19px; height: 19px; }
+.stats-icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.stats-customize {
+  display: flex; align-items: center; gap: 8px; height: 40px;
+  background: rgba(144,204,0,0.05); border: 1px solid rgba(144,204,0,0.14);
+  color: var(--accent); padding: 0 18px; border-radius: 9px;
+  cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s;
+}
+#stats-settings-btn svg { transition: transform .4s; }
+#stats-settings-btn:hover svg { transform: rotate(45deg); }
+.stats-customize:hover { background: var(--accent-dim); border-color: rgba(144,204,0,0.28); }
+
+/* ── Main scroll area ───────────────────────────────────────── */
+#main { overflow-y: auto; overflow-x: hidden; padding: 12px 14px; }
+#main::-webkit-scrollbar { width: 4px; }
+#main::-webkit-scrollbar-track { background: transparent; }
+#main::-webkit-scrollbar-thumb { background: #1a2416; border-radius: 2px; }
+
+/* ── Masonry grid ───────────────────────────────────────────── */
+#grid { columns: 295px; column-gap: 10px; }
+
+/* ── Card ───────────────────────────────────────────────────── */
+.card {
+  background: rgba(9,15,9,0.82); border: 1px solid #1e2e1e;
+  border-radius: 12px; overflow: hidden; break-inside: avoid;
+  margin-bottom: 10px; width: 100%;
+  position: relative; z-index: 2;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.55);
+  transition: border-color .2s, box-shadow .2s;
+}
+.card:hover {
+  border-color: rgba(144,204,0,0.2);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.65), 0 0 0 1px rgba(144,204,0,0.07);
+}
+.card.flash { border-color: var(--accent); box-shadow: 0 0 22px rgba(144,204,0,0.18); }
+.card.fav   { border-color: rgba(144,204,0,0.5); background: rgba(144,204,0,0.045); box-shadow: 0 0 0 1px rgba(144,204,0,0.15), 0 2px 16px rgba(0,0,0,0.5); }
+
+.card-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 12px 8px;
+  background: rgba(255,255,255,0.022);
+  border-bottom: 1px solid #1a2a1a;
+}
+.card-sym { font-size: 15px; font-weight: 800; color: #e8f0e0; white-space: nowrap; }
+.card-quote { font-size: 12px; font-weight: 400; color: var(--muted2); }
+.card-market {
+  display: none; /* replaced by S/F label in each row */
+  font-size: 8px; font-weight: 800; padding: 2px 5px; border-radius: 3px;
+  letter-spacing: 0.3px; flex-shrink: 0;
+}
+.market-f { background: rgba(184,144,42,0.12); color: #B8902A; }
+.market-s { background: rgba(82,136,192,0.12); color: #5288C0; }
+.card-spacer { flex: 1; }
+
+.card-icon-btn {
+  width: 22px; height: 22px; background: none; border: none; cursor: pointer;
+  color: var(--muted); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; transition: color .15s; flex-shrink: 0; border-radius: 4px;
+}
+.card-icon-btn:hover { color: var(--accent); background: var(--accent-dim); }
+.card-icon-btn.active { color: var(--accent); }
+.fav-btn.active { color: var(--accent) !important; text-shadow: 0 0 8px rgba(144,204,0,0.6); }
+.card-gear-btn {
+  background: none; border: none; cursor: pointer; color: var(--muted);
+  display: flex; align-items: center; padding: 3px; border-radius: 4px;
+  transition: color .3s, transform .3s;
+}
+.card-gear-btn:hover { color: var(--accent); transform: rotate(45deg); background: var(--accent-dim); }
+
+/* ── Density row ────────────────────────────────────────────── */
+.d-row {
+  display: grid;
+  grid-template-columns: 76px 18px 22px 52px 1fr 48px;
+  align-items: center; gap: 3px;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.022);
+  transition: background .1s;
+}
+.d-row:last-child { border-bottom: none; }
+.d-row:hover { background: var(--row-hover); }
+.d-row.new-row { animation: rowSlideIn .22s cubic-bezier(0.4,0,0.2,1), rowFlash .6s ease-out; }
+@keyframes rowSlideIn {
+  from { transform: translateY(-5px); }
+  to   { transform: translateY(0); }
+}
+@keyframes rowFlash {
+  0%   { background: rgba(144,204,0,0.1); }
+  100% { background: transparent; }
+}
+
+/* Vol badge */
+.d-vol {
+  font-weight: 700; font-size: 13px; padding: 2px 5px;
+  border-radius: 3px; text-align: right; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Default colours — overridden inline by card-style JS */
+.bid .d-vol { color: var(--accent); background: rgba(144,204,0,0.1); }
+.ask .d-vol { color: var(--ask);    background: rgba(204,68,68,0.09); }
+
+/* ── Card Style settings ──────────────────────────────────────── */
+.cs-tier { margin-bottom: 20px; }
+.cs-tier-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.cs-tier-label { font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted2); min-width: 52px; }
+.cs-tier-thresh {
+  width: 110px; background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px; padding: 5px 10px; border-radius: 7px;
+  outline: none; -moz-appearance: textfield;
+}
+.cs-tier-thresh::-webkit-inner-spin-button { -webkit-appearance: none; }
+.cs-tier-thresh:focus { border-color: var(--accent); }
+.cs-tier-thresh-label { font-size: 13px; color: var(--muted2); }
+.cs-colors { display: flex; gap: 14px; }
+.cs-color-group { display: flex; flex-direction: column; gap: 6px; }
+.cs-color-group-label { font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted2); }
+.cs-palette { display: flex; flex-wrap: wrap; gap: 5px; }
+.cs-swatch {
+  width: 22px; height: 22px; border-radius: 4px; cursor: pointer;
+  border: 1.5px solid transparent; flex-shrink: 0; transition: transform .1s;
+}
+.cs-swatch:hover { transform: scale(1.2); }
+.cs-swatch.selected { border-color: #fff; transform: scale(1.15); }
+.cs-swatch.none-swatch { border: 1.5px solid #2a3a28; background: transparent !important; position: relative; }
+.cs-swatch.none-swatch::after { content:'×'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--muted2); line-height:22px; text-align:center; }
+
+/* Exchange icon */
+.d-exch { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.d-exch img { border-radius: 2px; display: block; width: 17px; height: 17px; pointer-events: none; }
+
+/* S / F market label (replaces dot + abbr) */
+.d-mkt-lbl {
+  font-size: 10px; font-weight: 800; text-align: center; white-space: nowrap;
+  border-radius: 3px; padding: 1px 4px;
+}
+.d-mkt-lbl.f { color: #B8902A; background: rgba(184,144,42,0.12); }
+.d-mkt-lbl.s { color: #5288C0; background: rgba(82,136,192,0.12); }
+
+/* Age */
+.d-age { color: var(--muted2); font-size: 12px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Price */
+.d-price { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bid .d-price { color: var(--accent); }
+.ask .d-price { color: var(--ask); }
+
+/* Pct */
+.d-pct { font-size: 12.5px; font-weight: 700; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bid .d-pct { color: var(--accent); }
+.ask .d-pct { color: var(--ask); }
+
+/* ── Empty / Loading ────────────────────────────────────────── */
+#empty {
+  color: var(--muted2); padding: 70px 20px; font-size: 14px;
+  text-align: center; break-inside: avoid;
+}
+#empty span { display: block; margin-top: 8px; font-size: 12px; }
+
+/* ── Filter bar ─────────────────────────────────────────────── */
+#filterbar {
+  background: #050c07; border-top: 1px solid #192418;
+  display: flex; align-items: center;
+  padding: 0 16px; gap: 8px; overflow-x: auto; flex-shrink: 0;
+}
+#filterbar::-webkit-scrollbar { height: 0; }
+
+/* Базовый бокс фильтра */
+.fb-box {
+  display: flex; align-items: center;
+  background: var(--card-bg); border: 1px solid #1f321f;
+  border-radius: 10px; height: 44px; padding: 0 14px;
+  flex-shrink: 0; transition: border-color .15s, box-shadow .15s; gap: 10px;
+}
+.fb-box:hover, .fb-box:focus-within {
+  border-color: rgba(144,204,0,0.32);
+  box-shadow: 0 0 0 1px rgba(144,204,0,0.07), 0 0 14px rgba(144,204,0,0.07);
+}
+
+/* Search */
+.fb-search-box { width: 210px; }
+.fb-search-icon { color: var(--muted2); flex-shrink: 0; display: flex; }
+#search-input {
+  background: transparent; border: none; outline: none;
+  color: var(--text); font-size: 13px; width: 100%;
+}
+#search-input::placeholder { color: var(--muted2); }
+
+/* Select-бокс (legacy — kept for modal selects) */
+.fb-select-box {
+  flex-direction: column; align-items: flex-start; justify-content: center;
+  padding: 7px 14px; min-width: 88px; gap: 0;
+}
+.fb-box-lbl {
+  font-size: 8px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.5px; color: var(--muted2); line-height: 1; margin-bottom: 5px;
+}
+.fb-box-select {
+  background: transparent; border: none; outline: none;
+  color: var(--text); font-size: 13px; font-weight: 600;
+  cursor: pointer; appearance: none; width: 100%; line-height: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23607858' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0 center; padding-right: 14px;
+}
+.fb-box-select option { background: #080f0a; }
+
+/* ── Compact custom dropdown (filterbar) ─────────────────────── */
+.fdd { position: relative; flex-shrink: 0; }
+.fdd-trigger {
+  display: flex; align-items: center; gap: 7px;
+  height: 40px; padding: 0 13px;
+  background: #0a1209; border: 1px solid #1e2e1e;
+  border-radius: 9px; cursor: pointer; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  min-width: 90px;
+}
+.fdd-trigger:hover { border-color: rgba(144,204,0,0.28); box-shadow: 0 0 0 1px rgba(144,204,0,0.06); }
+.fdd-trigger.open { border-color: rgba(144,204,0,0.40); box-shadow: 0 0 0 2px rgba(144,204,0,0.09); }
+.fdd-lbl {
+  font-size: 8px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.4px; color: var(--muted2); line-height: 1;
+  margin-bottom: 2px; display: block;
+}
+.fdd-inner { display: flex; flex-direction: column; align-items: flex-start; flex: 1; min-width: 0; }
+.fdd-val {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1;
+}
+.fdd-chevron {
+  color: var(--muted2); flex-shrink: 0; transition: transform .2s;
+  display: flex; align-items: center;
+}
+.fdd-trigger.open .fdd-chevron { transform: rotate(180deg); }
+
+.fdd-menu {
+  position: absolute; left: 0; top: calc(100% + 6px);
+  background: #0c1610; border: 1px solid #1e2e1e;
+  border-radius: 10px; z-index: 600; min-width: 100%;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.65), 0 0 0 1px rgba(144,204,0,0.04);
+  overflow: hidden; animation: modalIn .14s ease-out;
+  padding: 4px 0;
+}
+.fdd-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 14px; cursor: pointer; font-size: 13px;
+  color: var(--text); font-weight: 500;
+  transition: background .1s; white-space: nowrap;
+}
+.fdd-item:hover { background: rgba(255,255,255,0.045); }
+.fdd-item.active { color: var(--accent); font-weight: 600; }
+.fdd-dot { width: 5px; height: 5px; border-radius: 50%; background: #2a3a28; flex-shrink: 0; }
+.fdd-item.active .fdd-dot { background: var(--accent); box-shadow: 0 0 5px rgba(144,204,0,0.5); }
+.fdd-item-icon { display: flex; align-items: center; flex-shrink: 0; }
+.fdd-item-icon img { width: 14px !important; height: 14px !important; border-radius: 2px; display: block; }
+
+.fb-spacer { flex: 1; min-width: 6px; }
+
+.fb-reset {
+  background: transparent; border: 1px solid #1f321f; color: var(--muted2);
+  height: 44px; padding: 0 18px; border-radius: 10px; cursor: pointer;
+  font-size: 13px; font-weight: 600; transition: all .15s; flex-shrink: 0;
+}
+.fb-reset:hover { border-color: rgba(144,204,0,0.22); color: var(--text); }
+
+.fb-apply {
+  background: var(--accent); border: none; color: #000;
+  height: 44px; padding: 0 22px; border-radius: 10px; cursor: pointer;
+  font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0; transition: all .15s;
+  box-shadow: 0 0 20px rgba(144,204,0,0.30);
+}
+.fb-apply:hover { filter: brightness(1.1); box-shadow: 0 0 30px rgba(144,204,0,0.48); }
+
+/* Favorites btn in filterbar */
+#favs-btn.on { border-color: var(--accent) !important; color: var(--accent); background: var(--accent-dim); }
+#favs-btn:hover { border-color: rgba(144,204,0,0.5) !important; color: var(--accent); }
+
+/* ══ Unsaved-changes confirm dialog ══════════════════════════ */
+#sp-unsaved-overlay {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.6);
+  align-items: center; justify-content: center;
+}
+#sp-unsaved-overlay.open { display: flex; }
+#sp-unsaved-box {
+  background: #090f0a; border: 1px solid #1c2b1d;
+  border-radius: 12px; padding: 28px 28px 22px;
+  width: 320px; max-width: 92vw; position: relative;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.75);
+  animation: modalIn .18s cubic-bezier(.22,.68,0,1.2);
+  display: flex; flex-direction: column; gap: 20px;
+}
+#sp-unsaved-dismiss {
+  position: absolute; top: 10px; right: 10px;
+  width: 24px; height: 24px; border-radius: 6px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  color: var(--muted2); font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s, border-color .15s;
+}
+#sp-unsaved-dismiss:hover { background: rgba(204,68,68,0.1); border-color: var(--ask); color: var(--ask); }
+#sp-unsaved-box p {
+  font-size: 14px; line-height: 1.55; color: var(--text);
+}
+#sp-unsaved-box p strong {
+  color: #c8d8c2; font-weight: 700;
+}
+.sp-unsaved-btns {
+  display: flex; gap: 10px;
+}
+#sp-unsaved-exit, #sp-unsaved-save {
+  flex: 1; padding: 9px 0; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 700; transition: border-color .15s, color .15s, filter .15s;
+}
+#sp-unsaved-exit {
+  background: transparent; border: 1px solid #2a3a28; color: var(--muted2);
+}
+#sp-unsaved-exit:hover { border-color: #4a5a48; color: var(--text); }
+#sp-unsaved-save {
+  background: var(--accent); border: none; color: #000;
+}
+#sp-unsaved-save:hover { filter: brightness(1.08); }
+
+/* ══ Settings modal (centered) ════════════════════════════════ */
+#settings-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.72);
+  align-items: center; justify-content: center;
+}
+#settings-overlay.open { display: flex; }
+
+#settings-panel {
+  width: 900px; max-width: 96vw; max-height: 88vh;
+  background: #090f0a; border: 1px solid #1c2b1d;
+  border-radius: 14px; display: flex; flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(144,204,0,0.06);
+  animation: modalIn .2s cubic-bezier(.22,.68,0,1.2);
+}
+@keyframes modalIn { from { transform: scale(.94) translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Header */
+.sp-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 22px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sp-title { font-size: 17px; font-weight: 800; color: #c8d8c2; flex: 1; letter-spacing: .2px; }
+.sp-close {
+  width: 28px; height: 28px; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--muted2); font-size: 15px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all .15s;
+}
+.sp-close:hover { background: rgba(204,68,68,0.1); border-color: var(--ask); color: var(--ask); }
+
+/* Body = two columns */
+.sp-body {
+  flex: 1; display: grid; grid-template-columns: 1fr 260px;
+  min-height: 0; overflow: hidden;
+}
+.sp-left  { overflow-y: auto; border-right: 1px solid var(--border); padding-bottom: 16px; }
+.sp-right { overflow-y: auto; padding-bottom: 16px; }
+.sp-left::-webkit-scrollbar, .sp-right::-webkit-scrollbar { width: 3px; }
+.sp-left::-webkit-scrollbar-track, .sp-right::-webkit-scrollbar-track { background: transparent; }
+.sp-left::-webkit-scrollbar-thumb, .sp-right::-webkit-scrollbar-thumb { background: #1a2416; border-radius: 2px; }
+
+/* Sections */
+.sp-section { padding: 18px 22px; border-bottom: 1px solid var(--border); }
+.sp-section:last-child { border-bottom: none; }
+.sp-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.6px; color: var(--muted2); margin-bottom: 14px;
+}
+
+/* Common form inputs */
+.sp-input {
+  background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px; padding: 8px 12px; border-radius: 7px;
+  outline: none; transition: border-color .15s; width: 100%;
+}
+.sp-input:focus { border-color: var(--accent); }
+.sp-input::placeholder { color: var(--muted2); }
+
+.sp-select {
+  background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px; padding: 7px 30px 7px 10px; border-radius: 7px;
+  outline: none; cursor: pointer; appearance: none; transition: border-color .15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M1 1l3.5 3.5L8 1' stroke='%23587050' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center;
+}
+.sp-select:focus { border-color: var(--accent); }
+.sp-select option { background: #0a1209; }
+
+.sp-label { font-size: 12.5px; color: var(--muted2); margin-bottom: 5px; display: block; }
+.sp-row2  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sp-field { display: flex; flex-direction: column; gap: 5px; }
+
+/* Sort row */
+.sort-row2 { display: flex; gap: 6px; align-items: center; }
+.sort-dir-btn {
+  width: 36px; height: 34px; border-radius: 7px; font-size: 14px; font-weight: 700;
+  border: 1px solid var(--border); background: transparent; color: var(--muted2);
+  cursor: pointer; transition: all .12s; flex-shrink: 0;
+}
+.sort-dir-btn.on { border-color: rgba(144,204,0,0.25); color: var(--accent); background: var(--accent-dim); }
+
+/* Time row */
+.sp-time-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sp-time-val {
+  width: 72px; background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px; padding: 7px 10px; border-radius: 7px;
+  outline: none; transition: border-color .15s; min-width: 0; -moz-appearance: textfield;
+  flex-shrink: 0;
+}
+.sp-time-val:focus { border-color: var(--accent); }
+.sp-time-val::-webkit-inner-spin-button, .sp-time-val::-webkit-outer-spin-button { -webkit-appearance: none; }
+.sp-time-unit { width: 110px; flex-shrink: 0; }
+.sp-time-label { font-size: 12.5px; color: var(--muted2); white-space: nowrap; }
+
+/* Min-size rows */
+.exch-sf-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.exch-sf-logo { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.exch-sf-logo img { border-radius: 3px; display: block; width: 17px; height: 17px; pointer-events: none; }
+.exch-sf-name { font-size: 13px; font-weight: 800; color: var(--muted2); width: 64px; flex-shrink: 0; }
+.exch-sf-label { font-size: 10.5px; font-weight: 700; color: var(--muted2); flex-shrink: 0; }
+.exch-sf-input {
+  flex: 1; background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px; padding: 5px 8px; border-radius: 6px;
+  text-align: right; outline: none; transition: border-color .15s;
+  -moz-appearance: textfield; min-width: 0;
+}
+.exch-sf-input::-webkit-inner-spin-button, .exch-sf-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.exch-sf-input:focus { border-color: var(--accent); }
+.exch-sf-div { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; margin: 0 2px; }
+
+/* Coin list */
+#coin-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.coin-item { background: rgba(144,204,0,0.025); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; transition: border-color .15s; }
+.coin-item:hover { border-color: rgba(144,204,0,0.12); }
+.coin-item.hidden-coin { opacity: .42; }
+
+/* Coin top row */
+.coin-top { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px; }
+.coin-sym-select {
+  flex: 1; background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px; font-weight: 700; padding: 6px 10px;
+  border-radius: 7px; outline: none; cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M1 1l3.5 3.5L8 1' stroke='%23587050' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+  min-width: 0; transition: border-color .15s;
+}
+.coin-sym-select:focus { border-color: var(--accent); }
+.coin-sym-select option { background: #0a1209; font-weight: 700; }
+.coin-sym-input-text {
+  flex: 1; background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px; font-weight: 700; padding: 6px 10px;
+  border-radius: 7px; outline: none; text-transform: uppercase;
+  min-width: 0; transition: border-color .15s;
+}
+.coin-sym-input-text::placeholder { color: var(--muted2); font-weight: 400; }
+.coin-sym-input-text:focus { border-color: var(--accent); }
+
+.coin-vol-input {
+  width: 120px; background: var(--input-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px; padding: 6px 10px; border-radius: 7px;
+  text-align: right; outline: none; -moz-appearance: textfield; flex-shrink: 0;
+  transition: border-color .15s;
+}
+.coin-vol-input { -moz-appearance: textfield; }
+.coin-vol-input:focus { border-color: var(--accent); }
+
+.coin-circle-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: transparent; color: var(--muted2);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .15s;
+}
+.coin-circle-btn:hover { border-color: var(--accent); color: var(--accent); }
+.coin-circle-btn.del:hover { border-color: var(--ask); color: var(--ask); }
+.coin-circle-btn.hidden { border-color: var(--ask); color: var(--ask); }
+
+/* Coin bottom row: S/F checkboxes + exchange icons */
+.coin-bottom { display: flex; align-items: center; gap: 10px; padding: 0 12px 10px; flex-wrap: wrap; }
+.coin-mkt-group { display: flex; align-items: center; gap: 4px; }
+.coin-chk-label { display: flex; align-items: center; gap: 3px; cursor: pointer; font-size: 12.5px; color: var(--muted2); }
+.coin-chk-label input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; }
+.coin-chk-label span { font-weight: 700; }
+.coin-exch-btn {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: none; background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s; overflow: hidden; flex-shrink: 0;
+}
+.coin-exch-btn img { border-radius: 3px; display: block; width: 16px; height: 16px; pointer-events: none; }
+.coin-exch-btn.off { opacity: .28; filter: grayscale(1); }
+/* Exchange globally disabled (both S+F off) — extra dim, not interactive */
+.coin-exch-btn.globally-off { opacity: .15; filter: grayscale(1); pointer-events: none; cursor: default; }
+
+/* Symbol autocomplete dropdown */
+#coin-sym-dropdown {
+  position: fixed; z-index: 9999;
+  background: #090f0a; border: 1px solid #1c2b1d;
+  border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+  max-height: 220px; overflow-y: auto; min-width: 160px;
+  display: none;
+}
+#coin-sym-dropdown::-webkit-scrollbar { width: 3px; }
+#coin-sym-dropdown::-webkit-scrollbar-track { background: transparent; }
+#coin-sym-dropdown::-webkit-scrollbar-thumb { background: #1a2416; border-radius: 2px; }
+#coin-sym-dropdown.open { display: block; }
+.csd-item {
+  padding: 7px 12px; font-size: 13px; font-weight: 700;
+  color: var(--text); cursor: pointer; transition: background .1s, color .1s;
+  white-space: nowrap;
+}
+.csd-item:hover, .csd-item.active { background: var(--accent-dim); color: var(--accent); }
+.csd-empty {
+  padding: 10px 12px; font-size: 12px; color: var(--muted2); font-style: italic;
+}
+
+/* Duplicate coin card */
+.coin-item.duplicate {
+  border-color: rgba(204,68,68,0.55) !important;
+  box-shadow: 0 0 0 1px rgba(204,68,68,0.2);
+}
+.coin-item.duplicate .coin-bottom,
+.coin-item.duplicate .coin-vol-input,
+.coin-item.duplicate [data-action="eye"] {
+  opacity: 0.35; pointer-events: none; user-select: none;
+}
+.coin-dup-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--ask);
+  padding: 2px 7px; border-radius: 4px;
+  background: rgba(204,68,68,0.12); border: 1px solid rgba(204,68,68,0.3);
+  flex-shrink: 0;
+}
+
+/* Coin list search */
+.coin-list-search-wrap {
+  flex: 1; display: flex; align-items: center; gap: 6px;
+  background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: 7px; padding: 5px 9px; min-width: 0;
+  transition: border-color .15s; color: var(--muted2);
+}
+.coin-list-search-wrap:focus-within { border-color: var(--accent); color: var(--accent); }
+#coin-list-search {
+  background: transparent; border: none; outline: none;
+  color: var(--text); font-size: 12.5px; font-weight: 600;
+  width: 100%; min-width: 0;
+}
+#coin-list-search::placeholder { color: var(--muted2); font-weight: 400; }
+
+/* Add coin btn */
+.sp-add-coin-btn {
+  width: 100%; padding: 10px 0; border-radius: 8px;
+  background: transparent; border: 1px dashed rgba(144,204,0,0.2); color: var(--muted2);
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.sp-add-coin-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Exchange right panel */
+.exch-select-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.exch-select-row:last-child { border-bottom: none; }
+.exch-circle {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; overflow: hidden;
+}
+.exch-circle img { border-radius: 3px; display: block; width: 20px; height: 20px; pointer-events: none; }
+.exch-chk-group { display: flex; flex-direction: column; gap: 4px; }
+.exch-chk-lbl { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12.5px; color: var(--muted2); }
+.exch-chk-lbl input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; }
+.exch-chk-lbl span { font-weight: 700; }
+
+/* Exchange row disabled states */
+.exch-select-row.one-off  .exch-row-name { filter: brightness(0.55); }
+.exch-select-row.both-off .exch-row-name { color: var(--muted) !important; filter: none; }
+.exch-select-row.both-off .exch-circle   { filter: grayscale(1) opacity(0.3); }
+.exch-select-row.one-off  .exch-circle   { filter: grayscale(0.4) opacity(0.7); }
+
+/* Disabled market input in Min Size */
+.exch-sf-input.sf-disabled {
+  color: var(--muted); background: rgba(255,255,255,0.02);
+  border-color: rgba(255,255,255,0.04); cursor: not-allowed;
+  pointer-events: none; font-style: italic; letter-spacing: 1px;
+}
+.exch-sf-label.sf-label-off { color: var(--muted) !important; }
+
+/* Footer */
+.sp-footer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 22px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.sp-reset-link {
+  display: flex; align-items: center; gap: 5px; background: none; border: none;
+  color: var(--muted2); font-size: 13.5px; cursor: pointer; transition: color .15s; padding: 0;
+}
+.sp-reset-link:hover { color: var(--text); }
+.sp-footer-spacer { flex: 1; }
+.sp-cancel-btn {
+  background: transparent; border: 1px solid var(--border); color: var(--muted2);
+  padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
+  transition: all .15s; display: flex; align-items: center; gap: 6px;
+}
+.sp-cancel-btn:hover { border-color: #2a3a28; color: var(--text); }
+.sp-cancel-btn svg { flex-shrink: 0; }
+.sp-save-btn {
+  background: var(--accent); border: none; color: #000;
+  padding: 8px 24px; border-radius: 8px; cursor: pointer;
+  font-size: 14px; font-weight: 700; transition: filter .15s;
+}
+.sp-save-btn:hover { filter: brightness(1.08); }
+
+/* Quote currencies grid */
+.sp-quotes-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px;
+}
+.sp-quote-lbl {
+  display: flex; align-items: center; gap: 5px; cursor: pointer;
+  font-size: 12.5px; color: var(--muted2); user-select: none;
+}
+.sp-quote-lbl input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
+.sp-quote-lbl span { font-weight: 700; }
+
+/* Mode buttons in modal */
+.sp-mode-row { display: flex; gap: 6px; margin-top: 2px; }
+.sp-mode-btn {
+  flex: 1; padding: 7px 4px; border-radius: 7px; cursor: pointer;
+  font-size: 11px; font-weight: 700; letter-spacing: .4px; border: 1px solid #1f321f;
+  background: transparent; color: var(--muted2); transition: all .15s; white-space: nowrap; text-align: center;
+}
+.sp-mode-btn.active { background: var(--accent-dim); border-color: rgba(144,204,0,0.35); color: var(--accent); }
+.sp-mode-btn:hover:not(.active) { border-color: rgba(144,204,0,0.2); color: var(--text); }
+
+/* Sound type selector */
+.sp-sound-types { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.sp-sound-btn {
+  padding: 5px 11px; border-radius: 7px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); background: var(--input-bg);
+  color: var(--muted2); transition: background .15s, color .15s, border-color .15s;
+  user-select: none;
+}
+.sp-sound-btn:hover { color: var(--text); border-color: rgba(144,204,0,0.2); }
+.sp-sound-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(144,204,0,0.3); }
+.sp-sound-preview { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--muted2); font-size: 13px; padding: 0 2px; }
+.sp-sound-preview:hover { color: var(--accent); }
+
+/* Sound section */
+.sp-sound-toggle {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: 13px; color: var(--text); margin-bottom: 14px; user-select: none;
+}
+.sp-sound-toggle input[type=checkbox] {
+  width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;
+}
+.sp-sound-toggle input[type=checkbox]:checked::after {
+  content: ''; position: absolute;
+  left: 3px; top: 1px; width: 5px; height: 8px;
+  border: 2px solid #050c05; border-top: none; border-left: none;
+  transform: rotate(45deg);
+}
+.sp-vol-row { display: flex; align-items: center; gap: 10px; }
+.sp-vol-icon { color: var(--muted2); flex-shrink: 0; display: flex; }
+.sp-vol-slider {
+  flex: 1; -webkit-appearance: none; appearance: none;
+  height: 4px; border-radius: 2px; outline: none; cursor: pointer;
+}
+.sp-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; box-shadow: 0 0 8px rgba(144,204,0,0.45);
+}
+.sp-vol-slider::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%; border: none;
+  background: var(--accent); cursor: pointer;
+}
+.sp-vol-label { font-size: 12px; color: var(--muted2); min-width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── Sidebar ──────────────────────────────────────────────── -->
+<div id="sidebar">
+
+  <div class="sb-logo">
+    <svg class="sb-eye-small" viewBox="0 0 120 120">
+      <defs>
+        <radialGradient id="eg" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#90CC00" stop-opacity=".22"/>
+          <stop offset="100%" stop-color="#90CC00" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="60" cy="60" rx="55" ry="55" fill="url(#eg)"/>
+      <path d="M10 60 Q35 24 60 24 Q85 24 110 60 Q85 96 60 96 Q35 96 10 60Z" fill="#021002" stroke="#90CC00" stroke-width="1.4" opacity=".9"/>
+      <circle cx="60" cy="60" r="23" fill="#011001" stroke="#90CC00" stroke-width="1.4"/>
+      <circle cx="60" cy="60" r="19" fill="none" stroke="#90CC00" stroke-width=".4" opacity=".3"/>
+      <circle cx="60" cy="60" r="15" fill="none" stroke="#90CC00" stroke-width=".4" opacity=".2"/>
+      <line x1="60" y1="37" x2="60" y2="83" stroke="#90CC00" stroke-width=".4" opacity=".25"/>
+      <line x1="37" y1="60" x2="83" y2="60" stroke="#90CC00" stroke-width=".4" opacity=".25"/>
+      <circle cx="60" cy="60" r="9.5" fill="#010901" stroke="#90CC00" stroke-width=".9"/>
+      <circle cx="60" cy="60" r="6" fill="#000600"/>
+      <circle cx="60" cy="60" r="3.5" fill="#90CC00" opacity=".9"/>
+      <circle cx="54.5" cy="54.5" r="2.5" fill="#fff" opacity=".5"/>
+    </svg>
+    <div class="sb-toggle" id="sb-toggle-btn" title="Toggle sidebar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="16" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="sb-nav">
+    <div class="sb-nav-item active">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span class="sb-nav-item-label">Densities</span>
+      <span class="sb-tip">Densities</span>
+    </div>
+    <div class="sb-nav-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="sb-nav-item-label">Token Splash</span>
+      <span class="sb-tip">Token Splash</span>
+    </div>
+  </div>
+
+
+
+  <div class="sb-user">
+    <div class="sb-user-avatar">S</div>
+    <div><span class="sb-user-name">Crypto Edge</span><span class="sb-user-badge">PRO</span></div>
+    <span class="sb-user-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+  </div>
+</div>
+
+<!-- ── Right column ─────────────────────────────────────────── -->
+<div id="right">
+<div id="octa-watermark" style="position:fixed;top:calc(50vh + 41px);left:calc(50vw + var(--sb-w,232px) / 2);transform:translate(-50%,-50%);pointer-events:none;z-index:1;transition:left .04s linear,font-size .04s linear,letter-spacing .04s linear;font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:calc((100vw - var(--sb-w,232px)) / 3.2);font-weight:900;letter-spacing:calc((100vw - var(--sb-w,232px)) / 40);font-style:italic;color:#060d09;-webkit-text-stroke:2px #90CC00;opacity:0.05;user-select:none;white-space:nowrap;">OCTA</div>
+
+  <!-- Brand bar -->
+  <div id="brandbar">
+    <svg class="brand-octa-icon" viewBox="0 0 30 30" fill="none">
+      <path d="M11 7.5 C8.5 4.5 7 2.5 6 1" stroke="#90CC00" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M19 7.5 C21.5 4.5 23 2.5 24 1" stroke="#90CC00" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M3 12 C3 12 8 6 15 6 C22 6 27 12 27 12 C27 12 22 18 15 18 C8 18 3 12 3 12Z" stroke="#90CC00" stroke-width="1.35" fill="none"/>
+      <circle cx="15" cy="12" r="4.5" stroke="#90CC00" stroke-width="1.0" fill="none"/>
+      <path d="M15 7.8 C17.5 12 15 16.2 15 16.2 C12.5 12 15 7.8 15 7.8Z" fill="#90CC00" opacity=".85"/>
+      <path d="M9 18 C6.5 22 5.5 25 5 28" stroke="#90CC00" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M13 19 C12 22.5 12 25.5 12 28" stroke="#90CC00" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M17 19 C18 22.5 18 25.5 18 28" stroke="#90CC00" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M21 18 C23.5 22 24.5 25 25 28" stroke="#90CC00" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+    <span class="brand-name">OCTA</span>
+    <div class="brand-spacer"></div>
+    <div class="ws-dropdown" id="ws-dropdown">
+      <button class="ws-trigger" id="ws-trigger">
+        <span class="ws-trigger-name" id="ws-name">Workspace 1</span>
+        <svg class="ws-trigger-chevron" id="ws-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="ws-menu" id="ws-menu" style="display:none">
+        <div class="ws-action" id="ws-rename-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Rename
+        </div>
+        <div class="ws-action" id="ws-delete-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          Delete workspace
+        </div>
+        <div class="ws-divider"></div>
+        <div class="ws-action" id="ws-create-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Create workspace
+        </div>
+        <div class="ws-divider"></div>
+        <div class="ws-list-label" style="display:flex;align-items:center;justify-content:space-between">
+          <span>List</span>
+          <span id="ws-count" style="font-size:10px;font-weight:600;color:var(--muted2);letter-spacing:0.5px"></span>
+        </div>
+        <div id="ws-list"></div>
+      </div>
+    </div>
+    <div id="conn-dot" style="display:none"></div>
+    <span id="conn-label" style="display:none"></span>
+  </div>
+
+  <!-- Stats bar -->
+  <div id="statsbar">
+    <div class="stat-block">
+      <div class="stat-lbl">Total Densities</div>
+      <div class="stat-val" id="stat-total">0</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-lbl">PERP</div>
+      <div class="stat-val green">
+        <span id="stat-perp">0</span>
+        <span class="stat-arr" style="color:var(--accent)">↑</span>
+      </div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-lbl">SPOT</div>
+      <div class="stat-val blue">
+        <span id="stat-spot">0</span>
+        <span class="stat-arr" style="color:#5288C0">↑</span>
+      </div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-lbl">Pairs Active</div>
+      <div class="stat-val" id="stat-syms">0</div>
+    </div>
+    <div class="stats-spacer"></div>
+    <!-- Search -->
+    <div class="fb-box fb-search-box">
+      <span class="fb-search-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </span>
+      <input id="search-input" type="text" placeholder="Search pair…" autocomplete="off">
+    </div>
+    <!-- Exchange -->
+    <div class="fdd" id="fdd-exchange">
+      <div class="fdd-trigger" id="fdd-exchange-trigger" tabindex="0">
+        <div class="fdd-inner">
+          <span class="fdd-lbl">Exchange</span>
+          <span class="fdd-val" id="fdd-exchange-val">All</span>
+        </div>
+        <span class="fdd-chevron"><svg width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+      </div>
+      <div class="fdd-menu" id="fdd-exchange-menu" style="display:none">
+        <div class="fdd-item active" data-val="all"><span class="fdd-dot"></span>All</div>
+        <div class="fdd-item" data-val="binance"><span class="fdd-dot"></span><span class="fdd-item-icon" id="fdd-icon-binance"></span>Binance</div>
+        <div class="fdd-item" data-val="bybit"><span class="fdd-dot"></span><span class="fdd-item-icon" id="fdd-icon-bybit"></span>Bybit</div>
+        <div class="fdd-item" data-val="okx"><span class="fdd-dot"></span><span class="fdd-item-icon" id="fdd-icon-okx"></span>OKX</div>
+        <div class="fdd-item" data-val="gate"><span class="fdd-dot"></span><span class="fdd-item-icon" id="fdd-icon-gate"></span>Gate.io</div>
+        <div class="fdd-item" data-val="bitget"><span class="fdd-dot"></span><span class="fdd-item-icon" id="fdd-icon-bitget"></span>Bitget</div>
+      </div>
+    </div>
+    <!-- Market -->
+    <div class="fdd" id="fdd-market">
+      <div class="fdd-trigger" id="fdd-market-trigger" tabindex="0">
+        <div class="fdd-inner">
+          <span class="fdd-lbl">Market</span>
+          <span class="fdd-val" id="fdd-market-val">All</span>
+        </div>
+        <span class="fdd-chevron"><svg width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+      </div>
+      <div class="fdd-menu" id="fdd-market-menu" style="display:none">
+        <div class="fdd-item active" data-val="all"><span class="fdd-dot"></span>All</div>
+        <div class="fdd-item" data-val="perp"><span class="fdd-dot"></span>PERP</div>
+        <div class="fdd-item" data-val="spot"><span class="fdd-dot"></span>SPOT</div>
+      </div>
+    </div>
+    <!-- Side -->
+    <div class="fdd" id="fdd-side">
+      <div class="fdd-trigger" id="fdd-side-trigger" tabindex="0">
+        <div class="fdd-inner">
+          <span class="fdd-lbl">Side</span>
+          <span class="fdd-val" id="fdd-side-val">All</span>
+        </div>
+        <span class="fdd-chevron"><svg width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+      </div>
+      <div class="fdd-menu" id="fdd-side-menu" style="display:none">
+        <div class="fdd-item active" data-val="all"><span class="fdd-dot"></span>All</div>
+        <div class="fdd-item" data-val="bid"><span class="fdd-dot"></span>BID</div>
+        <div class="fdd-item" data-val="ask"><span class="fdd-dot"></span>ASK</div>
+      </div>
+    </div>
+    <!-- Customize then Favorites -->
+    <button class="stats-customize" id="stats-settings-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Customize
+    </button>
+    <button class="fb-fav-btn hdr-icon-btn" id="favs-btn" title="Favorites only">★</button>
+  </div>
+
+  <!-- Main content -->
+  <div id="main">
+    <div id="grid" style="position:relative;">
+      <div id="empty">
+        Connecting to exchanges…
+        <span>Density walls will appear automatically</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottom-bar"><span style="position:absolute;right:18px;bottom:14px;font-size:10px;color:#2a3a28;letter-spacing:0.5px;user-select:none">v. 1.12</span></div>
+
+</div><!-- #right -->
+</div><!-- #app -->
+
+<!-- ══ Symbol autocomplete dropdown ═══════════════════════════ -->
+<div id="coin-sym-dropdown"></div>
+
+<!-- ══ Unsaved changes dialog ══════════════════════════════════ -->
+<div id="sp-unsaved-overlay">
+  <div id="sp-unsaved-box">
+    <button id="sp-unsaved-dismiss" title="Continue editing">✕</button>
+    <p><strong>Unsaved changes.</strong><br>Are you sure you want to exit?</p>
+    <div class="sp-unsaved-btns">
+      <button id="sp-unsaved-exit">Exit</button>
+      <button id="sp-unsaved-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Settings panel ══════════════════════════════════════════ -->
+<div id="settings-overlay">
+  <div id="settings-panel">
+    <div class="sp-header">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#90CC00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="sp-title">Customize</span>
+      <button class="sp-close" id="sp-close">✕</button>
+    </div>
+    <div class="sp-body">
+
+      <!-- ── LEFT COLUMN ── -->
+      <div class="sp-left">
+
+        <!-- Sort + Direction -->
+        <div class="sp-section">
+          <div class="sp-section-title">Sort</div>
+          <div class="sort-row2">
+            <select class="sp-select" id="sp-sort-select" style="flex:1">
+              <option value="time">By Time</option>
+              <option value="volume">By Volume</option>
+              <option value="distance">By Distance</option>
+              <option value="age">By Age</option>
+            </select>
+            <button class="sort-dir-btn on" id="sort-order-btn">↓</button>
+          </div>
+        </div>
+
+        <!-- Distance % -->
+        <div class="sp-section">
+          <div class="sp-section-title">Distance %</div>
+          <select class="sp-select" id="sp-distance-select" style="width:100%">
+            <option value="0">Any (no limit)</option>
+            <option value="0.5">0.5%</option>
+            <option value="1">1%</option>
+            <option value="2">2%</option>
+            <option value="3">3%</option>
+            <option value="5">5%</option>
+            <option value="10">10%</option>
+          </select>
+        </div>
+
+        <!-- Wall Age -->
+        <div class="sp-section">
+          <div class="sp-section-title">Wall Age</div>
+          <div class="sp-time-row">
+            <span class="sp-time-label">From</span>
+            <input class="sp-time-val" id="sp-time-from-val" type="number" placeholder="—" min="0">
+            <select class="sp-select sp-time-unit" id="sp-time-from-unit">
+              <option value="seconds">seconds</option>
+              <option value="minutes" selected>minutes</option>
+              <option value="hours">hours</option>
+              <option value="days">days</option>
+            </select>
+            <span class="sp-time-label">To</span>
+            <input class="sp-time-val" id="sp-time-to-val" type="number" placeholder="—" min="0">
+            <select class="sp-select sp-time-unit" id="sp-time-to-unit">
+              <option value="seconds">seconds</option>
+              <option value="minutes" selected>minutes</option>
+              <option value="hours">hours</option>
+              <option value="days">days</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Min size per exchange -->
+        <div class="sp-section">
+          <div class="sp-section-title">Min Size (S / F)</div>
+          <div id="sp-exch-rows"></div>
+        </div>
+
+        <!-- Card Style -->
+        <div class="sp-section">
+          <div class="sp-section-title">Card Style</div>
+          <div id="sp-card-style"></div>
+        </div>
+
+        <!-- Coin list -->
+        <div class="sp-section">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <div class="sp-section-title" style="margin-bottom:0;flex-shrink:0">Coin List</div>
+            <div class="coin-list-search-wrap">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input id="coin-list-search" type="text" placeholder="Search…" autocomplete="off" spellcheck="false">
+            </div>
+            <button class="sp-add-coin-btn" id="sp-add-coin" style="width:auto;padding:5px 12px;font-size:12px;border-radius:7px;flex-shrink:0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Coin
+            </button>
+          </div>
+          <div id="coin-list"></div>
+          <button class="sp-add-coin-btn" id="sp-add-coin-bottom">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Coin
+          </button>
+        </div>
+
+      </div><!-- /sp-left -->
+
+      <!-- ── RIGHT COLUMN ── -->
+      <div class="sp-right">
+        <div class="sp-section">
+          <div class="sp-section-title">Exchanges</div>
+          <div id="sp-exch-selection"></div>
+        </div>
+        <div class="sp-section">
+          <div class="sp-section-title">Sound</div>
+          <label class="sp-sound-toggle">
+            <input type="checkbox" id="sp-sound-on">
+            <span>Alert sound</span>
+          </label>
+          <div class="sp-sound-types" id="sp-sound-types">
+            <button class="sp-sound-btn active" data-sound="chime">Chime</button>
+            <button class="sp-sound-btn" data-sound="bell">Bell</button>
+            <button class="sp-sound-btn" data-sound="drop">Drop</button>
+            <button class="sp-sound-btn" data-sound="pulse">Pulse</button>
+            <button class="sp-sound-preview" id="sp-sound-preview" title="Preview">▶</button>
+          </div>
+          <div class="sp-vol-row">
+            <span class="sp-vol-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </span>
+            <input type="range" id="sp-sound-vol" class="sp-vol-slider" min="0" max="100" value="20">
+            <span class="sp-vol-label" id="sp-vol-label">20%</span>
+          </div>
+        </div>
+        <div class="sp-section">
+          <div class="sp-section-title">Quote Currencies</div>
+          <div class="sp-quotes-grid" id="sp-quotes-grid"></div>
+        </div>
+        <div class="sp-section">
+          <div class="sp-section-title">Mode</div>
+          <div class="sp-mode-row">
+            <button class="sp-mode-btn" id="sp-mode-binance-btn">Only BinanceF Tickers</button>
+            <button class="sp-mode-btn" id="sp-mode-all-btn">All Tickers</button>
+          </div>
+        </div>
+      </div><!-- /sp-right -->
+
+    </div><!-- /sp-body -->
+
+    <div class="sp-footer">
+      <button class="sp-reset-link" id="sp-reset">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.86"/></svg>
+        Reset Settings
+      </button>
+      <div class="sp-footer-spacer"></div>
+      <button class="sp-cancel-btn" id="sp-cancel">Cancel</button>
+      <button class="sp-save-btn"   id="sp-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ Workspace bootstrap (must run before loadSettings) ════════
+const WS_MAX = 5;
+let workspaces = JSON.parse(localStorage.getItem('octa_workspaces') || '["Workspace 1"]');
+let wsActive   = Math.min(parseInt(localStorage.getItem('octa_ws_active') || '0'), workspaces.length - 1);
+function wsSettingsKey(i) { return 'octa_ws_v3_' + i; }
+function wsModeKey(i)     { return 'octa_ws_mode_' + i; }
+
+// One-time migration: copy legacy octa_v3 → workspace 0 slot
+(function() {
+  const legacy = localStorage.getItem('octa_v3');
+  if (legacy && !localStorage.getItem(wsSettingsKey(0))) {
+    localStorage.setItem(wsSettingsKey(0), legacy);
+  }
+})();
+
+// ══ Exchange favicon helper ═══════════════════════════════════
+function _faveErr(img, abbr, color, fs) {
+  img.style.display = 'none';
+  const s = document.createElement('span');
+  s.textContent = abbr;
+  s.style.cssText = `font-size:${fs}px;font-weight:900;color:${color};line-height:1`;
+  img.parentNode.insertBefore(s, img.nextSibling);
+}
+
+// ══ Config ═══════════════════════════════════════════════════
+// Card style colour palette (dark-theme friendly)
+const CS_PALETTE = [
+  // Greens
+  '#1a3a1a','#1e4d1e','#2d5c1e','#3a7a1e','#4e9a2a',
+  // Teals / Blues
+  '#0d2e3a','#103a4a','#1a4a5e','#1e5c7a','#1a3a5c',
+  // Purples / Violets
+  '#2a1a3a','#3a1a5c','#4a1e6e','#321a4a','#1e1a3a',
+  // Ambers / Oranges
+  '#3a2a0a','#4a350d','#5c420f','#3a1a0a','#4a2a0d',
+  // Reds / Pinks
+  '#3a0d0d','#4a1212','#5c1818','#3a0d1a','#4a0d24',
+];
+const DEFAULT_CARD_STYLE = {
+  tiers: [
+    { id:'low',   label:'Low',   fromThresh: 50000,   bidColor: '', askColor: '' },
+    { id:'mid',   label:'Mid',   fromThresh: 500000,  bidColor: '', askColor: '' },
+    { id:'large', label:'Large', fromThresh: 2000000, bidColor: '', askColor: '' },
+  ]
+};
+
+const ALL_QUOTES = ['USDT','USDC','USDE','FDUSD','BUSD','TUSD','USD','EUR','GBP','TRY','BRL','AUD'];
+const DEFAULT_QUOTES_ENABLED = Object.fromEntries(ALL_QUOTES.map(q => [q, q === 'USDT']));
+
+const EXCHANGES_LIST = [
+  { key:'binance', label:'Binance', abbr:'BN', domain:'binance.com',  color:'#F0B90B' },
+  { key:'bybit',   label:'Bybit',   abbr:'BY', domain:'bybit.com',    color:'#FF6108' },
+  { key:'okx',     label:'OKX',     abbr:'OK', domain:'okx.com',      color:'#5B8EFF' },
+  { key:'gate',    label:'Gate.io', abbr:'GT', domain:'gate.io',      color:'#5BB4FF' },
+  { key:'bitget',  label:'Bitget',  abbr:'BG', domain:'bitget.com',   color:'#1DA2B4' },
+];
+const EXCH_DOMAINS = { binance:'binance.com', bybit:'bybit.com', okx:'okx.com', gate:'gate.io', bitget:'bitget.com' };
+const DEFAULT_EXCH_MINS = {
+  binance:{s:50000,f:50000}, bybit:{s:50000,f:50000}, okx:{s:50000,f:50000},
+  gate:{s:50000,f:50000}, bitget:{s:50000,f:50000}
+};
+const DEFAULT_SYM_OVERRIDES = {
+  BTCUSDT:5000000, ETHUSDT:3000000, BNBUSDT:2000000, BCHUSDT:2000000,
+  HYPEUSDT:2000000, DOGEUSDT:2000000, ZECUSDT:1000000,
+  AVAXUSDT:500000, TONUSDT:500000, TRXUSDT:500000, NEARUSDT:500000,
+  '1000PEPEUSDT':500000, PEPEUSDT:500000,
+  TAOUSDT:300000, PENGUUSDT:200000, ORDIUSDT:200000, ATOMUSDT:200000, XMRUSDT:200000,
+  SOLUSDT:500000, XRPUSDT:150000, XLMUSDT:150000,
+  SEIUSDT:200000, ETCUSDT:100000, LINKUSDT:200000, AAVEUSDT:200000,
+  SUIUSDT:200000, FILUSDT:120000, HBARUSDT:100000,
+  APTUSDT:100000, ASTERUSDT:100000,
+};
+const DEFAULT_COIN_LIST = Object.entries(DEFAULT_SYM_OVERRIDES)
+  .filter(([s]) => s !== 'PEPEUSDT') // PEPEUSDT covered by 1000PEPEUSDT entry
+  .map(([symbol, minVol]) => ({symbol, minVol, visible:true, mkt_s:true, mkt_f:true}))
+  .concat([{symbol:'PEPEUSDT', minVol:500000, visible:true, mkt_s:true, mkt_f:true}]);
+
+// ══ Settings ══════════════════════════════════════════════════
+const DEFAULT_EXCH_ENABLED = {
+  binance:{s:true,f:true}, bybit:{s:true,f:true}, okx:{s:true,f:true},
+  gate:{s:true,f:true}, bitget:{s:true,f:true}
+};
+const DEFAULT_TIME_OBJ = () => ({ value: '', unit: 'minutes' });
+function defaultSettings() {
+  return {
+    sortBy:'time', sortOrder:'desc', distancePct:'10',
+    timeFrom: DEFAULT_TIME_OBJ(), timeTo: DEFAULT_TIME_OBJ(),
+    soundOn: false, soundVolume: 20, soundType: 'chime',
+    exchangeMins: JSON.parse(JSON.stringify(DEFAULT_EXCH_MINS)),
+    exchangeEnabled: JSON.parse(JSON.stringify(DEFAULT_EXCH_ENABLED)),
+    quotesEnabled: JSON.parse(JSON.stringify(DEFAULT_QUOTES_ENABLED)),
+    cardStyle: JSON.parse(JSON.stringify(DEFAULT_CARD_STYLE)),
+    coinList: JSON.parse(JSON.stringify(DEFAULT_COIN_LIST))
+  };
+}
+function loadSettings(idx) {
+  idx = idx != null ? idx : wsActive;
+  try {
+    const r = JSON.parse(localStorage.getItem(wsSettingsKey(idx)) || 'null');
+    if (r && r.exchangeMins) {
+      // migrate older saves
+      if (!r.exchangeEnabled) r.exchangeEnabled = JSON.parse(JSON.stringify(DEFAULT_EXCH_ENABLED));
+      if (!r.distancePct) r.distancePct = '10';
+      if (!r.timeFrom || typeof r.timeFrom === 'string') r.timeFrom = DEFAULT_TIME_OBJ();
+      if (!r.timeTo   || typeof r.timeTo   === 'string') r.timeTo   = DEFAULT_TIME_OBJ();
+      if (r.soundOn == null || !r._v2)  r.soundOn = false;  // v2: sound off by default
+      r._v2 = true;
+      if (r.soundVolume == null) r.soundVolume = 20;
+      if (!r.soundType)          r.soundType   = 'chime';
+      if (!r.quotesEnabled) r.quotesEnabled = JSON.parse(JSON.stringify(DEFAULT_QUOTES_ENABLED));
+      if (!r.cardStyle) r.cardStyle = JSON.parse(JSON.stringify(DEFAULT_CARD_STYLE));
+      if (!r.coinList || r.coinList.length === 0) r.coinList = JSON.parse(JSON.stringify(DEFAULT_COIN_LIST));
+      // migrate old thresh → fromThresh
+      if (r.cardStyle && r.cardStyle.tiers) {
+        r.cardStyle.tiers.forEach(t => {
+          if (t.thresh != null && t.fromThresh == null) { t.fromThresh = t.thresh; delete t.thresh; }
+        });
+      }
+      delete r.name;
+      return r;
+    }
+  } catch(e) {}
+  return defaultSettings();
+}
+let settings     = loadSettings();
+let draftSettings = null;
+function saveSettings(idx) {
+  idx = idx != null ? idx : wsActive;
+  localStorage.setItem(wsSettingsKey(idx), JSON.stringify(settings));
+}
+
+// ══ Quick-filter state ════════════════════════════════════════
+let filterExchange = 'all', filterMarket = 'all', filterSide = 'all', filterText = '';
+let favsOnly = false;
+
+// ══ Core state ════════════════════════════════════════════════
+const densities   = new Map();
+const symCards    = new Map();  // symbol -> Set of density ids
+let favorites     = new Set(JSON.parse(localStorage.getItem('octa_favs') || '[]'));
+let soundOn       = settings.soundOn !== false;
+let soundVolume   = settings.soundVolume ?? 20;
+let soundType     = settings.soundType || 'beep';
+let audioCtx      = null;
+let _lastBeep     = 0;  // throttle: ms of last beep
+
+// ══ Filter logic ══════════════════════════════════════════════
+const UNIT_SECS = { seconds: 1, minutes: 60, hours: 3600, days: 86400 };
+function passesFilter(d) {
+  if (screenerMode === 'binance_only' && !d.binance_f) return false;
+  // Quote currency filter
+  const { quote: _q } = symParts(d.symbol.toUpperCase());
+  const _qKey = _q.slice(1); // strip leading '/'
+  if (_qKey && (settings.quotesEnabled || DEFAULT_QUOTES_ENABLED)[_qKey] === false) return false;
+  if (filterExchange !== 'all' && d.exchange !== filterExchange) return false;
+  if (filterMarket   !== 'all' && d.market   !== filterMarket)   return false;
+  if (filterSide     !== 'all' && d.side     !== filterSide)     return false;
+  if (filterText && !d.symbol.toLowerCase().includes(filterText.toLowerCase())) return false;
+  if (favsOnly && !favorites.has(d.symbol)) return false;
+
+  // Exchange enabled check
+  const mk = d.market === 'spot' ? 's' : 'f';
+  const ee = (settings.exchangeEnabled||{})[d.exchange];
+  if (ee && ee[mk] === false) return false;
+
+  const sym  = d.symbol.toUpperCase();
+  const coin = (settings.coinList || []).find(c => c.symbol === sym);
+  if (coin && coin.visible === false) return false;
+
+  // Distance filter: |pct_from_price| must be ≤ distancePct
+  const maxDist = parseFloat(settings.distancePct);
+  if (!isNaN(maxDist) && maxDist > 0) {
+    if (Math.abs(d.pct_from_price) > maxDist) return false;
+  }
+
+  // Age filter: age in seconds of d.first_seen
+  const ageSec = Date.now() / 1000 - d.first_seen;
+  const tf = settings.timeFrom;
+  const tt = settings.timeTo;
+  if (tf && tf.value !== '' && tf.value !== null) {
+    const fromSec = parseFloat(tf.value) * (UNIT_SECS[tf.unit] || 60);
+    if (!isNaN(fromSec) && ageSec < fromSec) return false;
+  }
+  if (tt && tt.value !== '' && tt.value !== null) {
+    const toSec = parseFloat(tt.value) * (UNIT_SECS[tt.unit] || 60);
+    if (!isNaN(toSec) && ageSec > toSec) return false;
+  }
+
+  const emin = ((settings.exchangeMins || {})[d.exchange] || {})[mk] || 0;
+  const coinMin = (coin && coin.minVol != null) ? coin.minVol
+    : (DEFAULT_SYM_OVERRIDES[sym] && mk === 'f') ? DEFAULT_SYM_OVERRIDES[sym] : 0;
+  return d.volume_usd >= Math.max(coinMin, emin);
+}
+
+// ══ Formatters ════════════════════════════════════════════════
+function fmtUsd(v) {
+  if (v >= 1e9) return (v/1e9).toFixed(2)+'B$';
+  if (v >= 1e6) return (v/1e6).toFixed(2)+'M$';
+  if (v >= 1e3) return (v/1e3).toFixed(1)+'K$';
+  return v.toFixed(0)+'$';
+}
+function fmtPrice(p) {
+  if (p >= 10000) return p.toLocaleString('en-US',{maximumFractionDigits:1});
+  if (p >= 100)   return p.toLocaleString('en-US',{maximumFractionDigits:2});
+  if (p >= 1)     return p.toLocaleString('en-US',{maximumFractionDigits:4});
+  if (p >= 0.01)  return p.toLocaleString('en-US',{maximumFractionDigits:5});
+  return p.toFixed(6);
+}
+function fmtAge(ts) {
+  const s = Math.floor(Date.now()/1000 - ts);
+  if (s < 60)   return s+'s';
+  if (s < 3600) return Math.floor(s/60)+'m ' + (s%60)+'s';
+  return Math.floor(s/3600)+'h';
+}
+function exchIcon(ex) {
+  const obj = EXCHANGES_LIST.find(e => e.key === ex);
+  if (!obj) return `<span style="font-size:10px;font-weight:900;color:#777">${ex.slice(0,2).toUpperCase()}</span>`;
+  return `<img src="https://www.google.com/s2/favicons?domain=${obj.domain}&sz=32" width="17" height="17" alt="${obj.abbr}" title="${ex}" style="border-radius:2px;display:block" onerror="_faveErr(this,'${obj.abbr}','${obj.color}',10)">`;
+}
+function symParts(sym) {
+  const QUOTES = ['FDUSD','USDT','USDC','USDE','BUSD','TUSD','USD','EUR','GBP','TRY','BRL','AUD','BTC','ETH','BNB'];
+  for (const q of QUOTES) {
+    if (sym.endsWith(q)) return { base: sym.slice(0, -q.length), quote: '/' + q };
+  }
+  return { base: sym, quote: '' };
+}
+function saveFavs() { localStorage.setItem('octa_favs', JSON.stringify([...favorites])); }
+
+// ══ Sound ═════════════════════════════════════════════════════
+function _ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function _playSound(type, vol) {
+  const ctx = _ensureAudio();
+  const t = ctx.currentTime;
+  const g = ctx.createGain();
+  g.connect(ctx.destination);
+
+  if (type === 'beep') {
+    // Falling tone 900→450 Hz
+    const osc = ctx.createOscillator();
+    osc.connect(g); osc.type = 'sine';
+    osc.frequency.setValueAtTime(900, t);
+    osc.frequency.exponentialRampToValueAtTime(450, t+0.15);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.32);
+    osc.start(t); osc.stop(t+0.32);
+
+  } else if (type === 'ping') {
+    // Short clean high sine 1400 Hz
+    const osc = ctx.createOscillator();
+    osc.connect(g); osc.type = 'sine';
+    osc.frequency.setValueAtTime(1400, t);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.25);
+    osc.start(t); osc.stop(t+0.25);
+
+  } else if (type === 'chime') {
+    // Two-note ascending: 600 then 900 Hz
+    [0, 0.14].forEach((delay, i) => {
+      const osc = ctx.createOscillator();
+      const gn  = ctx.createGain();
+      osc.connect(gn); gn.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(i === 0 ? 600 : 900, t+delay);
+      gn.gain.setValueAtTime(vol * 0.8, t+delay);
+      gn.gain.exponentialRampToValueAtTime(0.001, t+delay+0.28);
+      osc.start(t+delay); osc.stop(t+delay+0.28);
+    });
+
+  } else if (type === 'click') {
+    // Percussive noise burst
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random()*2-1) * (1 - i/data.length);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(g);
+    g.gain.setValueAtTime(vol * 1.5, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.05);
+    src.start(t);
+
+  } else if (type === 'blip') {
+    // Quick up-down chirp 500→1000→500 Hz
+    const osc = ctx.createOscillator();
+    osc.connect(g); osc.type = 'square';
+    const flt = ctx.createBiquadFilter();
+    flt.type = 'lowpass'; flt.frequency.value = 1800;
+    osc.disconnect(); osc.connect(flt); flt.connect(g);
+    osc.frequency.setValueAtTime(500, t);
+    osc.frequency.exponentialRampToValueAtTime(1000, t+0.08);
+    osc.frequency.exponentialRampToValueAtTime(500, t+0.16);
+    g.gain.setValueAtTime(vol * 0.4, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.18);
+    osc.start(t); osc.stop(t+0.18);
+
+  } else if (type === 'bell') {
+    // Deep resonant bell — 220 Hz triangle, long tail
+    const osc = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc.connect(g); osc2.connect(g2); g2.connect(ctx.destination);
+    osc.type = 'triangle'; osc.frequency.value = 220;
+    osc2.type = 'triangle'; osc2.frequency.value = 440;
+    g.gain.setValueAtTime(vol * 0.9, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+    g2.gain.setValueAtTime(vol * 0.3, t);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+    osc.start(t); osc.stop(t + 1.4);
+    osc2.start(t); osc2.stop(t + 0.7);
+
+  } else if (type === 'drop') {
+    // Low descending tone 380→140 Hz — deep thud feel
+    const osc = ctx.createOscillator();
+    osc.connect(g); osc.type = 'sine';
+    osc.frequency.setValueAtTime(380, t);
+    osc.frequency.exponentialRampToValueAtTime(140, t + 0.35);
+    g.gain.setValueAtTime(vol * 1.1, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    osc.start(t); osc.stop(t + 0.4);
+
+  } else if (type === 'pulse') {
+    // Three soft low pulses: 260 → 330 → 410 Hz
+    [[0, 260], [0.18, 330], [0.36, 410]].forEach(([delay, freq]) => {
+      const osc = ctx.createOscillator();
+      const gn  = ctx.createGain();
+      osc.connect(gn); gn.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gn.gain.setValueAtTime(vol * 0.7, t + delay);
+      gn.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.22);
+      osc.start(t + delay); osc.stop(t + delay + 0.22);
+    });
+  }
+}
+
+function playBeep(force) {
+  if (!soundOn) return;
+  const now = Date.now();
+  if (!force && now - _lastBeep < 1500) return;  // throttle: max 1 beep per 1.5s
+  _lastBeep = now;
+  try { _playSound(soundType, Math.max(0.001, soundVolume / 100 * 0.35)); } catch(e) {}
+}
+
+// ══ Card style helpers ════════════════════════════════════════
+// Brighten a hex color by blending with white for readable text
+function _textOnBg(hex) {
+  // All palette colors are dark → use bright text
+  return 'rgba(255,255,255,0.92)';
+}
+function getRowBg(d) {
+  const cs = settings.cardStyle || DEFAULT_CARD_STYLE;
+  const tiers = [...(cs.tiers || DEFAULT_CARD_STYLE.tiers)];
+  // Sort largest fromThresh first — assign tier to highest matching threshold
+  tiers.sort((a, b) => (b.fromThresh || 0) - (a.fromThresh || 0));
+  const vol = d.volume_usd;
+  for (const tier of tiers) {
+    if (vol >= (tier.fromThresh || 0)) {
+      const color = d.side === 'bid' ? tier.bidColor : tier.askColor;
+      return color || '';
+    }
+  }
+  return '';
+}
+function applyRowBg(el, d) {
+  const bg = getRowBg(d);
+  const volEl = el.querySelector('.d-vol');
+  if (!volEl) return;
+  if (bg) {
+    volEl.style.background = bg;
+    volEl.style.color = _textOnBg(bg);
+    volEl.style.borderRadius = '3px';
+  } else {
+    volEl.style.background = '';
+    volEl.style.color = '';
+  }
+}
+
+// ══ Update debounce buffer ════════════════════════════════════
+const _updateBuf = new Map(); // id -> density data
+const _rowEls    = new Map(); // id -> DOM row element (cache to avoid querySelector)
+let _updateRaf = null;
+function _flushUpdates() {
+  _updateRaf = null;
+  _updateBuf.forEach((d, id) => _applyUpdate(d));
+  _updateBuf.clear();
+}
+function _scheduleFlush() {
+  if (!_updateRaf) _updateRaf = requestAnimationFrame(_flushUpdates);
+}
+
+// ══ Row builder ═══════════════════════════════════════════════
+function buildRow(d, isNew=false) {
+  const el   = document.createElement('div');
+  el.className = `d-row ${d.side}${isNew?' new-row':''}`;
+  el.dataset.id = d.id;
+  const mktKey = d.market === 'spot' ? 's' : 'f';
+  const mktTxt = d.market === 'spot' ? 'S' : 'F';
+  el.innerHTML = `
+    <span class="d-vol">${fmtUsd(d.volume_usd)}</span>
+    <span class="d-exch">${exchIcon(d.exchange)}</span>
+    <span class="d-mkt-lbl ${mktKey}">${mktTxt}</span>
+    <span class="d-age" data-ts="${d.first_seen}">${fmtAge(d.first_seen)}</span>
+    <span class="d-price">${fmtPrice(d.price)}</span>
+    <span class="d-pct">${Math.abs(d.pct_from_price).toFixed(1)}%</span>
+  `;
+  applyRowBg(el, d);
+  el._pctEl = el.querySelector('.d-pct');
+  el._volEl = el.querySelector('.d-vol');
+  el._ageEl = el.querySelector('.d-age');
+  _rowEls.set(d.id, el);
+  return el;
+}
+
+// ══ Card builder ══════════════════════════════════════════════
+function getOrCreateCard(symbol) {
+  let card = document.getElementById('card-' + symbol);
+  if (card) return card;
+
+  const { base, quote } = symParts(symbol);
+  card = document.createElement('div');
+  card.id        = 'card-' + symbol;
+  card.className = 'card' + (favorites.has(symbol) ? ' fav' : '');
+
+  card.innerHTML = `
+    <div class="card-header">
+      <span class="card-sym" title="Click to copy ticker" style="cursor:pointer">${base}</span>
+      <span class="card-quote">${quote}</span>
+      <div class="card-spacer"></div>
+      <button class="card-icon-btn card-eye-btn" title="Hide coin" data-sym="${symbol}">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+      <button class="card-icon-btn fav-btn${favorites.has(symbol)?' active':''}" title="Favorite" data-sym="${symbol}">☆</button>
+      <button class="card-gear-btn" title="Settings" data-sym="${symbol}">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  `;
+
+  // detect market type from first density (assigned later) — placeholder header badge updated on first row insert
+  card.querySelector('.card-sym').addEventListener('click', e => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(symbol).catch(() => {});
+    const el = e.currentTarget;
+    const prev = el.textContent;
+    el.style.color = 'var(--accent)';
+    el.textContent = '✓ Copied';
+    setTimeout(() => { el.textContent = prev; el.style.color = ''; }, 900);
+  });
+  card.querySelector('.fav-btn').addEventListener('click', e => { e.stopPropagation(); toggleFav(symbol); });
+  card.querySelector('.card-eye-btn').addEventListener('click', e => { e.stopPropagation(); hideSymbolViaSettings(symbol); });
+  card.querySelector('.card-gear-btn').addEventListener('click', e => { e.stopPropagation(); openSettingsForSymbol(symbol); });
+
+  if (!symCards.has(symbol)) symCards.set(symbol, new Set());
+  document.getElementById('grid').appendChild(card);
+  return card;
+}
+
+function updateCardMarketBadge(card, d) {
+  if (card.querySelector('.card-market')) return;
+  const hdr = card.querySelector('.card-header');
+  const badge = document.createElement('span');
+  badge.className = `card-market market-${d.market === 'spot' ? 's' : 'f'}`;
+  badge.textContent = d.market === 'spot' ? 'S' : 'F';
+  // insert after card-quote
+  const quoteEl = hdr.querySelector('.card-quote');
+  quoteEl.after(badge);
+}
+
+function renderCard(symbol) {
+  const card = document.getElementById('card-' + symbol);
+  if (!card) return;
+  const ids = symCards.get(symbol);
+  if (!ids) return;
+
+  card.querySelectorAll('.d-row').forEach(el => { _rowEls.delete(el.dataset.id); el.remove(); });
+  const ds = [...ids].map(id => densities.get(id)).filter(d => d && passesFilter(d));
+  ds.sort(sortDensities);
+  ds.forEach(d => card.appendChild(buildRow(d)));
+
+  if (ids.size === 0) { removeCard(symbol); return; }
+  card.style.display = ds.length === 0 ? 'none' : '';
+}
+
+// Rows within a card are ALWAYS sorted by distance from price, side-aware:
+//   Asks (red)  at TOP,    largest distance first  → 3%, 2%, 1%
+//   Bids (green) at BOTTOM, smallest distance first → 1%, 2%, 3%
+// This mirrors the order book: closest orders in the middle, farthest at edges.
+function sortDensities(a, b) {
+  if (a.side !== b.side) return a.side === 'ask' ? -1 : 1;  // asks before bids
+  if (a.side === 'ask') {
+    // asks: descending by distance (farthest first)
+    return Math.abs(b.pct_from_price) - Math.abs(a.pct_from_price);
+  } else {
+    // bids: ascending by distance (closest first)
+    return Math.abs(a.pct_from_price) - Math.abs(b.pct_from_price);
+  }
+}
+
+function removeCard(symbol) {
+  document.getElementById('card-'+symbol)?.remove();
+  symCards.delete(symbol);
+}
+
+function toggleFav(symbol) {
+  if (favorites.has(symbol)) favorites.delete(symbol); else favorites.add(symbol);
+  saveFavs();
+  const card = document.getElementById('card-'+symbol);
+  if (card) {
+    card.classList.toggle('fav', favorites.has(symbol));
+    const btn = card.querySelector('.fav-btn');
+    if (btn) {
+      btn.classList.toggle('active', favorites.has(symbol));
+      btn.textContent = favorites.has(symbol) ? '★' : '☆';
+    }
+  }
+  reorderGrid();
+}
+
+function cardSortVal(sym) {
+  const ids = symCards.get(sym);
+  if (!ids || !ids.size) return 0;
+  const ds = [...ids].map(id => densities.get(id)).filter(Boolean);
+  if (!ds.length) return 0;
+  const desc = settings.sortOrder === 'desc';
+  switch (settings.sortBy) {
+    case 'volume':
+      // desc = highest volume first, asc = lowest volume first
+      return desc ? Math.max(...ds.map(d => d.volume_usd))
+                  : -Math.max(...ds.map(d => d.volume_usd));
+    case 'distance':
+      // desc = farthest wall first, asc = closest wall first
+      return desc ? Math.min(...ds.map(d => Math.abs(d.pct_from_price)))
+                  : -Math.min(...ds.map(d => Math.abs(d.pct_from_price)));
+    case 'age':
+      // asc = newest card first (card with most recently added density comes first)
+      // desc = oldest card first (card where the oldest density is oldest comes first)
+      return desc ? -Math.min(...ds.map(d => d.first_seen))
+                  :  Math.max(...ds.map(d => d.first_seen));
+    default: // time
+      // desc = most recently added card first, asc = oldest card first
+      return desc ?  Math.max(...ds.map(d => d.first_seen))
+                  : -Math.max(...ds.map(d => d.first_seen));
+  }
+}
+
+function reorderGrid() {
+  const grid  = document.getElementById('grid');
+  const cards = [...grid.querySelectorAll('.card')];
+
+  // FLIP – First: snapshot positions
+  const first = new Map();
+  cards.forEach(c => {
+    const r = c.getBoundingClientRect();
+    first.set(c.id, { top: r.top, left: r.left });
+  });
+
+  // Sort (Last state)
+  cards.sort((a, b) => {
+    const sA = a.id.replace('card-',''), sB = b.id.replace('card-','');
+    const fa = favorites.has(sA)?1:0, fb = favorites.has(sB)?1:0;
+    if (fa !== fb) return fb - fa;
+    return cardSortVal(sB) - cardSortVal(sA);
+  });
+  cards.forEach(c => grid.appendChild(c));
+
+  // FLIP – Invert + Play
+  requestAnimationFrame(() => {
+    cards.forEach(c => {
+      const f = first.get(c.id);
+      if (!f) return;
+      const l = c.getBoundingClientRect();
+      const dy = f.top  - l.top;
+      const dx = f.left - l.left;
+      if (Math.abs(dy) < 0.5 && Math.abs(dx) < 0.5) return;
+      c.style.transition = 'none';
+      c.style.transform  = `translate(${dx}px,${dy}px)`;
+      requestAnimationFrame(() => {
+        c.style.transition = 'transform .32s cubic-bezier(0.4,0,0.2,1)';
+        c.style.transform  = '';
+      });
+    });
+  });
+}
+
+function updateStats() {
+  let total=0, perp=0, spot=0;
+  densities.forEach(d => { if (passesFilter(d)) { total++; if (d.market==='perp') perp++; else spot++; } });
+  const syms = new Set();
+  densities.forEach(d => { if (passesFilter(d)) syms.add(d.symbol); });
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-perp').textContent  = perp;
+  document.getElementById('stat-spot').textContent  = spot;
+  document.getElementById('stat-syms').textContent  = syms.size;
+}
+
+// ══ WS handlers ═══════════════════════════════════════════════
+function handleNew(d) {
+  if (!d.first_seen) d.first_seen = Date.now() / 1000;  // fallback if server didn't send timestamp
+  densities.set(d.id, d);
+  if (!symCards.has(d.symbol)) symCards.set(d.symbol, new Set());
+  symCards.get(d.symbol).add(d.id);
+  if (!passesFilter(d)) { updateStats(); return; }
+
+  const emptyEl = document.getElementById('empty');
+  if (emptyEl) emptyEl.remove();
+
+  const card = getOrCreateCard(d.symbol);
+  updateCardMarketBadge(card, d);
+  card.style.display = '';
+  card.classList.add('flash');
+  setTimeout(() => card.classList.remove('flash'), 750);
+
+  const row = buildRow(d, true);
+  // Insert at the correct sorted position (respects current sortBy / sortOrder)
+  const anchor = [...card.querySelectorAll('.d-row')].find(el => {
+    const other = densities.get(el.dataset.id);
+    return other && sortDensities(d, other) < 0;
+  });
+  if (anchor) card.insertBefore(row, anchor); else card.appendChild(row);
+  playBeep(); reorderGrid(); updateStats();
+}
+
+function handleUpdate(d) {
+  densities.set(d.id, d);
+  _updateBuf.set(d.id, d);
+  _scheduleFlush();
+}
+function _applyUpdate(d) {
+  const row = _rowEls.get(d.id);
+  const passes = passesFilter(d);
+  if (!row && !passes) return; // not visible and won't become visible — skip
+
+  if (row) {
+    if (passes) {
+      // Still passes — update values in place
+      row.querySelector('.d-vol').textContent   = fmtUsd(d.volume_usd);
+      row.querySelector('.d-price').textContent = fmtPrice(d.price);
+      row.querySelector('.d-pct').textContent   = Math.abs(d.pct_from_price).toFixed(1) + '%';
+      row.querySelector('.d-age').textContent   = fmtAge(d.first_seen);
+      applyRowBg(row, d);
+    } else {
+      // No longer passes filter (e.g. pct_from_price moved outside distance limit) — hide row
+      row.remove(); _rowEls.delete(d.id);
+      const card = document.getElementById('card-' + d.symbol);
+      if (card && !card.querySelector('.d-row')) card.style.display = 'none';
+    }
+  } else if (passes) {
+    // Was previously hidden by filter but now passes again — insert row into card
+    const card = getOrCreateCard(d.symbol);
+    const newRow = buildRow(d);
+    const existingRows = [...card.querySelectorAll('.d-row')];
+    const insertBefore = existingRows.find(r => {
+      const rd = densities.get(r.dataset.id);
+      return rd && sortDensities(d, rd) < 0;
+    });
+    if (insertBefore) card.insertBefore(newRow, insertBefore);
+    else card.appendChild(newRow);
+    card.style.display = '';
+  }
+  updateStats();
+}
+
+function handleRemove(id) {
+  const d = densities.get(id);
+  if (!d) return;
+  densities.delete(id);
+  const ids = symCards.get(d.symbol);
+  if (ids) {
+    ids.delete(id);
+    if (ids.size === 0) removeCard(d.symbol);
+    else renderCard(d.symbol);
+  }
+  const _el = _rowEls.get(id); if (_el) { _el.remove(); _rowEls.delete(id); }
+  updateStats();
+}
+
+function handleInitial(list) {
+  densities.clear(); symCards.clear(); _rowEls.clear();
+  document.getElementById('grid').innerHTML = '';
+  if (!list.length) {
+    document.getElementById('grid').innerHTML =
+      '<div id="empty">No densities yet<span>Data is loading from exchanges…</span></div>';
+    return;
+  }
+  list.sort((a,b) => b.first_seen - a.first_seen);
+  list.forEach(d => {
+    densities.set(d.id, d);
+    if (!symCards.has(d.symbol)) symCards.set(d.symbol, new Set());
+    symCards.get(d.symbol).add(d.id);
+  });
+  [...symCards.keys()].forEach(sym => { getOrCreateCard(sym); renderCard(sym); });
+  // update market badges
+  densities.forEach(d => {
+    const card = document.getElementById('card-'+d.symbol);
+    if (card) updateCardMarketBadge(card, d);
+  });
+  reorderGrid(); updateStats();
+}
+
+// ══ Age ticker ════════════════════════════════════════════════
+setInterval(() => {
+  _rowEls.forEach((row) => {
+    const ageEl = row._ageEl;
+    if (ageEl) ageEl.textContent = fmtAge(parseFloat(ageEl.dataset.ts));
+  });
+}, 1000);
+
+// ══ WebSocket ═════════════════════════════════════════════════
+function connect() {
+  const proto = location.protocol==='https:'?'wss':'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+  window._activeWs = ws;
+  ws.onopen = () => {
+    document.getElementById('conn-dot').className = 'on';
+    document.getElementById('conn-label').textContent = 'Connected';
+    ws._ping = setInterval(() => { if (ws.readyState===1) ws.send('ping'); }, 30000);
+  };
+  ws.onmessage = ev => {
+    if (ev.data==='pong') return;
+    try {
+      const msg = JSON.parse(ev.data);
+      if      (msg.type==='initial_state')        handleInitial(msg.data);
+      else if (msg.type==='density_new')          handleNew(msg.data);
+      else if (msg.type==='density_new_batch')    msg.data.forEach(d => handleNew(d));
+      else if (msg.type==='density_update')       handleUpdate(msg.data);
+      else if (msg.type==='density_update_batch') msg.data.forEach(d => handleUpdate(d));
+      else if (msg.type==='density_remove')       handleRemove(msg.data.id);
+      else if (msg.type==='density_pct_batch') {
+        msg.data.forEach(p => {
+          const d = densities.get(p.id);
+          if (!d) return;
+          d.pct_from_price = p.pct;
+          if (p.vol !== undefined) d.volume_usd = p.vol;
+          const row = _rowEls.get(p.id);
+          if (row) {
+            if (row._pctEl) row._pctEl.textContent = Math.abs(p.pct).toFixed(1) + '%';
+            if (p.vol !== undefined && row._volEl) row._volEl.textContent = fmtUsd(p.vol);
+          }
+        });
+      }
+      // market_data ignored in card mode (no table)
+    } catch(e) {}
+  };
+  ws.onclose = () => {
+    clearInterval(ws._ping);
+    document.getElementById('conn-dot').className = '';
+    document.getElementById('conn-label').textContent = 'Reconnecting…';
+    setTimeout(connect, 3000);
+  };
+  ws.onerror = () => ws.close();
+}
+
+// ══ Quick-filters ═════════════════════════════════════════════
+function applyFilters() {
+  [...symCards.keys()].forEach(sym => renderCard(sym));
+  reorderGrid(); updateStats();
+}
+
+// ── Custom filterbar dropdowns ────────────────────────────────
+(function() {
+  const DDEFS = [
+    { id: 'exchange', varSetter: v => { filterExchange = v; },
+      labels: { all:'All', binance:'Binance', bybit:'Bybit', okx:'OKX', gate:'Gate.io', bitget:'Bitget' } },
+    { id: 'market',   varSetter: v => { filterMarket = v; },
+      labels: { all:'All', perp:'PERP', spot:'SPOT' } },
+    { id: 'side',     varSetter: v => { filterSide = v; },
+      labels: { all:'All', bid:'BID', ask:'ASK' } },
+  ];
+
+  // Inject exchange icons into dropdown items after EXCHANGES_LIST is ready
+  function injectFddIcons() {
+    ['binance','bybit','okx','gate','bitget'].forEach(key => {
+      const el = document.getElementById('fdd-icon-' + key);
+      if (el) el.innerHTML = exchIcon(key);
+    });
+  }
+  // Run after DOM is ready (EXCHANGES_LIST defined above)
+  requestAnimationFrame(injectFddIcons);
+
+  let openId = null;
+
+  function closeAll() {
+    DDEFS.forEach(({ id }) => {
+      const menu = document.getElementById('fdd-' + id + '-menu');
+      const trigger = document.getElementById('fdd-' + id + '-trigger');
+      if (menu) menu.style.display = 'none';
+      if (trigger) trigger.classList.remove('open');
+    });
+    openId = null;
+  }
+
+  DDEFS.forEach(({ id, varSetter, labels }) => {
+    const trigger = document.getElementById('fdd-' + id + '-trigger');
+    const menu    = document.getElementById('fdd-' + id + '-menu');
+    const valEl   = document.getElementById('fdd-' + id + '-val');
+
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      const isOpen = openId === id;
+      closeAll();
+      if (!isOpen) {
+        menu.style.display = 'block';
+        trigger.classList.add('open');
+        openId = id;
+      }
+    });
+    trigger.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); trigger.click(); }
+      if (e.key === 'Escape') closeAll();
+    });
+
+    menu.querySelectorAll('.fdd-item').forEach(item => {
+      item.addEventListener('click', e => {
+        e.stopPropagation();
+        const val = item.dataset.val;
+        menu.querySelectorAll('.fdd-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        valEl.textContent = labels[val] || val;
+        varSetter(val);
+        closeAll();
+        applyFilters();
+      });
+    });
+  });
+
+  // Close on outside click
+  document.addEventListener('click', closeAll);
+
+  // Expose reset helper for resetFilters()
+  window._fddReset = function() {
+    DDEFS.forEach(({ id, labels }) => {
+      const menu  = document.getElementById('fdd-' + id + '-menu');
+      const valEl = document.getElementById('fdd-' + id + '-val');
+      if (menu) {
+        menu.querySelectorAll('.fdd-item').forEach(i => i.classList.toggle('active', i.dataset.val === 'all'));
+      }
+      if (valEl) valEl.textContent = labels['all'] || 'All';
+    });
+  };
+})();
+
+document.getElementById('search-input').addEventListener('input', e => {
+  filterText = e.target.value.trim(); applyFilters();
+});
+// Reset via double-click on search or via future UI
+function resetFilters() {
+  filterExchange='all'; filterMarket='all'; filterSide='all'; filterText=''; favsOnly=false;
+  document.getElementById('search-input').value='';
+  if (window._fddReset) window._fddReset();
+  document.getElementById('favs-btn').classList.remove('on');
+  applyFilters();
+}
+document.getElementById('search-input').addEventListener('dblclick', resetFilters);
+
+// Favorites only toggle
+document.getElementById('favs-btn').addEventListener('click', function() {
+  favsOnly = !favsOnly;
+  this.classList.toggle('on', favsOnly);
+  applyFilters();
+});
+
+// Sound type buttons
+document.getElementById('sp-sound-types').addEventListener('click', e => {
+  const btn = e.target.closest('.sp-sound-btn');
+  if (btn) {
+    document.querySelectorAll('#sp-sound-types .sp-sound-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (draftSettings) draftSettings.soundType = btn.dataset.sound;
+  }
+});
+document.getElementById('sp-sound-preview').addEventListener('click', () => {
+  const active = document.querySelector('#sp-sound-types .sp-sound-btn.active');
+  const type = active ? active.dataset.sound : 'beep';
+  const vol  = Math.max(0.001, (parseInt(document.getElementById('sp-sound-vol')?.value || 20)) / 100 * 0.35);
+  try { _playSound(type, vol); } catch(e) {}
+});
+
+// Volume slider helper
+function updateVolSlider(el) {
+  const pct = el.value + '%';
+  el.style.background = `linear-gradient(to right,var(--accent) 0%,var(--accent) ${pct},#1e2e1e ${pct},#1e2e1e 100%)`;
+}
+document.addEventListener('input', e => {
+  if (e.target.id === 'sp-sound-vol') {
+    updateVolSlider(e.target);
+    const lbl = document.getElementById('sp-vol-label');
+    if (lbl) lbl.textContent = e.target.value + '%';
+  }
+});
+
+const MIN_VOL_FLOOR = 50000;
+
+function fmtNum(n) {
+  if (n === '' || n == null) return '';
+  const i = Math.round(Number(n));
+  if (isNaN(i)) return '';
+  return i.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+function parseNum(s) {
+  return parseInt(String(s).replace(/\s/g, '')) || 0;
+}
+function _fmtInput(inp) {
+  const raw = parseNum(inp.value);
+  const pos = inp.selectionStart;
+  const oldLen = inp.value.length;
+  inp.value = raw ? fmtNum(raw) : '';
+  // keep cursor roughly in place
+  const diff = inp.value.length - oldLen;
+  try { inp.setSelectionRange(pos + diff, pos + diff); } catch(_) {}
+}
+
+function _enforceMinFloor(inp) {
+  const v = parseNum(inp.value);
+  if (v < MIN_VOL_FLOOR) {
+    inp.value = fmtNum(MIN_VOL_FLOOR);
+    inp.style.borderColor = 'var(--accent)';
+    setTimeout(() => { inp.style.borderColor = ''; }, 800);
+  } else {
+    inp.value = fmtNum(v);
+  }
+}
+document.addEventListener('input', e => {
+  if (e.target.classList.contains('exch-sf-input') && !e.target.classList.contains('sf-disabled')) {
+    _fmtInput(e.target);
+  }
+}, true);
+document.addEventListener('blur', e => {
+  if (e.target.classList.contains('exch-sf-input') ||
+      e.target.classList.contains('coin-vol-input')) {
+    _enforceMinFloor(e.target);
+  }
+}, true);
+
+// ══ Symbol autocomplete ═══════════════════════════════════════
+(function() {
+  const dd      = document.getElementById('coin-sym-dropdown');
+  let activeInp = null;
+  let onSelect  = null;
+  let hoverIdx  = -1;
+
+  function getSymbols(query) {
+    const all = [...symCards.keys()].sort();
+    if (!query) return all;
+    const q = query.toUpperCase();
+    return all.filter(s => s.startsWith(q));
+  }
+
+  function positionDd(inp) {
+    const r = inp.getBoundingClientRect();
+    dd.style.left  = r.left + 'px';
+    dd.style.top   = (r.bottom + 4) + 'px';
+    dd.style.width = r.width + 'px';
+  }
+
+  function renderDd(syms) {
+    hoverIdx = -1;
+    if (!syms.length) {
+      dd.innerHTML = '<div class="csd-empty">No matches</div>';
+    } else {
+      dd.innerHTML = syms.map((s, i) =>
+        `<div class="csd-item" data-idx="${i}" data-sym="${s}">${s}</div>`
+      ).join('');
+      dd.querySelectorAll('.csd-item').forEach(el => {
+        el.addEventListener('mousedown', e => {
+          e.preventDefault(); // prevent blur before mousedown
+          const sym = el.dataset.sym;
+          if (activeInp) activeInp.value = sym;
+          if (onSelect)  onSelect(sym);
+          hideDd();
+        });
+      });
+    }
+  }
+
+  function showDd(inp, cb) {
+    activeInp = inp;
+    onSelect  = cb;
+    positionDd(inp);
+    const syms = getSymbols(inp.value);
+    renderDd(syms);
+    dd.classList.add('open');
+  }
+
+  function hideDd() {
+    dd.classList.remove('open');
+    activeInp = null;
+    onSelect  = null;
+    hoverIdx  = -1;
+  }
+
+  function handleKey(e) {
+    if (!dd.classList.contains('open')) return;
+    const items = [...dd.querySelectorAll('.csd-item')];
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      hoverIdx = Math.min(hoverIdx + 1, items.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      hoverIdx = Math.max(hoverIdx - 1, 0);
+    } else if (e.key === 'Enter') {
+      if (hoverIdx >= 0 && items[hoverIdx]) items[hoverIdx].dispatchEvent(new MouseEvent('mousedown'));
+      return;
+    } else if (e.key === 'Escape') {
+      hideDd(); return;
+    } else { return; }
+    items.forEach((el, i) => el.classList.toggle('active', i === hoverIdx));
+    items[hoverIdx]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  document.addEventListener('keydown', handleKey);
+  document.addEventListener('click', e => {
+    if (!dd.contains(e.target) && e.target !== activeInp) hideDd();
+  });
+  window.addEventListener('scroll', () => { if (activeInp) positionDd(activeInp); }, true);
+
+  // Expose
+  window._coinSymDd = { show: showDd, hide: hideDd };
+})();
+
+// ══ Settings panel ════════════════════════════════════════════
+function buildExchRows(draft) {
+  const c = document.getElementById('sp-exch-rows');
+  c.innerHTML = '';
+  EXCHANGES_LIST.forEach(({ key, label, abbr, domain, color }) => {
+    const mins = (draft.exchangeMins||{})[key] || {s:50000,f:50000};
+    const ee   = (draft.exchangeEnabled||{})[key] || {s:true,f:true};
+    const sOn  = ee.s !== false;
+    const fOn  = ee.f !== false;
+    const row  = document.createElement('div');
+    row.className = 'exch-sf-row';
+    row.dataset.exchKey = key;
+    row.innerHTML = `
+      <div class="exch-sf-logo">
+        <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" width="17" height="17" style="border-radius:3px;display:block;${(!sOn&&!fOn)?'filter:grayscale(1) opacity(.3)':(!sOn||!fOn)?'filter:grayscale(.4) opacity(.65)':''}" onerror="_faveErr(this,'${abbr}','${color}',9)">
+      </div>
+      <span class="exch-sf-name" style="color:${(!sOn&&!fOn)?'var(--muted)':(!sOn||!fOn)?color+'99':color}">${label}</span>
+      <span class="exch-sf-label${sOn?'':' sf-label-off'}" style="color:${sOn?color:'var(--muted)'}">S</span>
+      <input class="exch-sf-input${sOn?'':' sf-disabled'}" type="text" inputmode="numeric"
+        data-key="${key}" data-type="s"
+        value="${sOn?fmtNum(mins.s):'——'}" ${sOn?'':'readonly tabindex="-1"'}>
+      <span class="exch-sf-label${fOn?'':' sf-label-off'}" style="color:${fOn?color:'var(--muted)'}">F</span>
+      <input class="exch-sf-input${fOn?'':' sf-disabled'}" type="text" inputmode="numeric"
+        data-key="${key}" data-type="f"
+        value="${fOn?fmtNum(mins.f):'——'}" ${fOn?'':'readonly tabindex="-1"'}>
+    `;
+    c.appendChild(row);
+  });
+}
+
+function _applyCoinListSearch() {
+  const q = (document.getElementById('coin-list-search')?.value || '').trim().toUpperCase();
+  document.querySelectorAll('#coin-list .coin-item').forEach(item => {
+    if (!q) { item.style.display = ''; return; }
+    const sym = (item.querySelector('.coin-sym-select')?.value || '').toUpperCase();
+    item.style.display = sym.startsWith(q) ? '' : 'none';
+  });
+}
+
+function buildCoinList(draft) {
+  const c = document.getElementById('coin-list');
+  c.innerHTML = '';
+  (draft.coinList||[]).forEach((coin, idx) => appendCoinItem(coin, idx, draft));
+  _applyCoinListSearch(); // keep filter after rebuild
+}
+
+function _checkDuplicate(item, sym, idx, draft) {
+  const isDup = sym && draft.coinList.some((c, i) => i !== idx && c.symbol === sym);
+  item.classList.toggle('duplicate', isDup);
+  // add/remove badge
+  let badge = item.querySelector('.coin-dup-badge');
+  if (isDup && !badge) {
+    badge = document.createElement('span');
+    badge.className = 'coin-dup-badge';
+    badge.textContent = 'Duplicate';
+    item.querySelector('.coin-top').insertBefore(badge, item.querySelector('[data-action="eye"]'));
+  } else if (!isDup && badge) {
+    badge.remove();
+  }
+}
+
+function appendCoinItem(coin, idx, draft) {
+  const c    = document.getElementById('coin-list');
+  const item = document.createElement('div');
+  item.className = 'coin-item' + (coin.visible===false?' hidden-coin':'');
+  item.dataset.idx = idx;
+  const eyeHidden = coin.visible===false;
+
+  const exchBtns = EXCHANGES_LIST.map(ex => {
+    const isOff = coin.exchanges && coin.exchanges[ex.key] && coin.exchanges[ex.key].enabled===false;
+    const ee = (draft.exchangeEnabled||{})[ex.key] || {s:true,f:true};
+    const globallyOff = ee.s === false && ee.f === false;
+    const cls = globallyOff ? ' globally-off' : (isOff ? ' off' : '');
+    const title = globallyOff ? `${ex.label} (disabled globally)` : ex.label;
+    return `<button class="coin-exch-btn${cls}" data-exch="${ex.key}" title="${title}">
+      <img src="https://www.google.com/s2/favicons?domain=${ex.domain}&sz=32" width="16" height="16" style="border-radius:3px;display:block" onerror="_faveErr(this,'${ex.abbr}','${ex.color}',8)">
+    </button>`;
+  }).join('');
+
+  item.innerHTML = `
+    <div class="coin-top">
+      <input class="coin-sym-select" type="text" placeholder="BTCUSDT" value="${coin.symbol||''}" maxlength="20" autocomplete="off">
+      <input class="coin-vol-input" type="text" inputmode="numeric" placeholder="Min vol $" value="${coin.minVol ? fmtNum(coin.minVol) : ''}">
+      <button class="coin-circle-btn${eyeHidden?' hidden':''}" data-action="eye" title="${eyeHidden?'Show':'Hide'}">
+        ${eyeHidden
+          ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+          : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`}
+      </button>
+      <button class="coin-circle-btn del" data-action="del" title="Remove">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="coin-bottom">
+      <div class="coin-mkt-group">
+        <label class="coin-chk-label">
+          <input type="checkbox" ${coin.mkt_s!==false?'checked':''} data-field="mkt_s">
+          <span>S</span>
+        </label>
+        <label class="coin-chk-label">
+          <input type="checkbox" ${coin.mkt_f!==false?'checked':''} data-field="mkt_f">
+          <span>F</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">${exchBtns}</div>
+    </div>
+  `;
+
+  item.querySelector('[data-action="eye"]').addEventListener('click', () => {
+    draft.coinList[idx].visible = draft.coinList[idx].visible===false ? true : false;
+    buildCoinList(draft);
+  });
+  item.querySelector('[data-action="del"]').addEventListener('click', () => {
+    draft.coinList.splice(idx,1); buildCoinList(draft);
+  });
+  const symInp = item.querySelector('.coin-sym-select');
+
+  function _onSymPick(sym) {
+    symInp.value = sym;
+    draft.coinList[idx].symbol = sym;
+    _checkDuplicate(item, sym, idx, draft);
+  }
+
+  symInp.addEventListener('focus', () => {
+    window._coinSymDd?.show(symInp, _onSymPick);
+  });
+  symInp.addEventListener('input', e => {
+    const v = e.target.value.toUpperCase();
+    e.target.value = v;
+    window._coinSymDd?.show(symInp, _onSymPick);
+  });
+  symInp.addEventListener('blur', () => {
+    setTimeout(() => window._coinSymDd?.hide(), 120);
+  });
+
+  // Check on initial render (e.g. if draft already had a dup)
+  _checkDuplicate(item, coin.symbol, idx, draft);
+  item.querySelector('.coin-vol-input').addEventListener('input', e => {
+    _fmtInput(e.target);
+    draft.coinList[idx].minVol = parseNum(e.target.value);
+  });
+  item.querySelector('.coin-vol-input').addEventListener('blur', e => {
+    const v = parseNum(e.target.value);
+    if (v < MIN_VOL_FLOOR) {
+      e.target.value = fmtNum(MIN_VOL_FLOOR);
+      draft.coinList[idx].minVol = MIN_VOL_FLOOR;
+    } else {
+      e.target.value = fmtNum(v);
+      draft.coinList[idx].minVol = v;
+    }
+  });
+  item.querySelectorAll('[data-field]').forEach(chk => {
+    chk.addEventListener('change', () => {
+      draft.coinList[idx][chk.dataset.field] = chk.checked;
+    });
+  });
+  item.querySelectorAll('.coin-exch-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const exKey = btn.dataset.exch;
+      if (!draft.coinList[idx].exchanges) draft.coinList[idx].exchanges = {};
+      if (!draft.coinList[idx].exchanges[exKey]) draft.coinList[idx].exchanges[exKey] = {enabled:true};
+      const cur = draft.coinList[idx].exchanges[exKey].enabled;
+      draft.coinList[idx].exchanges[exKey].enabled = !cur;
+      btn.classList.toggle('off', cur); // if was on, now off
+    });
+  });
+  c.appendChild(item);
+}
+
+function _updateExchSelectRowState(row, ee, color) {
+  const sOn = ee.s !== false, fOn = ee.f !== false;
+  row.classList.toggle('one-off',  (sOn !== fOn));
+  row.classList.toggle('both-off', (!sOn && !fOn));
+  const nameEl = row.querySelector('.exch-row-name');
+  if (nameEl) nameEl.style.color = (!sOn&&!fOn) ? 'var(--muted)' : (!sOn||!fOn) ? color+'99' : color;
+}
+
+function buildExchSelection(draft) {
+  const c = document.getElementById('sp-exch-selection');
+  if (!c) return;
+  c.innerHTML = '';
+  if (!draft.exchangeEnabled) draft.exchangeEnabled = JSON.parse(JSON.stringify(DEFAULT_EXCH_ENABLED));
+  EXCHANGES_LIST.forEach(({ key, label, abbr, domain, color }) => {
+    const ee = draft.exchangeEnabled[key] || {s:true,f:true};
+    const sOn = ee.s !== false, fOn = ee.f !== false;
+    const row = document.createElement('div');
+    row.className = 'exch-select-row' + (!sOn&&!fOn?' both-off':(!sOn||!fOn)?' one-off':'');
+    row.innerHTML = `
+      <div class="exch-circle">
+        <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" width="20" height="20"
+          style="border-radius:3px;display:block" onerror="_faveErr(this,'${abbr}','${color}',10)">
+      </div>
+      <span class="exch-row-name" style="flex:1;font-size:11.5px;font-weight:700;color:${(!sOn&&!fOn)?'var(--muted)':(!sOn||!fOn)?color+'99':color}">${label}</span>
+      <div class="exch-chk-group">
+        <label class="exch-chk-lbl">
+          <input type="checkbox" ${sOn?'checked':''} data-key="${key}" data-type="s">
+          <span>Spot</span>
+        </label>
+        <label class="exch-chk-lbl">
+          <input type="checkbox" ${fOn?'checked':''} data-key="${key}" data-type="f">
+          <span>Futures</span>
+        </label>
+      </div>
+    `;
+    row.querySelectorAll('input[type=checkbox]').forEach(chk => {
+      chk.addEventListener('change', () => {
+        if (!draft.exchangeEnabled[key]) draft.exchangeEnabled[key]={s:true,f:true};
+        draft.exchangeEnabled[key][chk.dataset.type] = chk.checked;
+        _updateExchSelectRowState(row, draft.exchangeEnabled[key], color);
+        // Rebuild min-size rows to reflect enabled state
+        buildExchRows(draft);
+        // Rebuild coin list to reflect per-exchange disabled state
+        buildCoinList(draft);
+      });
+    });
+    c.appendChild(row);
+  });
+}
+
+function syncSortUI(draft) {
+  const sel = document.getElementById('sp-sort-select');
+  if (sel) sel.value = draft.sortBy || 'time';
+  const ob = document.getElementById('sort-order-btn');
+  if (ob) {
+    const desc = draft.sortOrder === 'desc';
+    ob.textContent = desc ? '↓' : '↑';
+    ob.classList.toggle('on', desc);
+  }
+}
+
+function populateSettingsForm(draft) {
+  buildExchRows(draft);
+  buildExchSelection(draft);
+  buildCoinList(draft);
+  syncSortUI(draft);
+  const dist = document.getElementById('sp-distance-select');
+  if (dist) dist.value = draft.distancePct || '2';
+  // Wall Age — from
+  const tfv = document.getElementById('sp-time-from-val');
+  const tfu = document.getElementById('sp-time-from-unit');
+  if (tfv) tfv.value = (draft.timeFrom && draft.timeFrom.value != null) ? draft.timeFrom.value : '';
+  if (tfu) tfu.value = (draft.timeFrom && draft.timeFrom.unit) ? draft.timeFrom.unit : 'minutes';
+  // Wall Age — to
+  const ttv = document.getElementById('sp-time-to-val');
+  const ttu = document.getElementById('sp-time-to-unit');
+  if (ttv) ttv.value = (draft.timeTo && draft.timeTo.value != null) ? draft.timeTo.value : '';
+  if (ttu) ttu.value = (draft.timeTo && draft.timeTo.unit) ? draft.timeTo.unit : 'minutes';
+  // Sound
+  const sOn  = document.getElementById('sp-sound-on');
+  const sVol = document.getElementById('sp-sound-vol');
+  const sLbl = document.getElementById('sp-vol-label');
+  if (sOn)  sOn.checked  = draft.soundOn !== false;
+  if (sVol) { sVol.value = draft.soundVolume ?? 20; updateVolSlider(sVol); }
+  if (sLbl) sLbl.textContent = (draft.soundVolume ?? 20) + '%';
+  document.querySelectorAll('#sp-sound-types .sp-sound-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.sound === (draft.soundType || 'beep'));
+  });
+  buildQuoteCheckboxes(draft);
+  buildCardStyleUI(draft);
+  syncModeUI(screenerMode);
+}
+function buildCardStyleUI(draft) {
+  const wrap = document.getElementById('sp-card-style');
+  if (!wrap) return;
+  const cs = draft.cardStyle || DEFAULT_CARD_STYLE;
+  const tiers = cs.tiers || DEFAULT_CARD_STYLE.tiers;
+
+  wrap.innerHTML = tiers.map((tier, ti) => {
+    const fromVal = tier.fromThresh != null ? tier.fromThresh : '';
+    const swatchesFor = (side) => {
+      const cur = side === 'bid' ? tier.bidColor : tier.askColor;
+      const noneSelected = !cur;
+      return `<div class="cs-palette">
+        <span class="cs-swatch none-swatch${noneSelected?' selected':''}"
+          data-tier="${ti}" data-side="${side}" data-color="" title="Default color"></span>
+        ${CS_PALETTE.map(c => `<span class="cs-swatch${cur===c?' selected':''}"
+          style="background:${c}" data-tier="${ti}" data-side="${side}" data-color="${c}" title="${c}"></span>`).join('')}
+      </div>`;
+    };
+    return `<div class="cs-tier">
+      <div class="cs-tier-header">
+        <span class="cs-tier-label">${tier.label}</span>
+        <input class="cs-tier-thresh" type="number" data-tier="${ti}"
+          value="${fromVal}" placeholder="50000" min="0">
+        <span class="cs-tier-thresh-label">$ from</span>
+      </div>
+      <div class="cs-colors">
+        <div class="cs-color-group">
+          <div class="cs-color-group-label">Bid</div>
+          ${swatchesFor('bid')}
+        </div>
+        <div class="cs-color-group">
+          <div class="cs-color-group-label">Ask</div>
+          ${swatchesFor('ask')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Swatch click handler
+  wrap.querySelectorAll('.cs-swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      const ti = +sw.dataset.tier, side = sw.dataset.side, color = sw.dataset.color;
+      // deselect siblings
+      wrap.querySelectorAll(`.cs-swatch[data-tier="${ti}"][data-side="${side}"]`)
+        .forEach(s => s.classList.remove('selected'));
+      sw.classList.add('selected');
+    });
+  });
+}
+function collectCardStyleDraft() {
+  if (!draftSettings) return;
+  const wrap = document.getElementById('sp-card-style');
+  if (!wrap) return;
+  const cs = draftSettings.cardStyle || JSON.parse(JSON.stringify(DEFAULT_CARD_STYLE));
+  const tiers = cs.tiers;
+  // Collect thresholds (fromThresh = lower bound for this tier)
+  wrap.querySelectorAll('.cs-tier-thresh').forEach(inp => {
+    const ti = +inp.dataset.tier;
+    const v = parseFloat(inp.value);
+    tiers[ti].fromThresh = isNaN(v) ? 0 : v;
+  });
+  // Collect colours
+  wrap.querySelectorAll('.cs-swatch.selected').forEach(sw => {
+    const ti = +sw.dataset.tier, side = sw.dataset.side, color = sw.dataset.color;
+    if (side === 'bid') tiers[ti].bidColor = color;
+    else                tiers[ti].askColor = color;
+  });
+  draftSettings.cardStyle = cs;
+}
+
+function buildQuoteCheckboxes(draft) {
+  const grid = document.getElementById('sp-quotes-grid');
+  if (!grid) return;
+  const qe = draft.quotesEnabled || DEFAULT_QUOTES_ENABLED;
+  grid.innerHTML = ALL_QUOTES.map(q => `
+    <label class="sp-quote-lbl">
+      <input type="checkbox" class="sp-quote-chk" data-quote="${q}"${qe[q] !== false ? ' checked' : ''}>
+      <span>${q}</span>
+    </label>`).join('');
+}
+function syncModeUI(mode) {
+  document.getElementById('sp-mode-binance-btn')?.classList.toggle('active', mode === 'binance_only');
+  document.getElementById('sp-mode-all-btn')?.classList.toggle('active', mode === 'all');
+}
+let _settingsSnapshot = null;   // settings state at moment of opening
+let _settingsDirty    = false;  // user changed something but didn't save
+let _autoSyncTimer    = null;
+
+function openSettings() {
+  _settingsSnapshot = JSON.parse(JSON.stringify(settings));
+  draftSettings     = JSON.parse(JSON.stringify(settings));
+  _settingsDirty    = false;
+  const srch = document.getElementById('coin-list-search');
+  if (srch) srch.value = '';
+  populateSettingsForm(draftSettings);
+  document.getElementById('settings-overlay').classList.add('open');
+  // Auto-sync every 1 s: apply draft to live (without saving to localStorage)
+  _autoSyncTimer = setInterval(() => {
+    if (!draftSettings) return;
+    collectDraft();
+    const prev = JSON.stringify(settings);
+    const next = JSON.stringify(draftSettings);
+    if (prev === next) return;
+    _settingsDirty = true;
+    // Apply live (no localStorage write)
+    settings = JSON.parse(JSON.stringify(draftSettings));
+    soundOn     = settings.soundOn !== false;
+    soundVolume = settings.soundVolume ?? 20;
+    soundType   = settings.soundType   || 'chime';
+    [...symCards.keys()].forEach(sym => renderCard(sym));
+    reorderGrid(); updateStats();
+  }, 1000);
+}
+
+function _closeSettingsForce() {
+  clearInterval(_autoSyncTimer); _autoSyncTimer = null;
+  document.getElementById('settings-overlay').classList.remove('open');
+  _settingsDirty = false;
+  draftSettings = null;
+  _settingsSnapshot = null;
+}
+
+function closeSettings() {
+  if (_settingsDirty) {
+    // Show unsaved-changes dialog
+    document.getElementById('sp-unsaved-overlay').classList.add('open');
+    return;
+  }
+  // Revert live settings to snapshot (user didn't save anything)
+  if (_settingsSnapshot) {
+    settings = JSON.parse(JSON.stringify(_settingsSnapshot));
+    soundOn     = settings.soundOn !== false;
+    soundVolume = settings.soundVolume ?? 20;
+    soundType   = settings.soundType   || 'chime';
+    [...symCards.keys()].forEach(sym => renderCard(sym));
+    reorderGrid(); updateStats();
+  }
+  _closeSettingsForce();
+}
+function collectDraft() {
+  if (!draftSettings) return;
+  // Min sizes
+  document.querySelectorAll('.exch-sf-input').forEach(inp => {
+    if (inp.classList.contains('sf-disabled')) return; // market disabled — skip
+    const k=inp.dataset.key, t=inp.dataset.type;
+    if (!draftSettings.exchangeMins[k]) draftSettings.exchangeMins[k]={};
+    draftSettings.exchangeMins[k][t] = Math.max(MIN_VOL_FLOOR, parseNum(inp.value)||MIN_VOL_FLOOR);
+  });
+  // Sort / distance (exchange enabled already updated reactively)
+  const sel = document.getElementById('sp-sort-select');  if (sel) draftSettings.sortBy = sel.value;
+  const dist = document.getElementById('sp-distance-select'); if (dist) draftSettings.distancePct = dist.value;
+  // Wall Age — from
+  const tfv = document.getElementById('sp-time-from-val');
+  const tfu = document.getElementById('sp-time-from-unit');
+  draftSettings.timeFrom = {
+    value: tfv && tfv.value.trim() !== '' ? tfv.value.trim() : '',
+    unit:  tfu ? tfu.value : 'minutes'
+  };
+  // Wall Age — to
+  const ttv = document.getElementById('sp-time-to-val');
+  const ttu = document.getElementById('sp-time-to-unit');
+  draftSettings.timeTo = {
+    value: ttv && ttv.value.trim() !== '' ? ttv.value.trim() : '',
+    unit:  ttu ? ttu.value : 'minutes'
+  };
+  // Sound
+  const sOn  = document.getElementById('sp-sound-on');
+  const sVol = document.getElementById('sp-sound-vol');
+  if (sOn)  draftSettings.soundOn     = sOn.checked;
+  if (sVol) draftSettings.soundVolume = parseInt(sVol.value) || 0;
+  const activeSound = document.querySelector('#sp-sound-types .sp-sound-btn.active');
+  if (activeSound) draftSettings.soundType = activeSound.dataset.sound;
+  // Quote currencies
+  const qe = {};
+  document.querySelectorAll('.sp-quote-chk').forEach(chk => { qe[chk.dataset.quote] = chk.checked; });
+  if (Object.keys(qe).length) draftSettings.quotesEnabled = qe;
+  // Card style
+  collectCardStyleDraft();
+}
+function commitSettings() {
+  collectDraft();
+  settings = JSON.parse(JSON.stringify(draftSettings));
+  saveSettings();
+  // Apply sound settings immediately
+  soundOn     = settings.soundOn !== false;
+  soundVolume = settings.soundVolume ?? 20;
+  soundType   = settings.soundType   || 'chime';
+  [...symCards.keys()].forEach(sym => renderCard(sym));
+  reorderGrid(); updateStats();
+  _settingsDirty = false;
+  _closeSettingsForce();
+}
+
+function openSettingsForSymbol(symbol) {
+  openSettings();
+  const exists = draftSettings.coinList.find(c => c.symbol===symbol.toUpperCase());
+  if (!exists) {
+    draftSettings.coinList.push({ symbol:symbol.toUpperCase(), minVol:0, visible:true, mkt_s:true, mkt_f:true });
+    buildCoinList(draftSettings);
+  }
+  setTimeout(() => {
+    document.getElementById('coin-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }, 120);
+}
+
+function hideSymbolViaSettings(symbol) {
+  openSettings();
+  const sym = symbol.toUpperCase();
+  const idx = draftSettings.coinList.findIndex(c => c.symbol === sym);
+  if (idx >= 0) {
+    draftSettings.coinList[idx].visible = false;
+  } else {
+    draftSettings.coinList.push({ symbol: sym, minVol: 0, visible: false, mkt_s: true, mkt_f: true });
+  }
+  buildCoinList(draftSettings);
+  setTimeout(() => {
+    // scroll coin list to the hidden item
+    const items = document.querySelectorAll('#coin-list .coin-item');
+    if (items.length) items[items.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 150);
+}
+
+['stats-settings-btn','nav-settings'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', openSettings);
+});
+document.getElementById('sp-close').addEventListener('click', closeSettings);
+document.getElementById('sp-cancel').addEventListener('click', closeSettings);
+document.getElementById('settings-overlay').addEventListener('click', e => {
+  if (e.target===document.getElementById('settings-overlay')) closeSettings();
+});
+document.getElementById('sp-save').addEventListener('click', commitSettings);
+
+// Unsaved-changes dialog buttons
+// ✕ — just close the dialog, keep settings modal open for further editing
+document.getElementById('sp-unsaved-dismiss').addEventListener('click', () => {
+  document.getElementById('sp-unsaved-overlay').classList.remove('open');
+});
+document.getElementById('sp-unsaved-exit').addEventListener('click', () => {
+  document.getElementById('sp-unsaved-overlay').classList.remove('open');
+  // Revert live settings to snapshot
+  if (_settingsSnapshot) {
+    settings = JSON.parse(JSON.stringify(_settingsSnapshot));
+    soundOn     = settings.soundOn !== false;
+    soundVolume = settings.soundVolume ?? 20;
+    soundType   = settings.soundType   || 'chime';
+    [...symCards.keys()].forEach(sym => renderCard(sym));
+    reorderGrid(); updateStats();
+  }
+  _settingsDirty = false;
+  _closeSettingsForce();
+});
+document.getElementById('sp-unsaved-save').addEventListener('click', () => {
+  document.getElementById('sp-unsaved-overlay').classList.remove('open');
+  commitSettings();
+});
+// Click outside unsaved dialog = same as Выйти
+document.getElementById('sp-unsaved-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('sp-unsaved-overlay')) {
+    document.getElementById('sp-unsaved-exit').click();
+  }
+});
+
+// Sort direction button
+document.getElementById('sort-order-btn').addEventListener('click', () => {
+  if (!draftSettings) return;
+  draftSettings.sortOrder = draftSettings.sortOrder==='desc'?'asc':'desc';
+  syncSortUI(draftSettings);
+});
+
+// Add coin (shared handler)
+function _addCoin() {
+  if (!draftSettings) return;
+  draftSettings.coinList.push({symbol:'',minVol:0,visible:true,mkt_s:true,mkt_f:true});
+  buildCoinList(draftSettings);
+  const items = document.querySelectorAll('.coin-item');
+  if (items.length) {
+    const last = items[items.length - 1];
+    last.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setTimeout(() => last.querySelector('.coin-sym-select')?.focus(), 180);
+  }
+}
+document.getElementById('sp-add-coin').addEventListener('click', _addCoin);
+document.getElementById('sp-add-coin-bottom').addEventListener('click', _addCoin);
+
+// Coin list search
+document.getElementById('coin-list-search').addEventListener('input', _applyCoinListSearch);
+
+// Reset
+document.getElementById('sp-reset').addEventListener('click', () => {
+  draftSettings = defaultSettings();
+  populateSettingsForm(draftSettings);
+});
+
+// ══ Workspace ════════════════════════════════════════════════
+// workspaces / wsActive already declared at top of script
+
+function saveWorkspaces() {
+  localStorage.setItem('octa_workspaces', JSON.stringify(workspaces));
+  localStorage.setItem('octa_ws_active',  String(wsActive));
+}
+
+// ── Switch workspace ─────────────────────────────────────────
+function switchWorkspace(i) {
+  if (i === wsActive) return;
+  // 1. Save current workspace state
+  saveSettings(wsActive);
+  localStorage.setItem(wsModeKey(wsActive), screenerMode);
+  // 2. Activate new workspace
+  wsActive = i;
+  saveWorkspaces();
+  // 3. Load new workspace settings
+  settings = loadSettings(wsActive);
+  screenerMode = localStorage.getItem(wsModeKey(wsActive)) || 'binance_only';
+  // 4. Apply sound
+  soundOn     = settings.soundOn !== false;
+  soundVolume = settings.soundVolume ?? 20;
+  soundType   = settings.soundType   || 'beep';
+  // 5. Update UI header
+  document.getElementById('ws-name').textContent = workspaces[wsActive];
+  syncModeUI(screenerMode);
+  // 6. Re-render everything
+  [...symCards.keys()].forEach(sym => renderCard(sym));
+  reorderGrid(); updateStats();
+}
+
+function renderWsList() {
+  const list = document.getElementById('ws-list');
+  list.innerHTML = '';
+  const countEl = document.getElementById('ws-count');
+  if (countEl) countEl.textContent = `${workspaces.length}/${WS_MAX}`;
+  workspaces.forEach((name, i) => {
+    const el = document.createElement('div');
+    el.className = 'ws-item' + (i === wsActive ? ' active' : '');
+    el.innerHTML = `<div class="ws-item-dot"></div><span>${escHtml(name)}</span>`;
+    el.addEventListener('click', () => { switchWorkspace(i); closeWsMenu(); });
+    list.appendChild(el);
+  });
+  // Grey out "Create" if at max
+  const createBtn = document.getElementById('ws-create-btn');
+  if (createBtn) {
+    const atMax = workspaces.length >= WS_MAX;
+    createBtn.style.opacity = atMax ? '0.35' : '';
+    createBtn.style.pointerEvents = atMax ? 'none' : '';
+    createBtn.title = atMax ? `Maximum ${WS_MAX} workspaces` : '';
+  }
+  // Hide "Delete" if only 1 workspace
+  const deleteBtn = document.getElementById('ws-delete-btn');
+  if (deleteBtn) {
+    deleteBtn.style.display = workspaces.length <= 1 ? 'none' : '';
+  }
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function openWsMenu() {
+  renderWsList();
+  document.getElementById('ws-menu').style.display = '';
+  document.getElementById('ws-chevron').classList.add('open');
+}
+function closeWsMenu() {
+  document.getElementById('ws-menu').style.display = 'none';
+  document.getElementById('ws-chevron').classList.remove('open');
+}
+
+document.getElementById('ws-trigger').addEventListener('click', e => {
+  e.stopPropagation();
+  const open = document.getElementById('ws-menu').style.display !== 'none';
+  open ? closeWsMenu() : openWsMenu();
+});
+document.getElementById('ws-menu').addEventListener('click', e => e.stopPropagation());
+document.addEventListener('click', closeWsMenu);
+
+// Rename
+document.getElementById('ws-rename-btn').addEventListener('click', () => {
+  closeWsMenu();
+  const nameEl  = document.getElementById('ws-name');
+  const current = workspaces[wsActive];
+  const inp     = document.createElement('input');
+  inp.value     = current;
+  inp.style.cssText = 'background:transparent;border:none;outline:none;color:var(--text);font-size:13px;font-weight:600;width:130px;';
+  nameEl.textContent = '';
+  nameEl.appendChild(inp);
+  inp.focus(); inp.select();
+
+  function commit() {
+    const val = inp.value.trim() || current;
+    workspaces[wsActive] = val;
+    saveWorkspaces();
+    nameEl.textContent = val;
+  }
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { commit(); inp.blur(); }
+    if (e.key === 'Escape') { nameEl.textContent = current; }
+  });
+  inp.addEventListener('blur', commit);
+});
+
+// Delete (cannot delete last workspace)
+document.getElementById('ws-delete-btn').addEventListener('click', () => {
+  if (workspaces.length <= 1) return;
+  closeWsMenu();
+  // Remove settings for deleted workspace
+  localStorage.removeItem(wsSettingsKey(wsActive));
+  localStorage.removeItem(wsModeKey(wsActive));
+  workspaces.splice(wsActive, 1);
+  // Re-index storage keys: shift all keys after deleted one
+  for (let i = wsActive; i < workspaces.length; i++) {
+    const next = localStorage.getItem(wsSettingsKey(i + 1));
+    const nextMode = localStorage.getItem(wsModeKey(i + 1));
+    if (next) localStorage.setItem(wsSettingsKey(i), next);
+    else localStorage.removeItem(wsSettingsKey(i));
+    if (nextMode) localStorage.setItem(wsModeKey(i), nextMode);
+    else localStorage.removeItem(wsModeKey(i));
+  }
+  localStorage.removeItem(wsSettingsKey(workspaces.length));
+  localStorage.removeItem(wsModeKey(workspaces.length));
+  wsActive = Math.min(wsActive, workspaces.length - 1);
+  settings = loadSettings(wsActive);
+  screenerMode = localStorage.getItem(wsModeKey(wsActive)) || 'binance_only';
+  soundOn     = settings.soundOn !== false;
+  soundVolume = settings.soundVolume ?? 20;
+  soundType   = settings.soundType   || 'beep';
+  saveWorkspaces();
+  document.getElementById('ws-name').textContent = workspaces[wsActive];
+  syncModeUI(screenerMode);
+  [...symCards.keys()].forEach(sym => renderCard(sym));
+  reorderGrid(); updateStats();
+});
+
+// Create (max WS_MAX)
+document.getElementById('ws-create-btn').addEventListener('click', () => {
+  if (workspaces.length >= WS_MAX) return;
+  closeWsMenu();
+  const newIdx = workspaces.length;
+  const name = `Workspace ${newIdx + 1}`;
+  workspaces.push(name);
+  // Save defaults for new workspace
+  const prevActive = wsActive;
+  saveSettings(prevActive); // persist current before switching
+  wsActive = newIdx;
+  settings = defaultSettings();
+  saveSettings(wsActive);
+  localStorage.setItem(wsModeKey(wsActive), 'binance_only');
+  screenerMode = 'binance_only';
+  soundOn = true; soundVolume = 20;
+  saveWorkspaces();
+  document.getElementById('ws-name').textContent = name;
+  syncModeUI(screenerMode);
+  [...symCards.keys()].forEach(sym => renderCard(sym));
+  reorderGrid(); updateStats();
+});
+
+// Init name
+document.getElementById('ws-name').textContent = workspaces[wsActive] || 'Workspace 1';
+
+// ══ Mode toggle ═══════════════════════════════════════════════
+let screenerMode = localStorage.getItem(wsModeKey(wsActive)) || localStorage.getItem('octa_mode') || 'binance_only';
+
+function setScreenerMode(mode) {
+  screenerMode = mode;
+  localStorage.setItem(wsModeKey(wsActive), mode);
+  syncModeUI(mode);
+  applyFilters();
+}
+
+document.getElementById('sp-mode-binance-btn').addEventListener('click', () => setScreenerMode('binance_only'));
+document.getElementById('sp-mode-all-btn').addEventListener('click', () => setScreenerMode('all'));
+syncModeUI(screenerMode);
+
+// ══ Sidebar collapse ═════════════════════════════════════════
+(function() {
+  const app = document.getElementById('app');
+  const btn = document.getElementById('sb-toggle-btn');
+  const collapsed = localStorage.getItem('octa_sb_collapsed') === '1';
+  if (collapsed) app.classList.add('sb-collapsed');
+
+  btn.addEventListener('click', () => {
+    const isNow = app.classList.toggle('sb-collapsed');
+    localStorage.setItem('octa_sb_collapsed', isNow ? '1' : '0');
+  });
+})();
+
+// ══ Init ═════════════════════════════════════════════════════
+connect();
+</script>
+</body>
+</html>

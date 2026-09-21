@@ -1,0 +1,26 @@
+[Unit]
+Description=Free Screener WebSocket gateway
+After=network-online.target free-screener-redis.service free-screener-web.service
+Requires=free-screener-redis.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/free-screener/goingest
+Environment=REDIS_ADDR=127.0.0.1:6381
+Environment=INGEST_MODE=gateway
+Environment=GW_ALL_PRO=1
+Environment=GW_PY_BASE=http://127.0.0.1:8100
+Environment=GW_LISTEN_ADDR=127.0.0.1:7100
+Environment=GW_ALLOWED_ORIGINS=*
+Environment=GW_BINANCE_REST=1
+Environment=GW_KRAKEN_FUT_REST=0
+Environment=GW_TRADES_FANOUT=0
+ExecStart=/opt/free-screener/goingest/goingest
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+

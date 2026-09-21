@@ -1,0 +1,59 @@
+from dataclasses import dataclass, field, asdict
+from typing import Optional
+import time
+import uuid
+
+
+@dataclass
+class Density:
+    id: str
+    symbol: str
+    exchange: str
+    market: str         # "perp" | "spot"
+    side: str           # "bid" | "ask"
+    price: float
+    volume_usd: float
+    pct_from_price: float
+    three_min_vol: float
+    first_seen: float
+    last_seen: float
+    binance_f: bool = False
+    miss_count: int = 0   # consecutive cycles not found in orderbook
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+def make_density(symbol, exchange, market, side, price, volume_usd, pct, three_min_vol, binance_f=False) -> Density:
+    now = time.time()
+    uid = f"{exchange}:{symbol}:{market}:{side}:{uuid.uuid4().hex[:8]}"
+    return Density(
+        id=uid,
+        symbol=symbol,
+        exchange=exchange,
+        market=market,
+        side=side,
+        price=price,
+        volume_usd=volume_usd,
+        pct_from_price=pct,
+        three_min_vol=three_min_vol,
+        first_seen=now,
+        last_seen=now,
+        binance_f=binance_f,
+    )
+
+
+class ScreenerState:
+    def __init__(self):
+        # "exchange:symbol" -> {"bids": {price: vol_usd}, "asks": {price: vol_usd}, "ts": float}
+        self.orderbooks: dict[str, dict] = {}
+        # density_id -> Density  (confirmed, shown to users)
+        self.active_densities: dict[str, Density] = {}
+        # density_id -> Density  (detected but not yet old enough to show)
+        self.pending_densities: dict[str, Density] = {}
+        # connected WS clients (fastapi WebSocket objects)
+        self.ws_clients: set = set()
+        self.binance_f_symbols: set = set()   # symbols on Binance Futures (for client filter)
+
+
+state = ScreenerState()

@@ -1,0 +1,19 @@
+[Unit]
+Description=Free Screener ingest (%i)
+After=network-online.target free-screener-redis.service
+Requires=free-screener-redis.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/free-screener/goingest
+Environment=REDIS_ADDR=127.0.0.1:6381
+EnvironmentFile=/opt/free-screener/deploy/free/ingest/%i.env
+ExecStart=/opt/free-screener/goingest/goingest
+Restart=always
+RestartSec=4
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+
