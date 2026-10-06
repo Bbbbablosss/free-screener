@@ -266,10 +266,10 @@ async def pay_heleket_callback(request: _pay_Request):
     return JSONResponse({"ok": False, "error": result.get("error", "bad")},
                         status_code=int(result.get("code", 400)))
 
-# Account/auth/alerts/affiliate routes are isolated from the market-data core.
-if os.environ.get("FREE_EDITION", "1") != "1":
-    from .account_routes import router as account_router  # noqa: E402
-    app.include_router(account_router)
+# Account/auth routes are required in both editions. The free deployment now
+# uses them as an approval gate (request access -> admin grant -> sign in).
+from .account_routes import router as account_router  # noqa: E402
+app.include_router(account_router)
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────

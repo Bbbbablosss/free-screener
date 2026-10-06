@@ -12,10 +12,13 @@ Environment=INGEST_MODE=gateway
 Environment=GW_ALL_PRO=1
 Environment=GW_PY_BASE=http://127.0.0.1:8100
 Environment=GW_LISTEN_ADDR=127.0.0.1:7100
+Environment=CHART_DB_PATH=/opt/free-screener/charts.db
+Environment=GW_KLINES_GO=1
 Environment=GW_ALLOWED_ORIGINS=*
 Environment=GW_BINANCE_REST=1
 Environment=GW_KRAKEN_FUT_REST=0
 Environment=GW_TRADES_FANOUT=0
+Environment=GW_FIRST_VISIT_LIMIT_SECONDS=0
 ExecStart=/opt/free-screener/goingest/goingest
 Restart=always
 RestartSec=3

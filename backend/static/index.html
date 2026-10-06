@@ -8346,7 +8346,7 @@ body.theme-blue .ch-exch-pro{ color:#7aaaf3; background:rgba(90,153,221,.14); bo
     t.src=v;s=b.getElementsByTagName(e)[0];
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '4498140553789390');
+    fbq('init', '2856481901392518');
     fbq('track', 'PageView');
   </script>
   <!-- End Meta Pixel Code -->
@@ -8355,11 +8355,11 @@ body.theme-blue .ch-exch-pro{ color:#7aaaf3; background:rgba(90,153,221,.14); bo
 
 <body>
 <noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=4498140553789390&amp;ev=PageView&amp;noscript=1"
+src="https://www.facebook.com/tr?id=2856481901392518&amp;ev=PageView&amp;noscript=1"
 alt=""></noscript>
 <style>
 /* Standalone free edition: account, billing and removed modules stay out of the UI. */
-#tb-profile-wrap,#tb-login-btn,#auth-overlay,#profile-main,#premium-main,#alerts-main { display:none !important; }
+#profile-main,#premium-main,#alerts-main { display:none !important; }
 </style>
 <style id="free-charts-redesign">
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@500;600&family=Sora:wght@700;800&display=swap');
@@ -10182,6 +10182,8 @@ body.crypto-free.sec-charts #ch-exch-menu {
   border-radius:9px!important;
   background:#0f141b!important;
   box-shadow:0 18px 48px rgba(0,0,0,.5)!important;
+  max-height:min(680px,calc(100vh - 88px))!important;
+  overflow-y:auto!important;
 }
 body.crypto-free.sec-charts #ch-exch-menu .ch-exch-grid-head {
   display:grid;
@@ -26572,7 +26574,180 @@ document.querySelectorAll('#top-nav .sb-nav-item').forEach((el) => {
     { id: 'hyperliquid_futures', label: 'Hyperliquid Futures', tvPrefix: 'HYPERLIQUID:', suffix: 'USDC', domain: 'hyperliquid.xyz' },
     { id: 'hyperliquid_spot',    label: 'Hyperliquid Spot',    tvPrefix: 'HYPERLIQUID:', suffix: 'USDC', domain: 'hyperliquid.xyz' },
     { id: 'aster_futures',   label: 'Aster Futures',   tvPrefix: 'ASTER:',        suffix: 'USDT',   domain: 'asterdex.com'     },
+    { id: 'aster_spot',      label: 'Aster Spot',      domain: 'asterdex.com', available:false },
   ];
+  // Interface-only catalogue. Live connectors stay limited to the entries above;
+  // the rest are deliberately marked unavailable and never trigger API/WS calls.
+  const CMC_DERIVATIVES = `11978|GaiaEx|gaiaex
+1645|Tapbit|tapbit
+11199|Top.one|top-one-exchange
+294|OKX|okx
+1247|FameEX|fameex
+33206|CrypFine|crypfine
+5751|WEEX|weex
+9867|KCEX|kcex
+6137|Toobit|toobit
+10153|Ourbit|ourbit
+517|CoinW|coinw
+10361|CoinUp.io|coinup-io
+407|DigiFinex|digifinex
+9200|Zedcex Exchange|zedcex-exchange
+521|Bybit|bybit
+33113|KTX|ktx
+8125|OrangeX|orangex
+302|Gate|gate
+33178|ASTX|astx
+790|Pionex|pionex
+544|MEXC|mexc
+937|Biconomy.com|biconomy
+501|WhiteBIT|whitebit
+1379|Batonex|wisebitcoin
+943|Hotcoin|hotcoin-global
+11090|x.me Exchange|voox-exchange
+9298|BiKing|biking
+7618|BVOX|bvox
+11608|CEEX exchange|ceex-exchange
+9015|Websea|websea
+333|LBank|lbank
+1133|TruBit Pro Exchange|trubit-exchange
+9218|Hibt|hibt
+12099|AstralX|astralx
+9449|Echobit|echobit
+12144|COINSPACE|coinspace
+10962|BASEKX|ekbit
+1182|Deepcoin|deepcoin
+513|Bitget|bitget
+1064|BingX|bingx
+8112|Hyperliquid|hyperliquid
+9450|Zedxion Exchange|zedxion-exchange
+12404|Aivora Exchange|aivora-exchange
+12030|CoinP|coinp
+10770|Aibit|aibit
+9181|UZX|uzx
+1653|Zoomex|zoomex
+12596|WOO X Pro|wooxpro
+33326|Ulink|ulink
+7302|Bitunix|bitunix
+32491|CZR Exchange|czr-exchange
+33551|MSX|msx
+32919|BTDUex|btduex
+33355|idax exchange|idax-exchange
+11136|IBIT Global|ibit-global
+7699|OmniX|omnix
+525|XT.COM|xt
+11339|YUBIT|yubit
+1277|Blockfinex|blockfinex
+33595|AEGET|aeget
+9717|Koinbay|koinbay
+12779|Cofinex|cofinex
+10922|MGBX|mgbx
+7085|Fairdesk|fairdesk
+406|BitMart|bitmart
+21|BTCC|btcc
+9606|BiFinance|bifinance-exchange
+32784|Picol|picol
+1117|Azbit|azbit
+433|Bitrue|bitrue
+32686|SunX|sunx
+311|KuCoin|kucoin
+12266|BlockFin|blockfin
+6637|BloFin|blofin
+12544|YEX|yex
+12456|Bitbaby|bitbabyexchange
+9384|BitDelta|bitdelta
+12578|EasiCoin|easicoin
+5319|SuperEx|superex
+33662|Bitbase|bitbase-com
+9202|4E|4e
+24|Kraken|kraken
+9613|Slex Exchange|slex-exchange
+522|Deribit|deribit
+699|Currency.com|currency-com
+12131|BitradeX|bitradex
+32929|Tebbit|tebbit
+10946|BitxEX|xex
+102|HTX|htx
+33080|OneEx|oneex
+12467|Gems Trade|gems-trade
+1110|PrimeXBT|primexbt
+33260|BitGW Exchange|bitgw-exchange
+12062|PumpSwap|pumpswap
+33450|IMBX|imbx
+955|Phemex|phemex
+9365|AlphaX|alphax
+32521|Lighter|lighter
+12524|Binance Alpha|binance-alpha
+89|Coinbase Exchange|coinbase-exchange
+1452|Aster|aster-pro
+32928|EagleX|eaglex
+12386|BitTap|bittap
+9586|Bitop|bitop
+12218|XXKK|xxkk`.trim().split('\n').map(v=>{const [cmcId,name,slug]=v.split('|');return{cmcId,name,slug};});
+  const PERPDEX_VENUES = `01|01xyz
+Aftermath|aftermath
+ApeX|apex
+Arcus|arcus
+Aster|asterdex
+Avantis|avantis
+Boros|boros
+Bulk|bulk
+Bullet|bullet
+Decibel|decibel
+dYdX|dydx
+edgeX|edgex
+Entropy|entropy
+Meridian|ethereal
+Extended|extended_starknet
+Gains|gains
+GMX|gmx
+GRVT|gravitymarkets
+Hello|hello
+Hibachi|hibachi
+Hotstuff|hotstuff
+HYENA|hyena
+Hyperliquid|hyperliquid
+Kalshi|kalshi
+Katana Perps|katana
+Markets|km
+Lighter|lighter
+Lighter RH|lighter_rh
+Nado|nado
+Ondo Perps|ondo
+Pacifica|pacifica
+Paradex|paradex
+Paragon|paragon
+Perpl|perpl
+Phoenix|phoenix
+Polymarket|polymarket
+Popdex|popdex
+QFEX|qfex
+Reya|reya
+Rho|rho
+RISEx|risex
+StandX|standx
+tradeXYZ|trade_xyz
+TXFlow|txflow
+Variational|variational
+Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');return{name,slug};});
+  const PERPDEX_LOGOS={
+    '01xyz':'01xyz.jpg',aftermath:'aftermath.ico',apex:'apex.png',arcus:'arcus.png',asterdex:'aster.jpg',avantis:'avantis.png',boros:'boros.jpg',bulk:'bulk.jpg',bullet:'bullet.svg',decibel:'decibel.png',dydx:'dydx.jpg',edgex:'edgex.jpg',entropy:'entropy.png',ethereal:'meridian.jpg',extended_starknet:'extended.jpg',gains:'gtrade.png',gmx:'gmx.png',gravitymarkets:'grvt.jpg',hello:'hello.svg',hibachi:'hibachi.jpg',hotstuff:'hotstuff.jpg',hyena:'hyena.jpg',hyperliquid:'hyperliquid.png',kalshi:'kalshi.png',katana:'katana.png',km:'markets.jpg',lighter:'lighter.jpg',lighter_rh:'lighter.jpg',nado:'nado.jpg',ondo:'ondo.jpg',pacifica:'pacifica.jpg',paradex:'paradex.jpg',paragon:'paragon.png',perpl:'perpl.jpg',phoenix:'phoenix.png',polymarket:'polymarket.png',popdex:'popdex.png',qfex:'qfex.png',reya:'reya.jpg',rho:'rho-labs.jpg',risex:'risex.png',standx:'standx.jpg',trade_xyz:'tradexyz.jpg',txflow:'txflow.png',variational:'variational.jpg',vest_exchange:'vest.jpg'
+  };
+  const _normVenue = s => String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'');
+  const _knownFamilies = new Set(EXCHANGES.map(e=>_normVenue(e.label.replace(/\s+(Futures|Spot)$/i,''))));
+  CMC_DERIVATIVES.forEach(v=>{
+    if (_knownFamilies.has(_normVenue(v.name))) return;
+    const base='cmc_'+v.slug.replace(/[^a-z0-9]+/g,'_');
+    const logo=`https://s2.coinmarketcap.com/static/img/exchanges/64x64/${v.cmcId}.png`;
+    EXCHANGES.push({id:base+'_futures',label:v.name+' Futures',logo,available:false,source:'cmc'});
+    EXCHANGES.push({id:base+'_spot',label:v.name+' Spot',logo,available:false,source:'cmc'});
+    _knownFamilies.add(_normVenue(v.name));
+  });
+  PERPDEX_VENUES.forEach(v=>{
+    if (_knownFamilies.has(_normVenue(v.name))) return;
+    const base='perpdex_'+v.slug.replace(/[^a-z0-9]+/g,'_');
+    EXCHANGES.push({id:base+'_futures',label:v.name+' Futures',logo:`https://perpdexlist.com/logos/${PERPDEX_LOGOS[v.slug]||'favicon.png'}`,available:false,source:'perpdex'});
+    _knownFamilies.add(_normVenue(v.name));
+  });
   // Expose the full exchange list + favicon renderer so the Builder (a separate top-level
   // closure) can render the SAME icon'd exchange dropdown as the rest of the site.
   try { window._EXCHANGES = EXCHANGES; window._exchIconHtml = _exchIconHtml; } catch (e) {}
@@ -28715,8 +28890,15 @@ document.querySelectorAll('#top-nav .sb-nav-item').forEach((el) => {
   const _exchCounts = {};
 
   function _exchIconHtml(ex) {
-    if (!ex.domain) return `<div class="ch-exch-ico"></div>`;
-    return `<div class="ch-exch-ico"><img src="https://www.google.com/s2/favicons?domain=${ex.domain}&sz=32" alt="" onerror="this.style.display='none'"></div>`;
+    const src = ex.logo || (ex.domain ? `https://www.google.com/s2/favicons?domain=${ex.domain}&sz=32` : '');
+    const initials=String(ex.label||'?').replace(/\s+(Futures|Spot)$/i,'').split(/\s+/).map(s=>s[0]||'').join('').slice(0,2).toUpperCase();
+    if (!src) return `<div class="ch-exch-ico"><span>${initials}</span></div>`;
+    return `<div class="ch-exch-ico" style="position:relative"><span style="font-size:9px;font-weight:800;color:#8d98aa">${initials}</span><img src="${src}" alt="" loading="lazy" style="position:absolute" onerror="this.remove()"></div>`;
+  }
+
+  function _exchangeUnavailableText(){
+    const l=((typeof currentLang==='string'&&currentLang)||document.documentElement.lang||'en').toLowerCase().slice(0,2);
+    return ({ru:'Биржа временно недоступна',uk:'Біржа тимчасово недоступна',es:'El exchange no está disponible temporalmente',de:'Die Börse ist vorübergehend nicht verfügbar',fr:'La plateforme est temporairement indisponible',pt:'A exchange está temporariamente indisponível',tr:'Borsa geçici olarak kullanılamıyor',zh:'该交易所暂时不可用',ja:'この取引所は一時的に利用できません'})[l] || 'Exchange is temporarily unavailable';
   }
 
   // Canonical exchange switch — used by BOTH the Charts sidebar menu and the
@@ -28725,6 +28907,13 @@ document.querySelectorAll('#top-nav .sb-nav-item').forEach((el) => {
     if (window.PLAN && !PLAN.canExchange(id)) { PLAN.toast(t('gate_pro_exchange')); PLAN.closeMenusSoft(); return; }
     const isAll = (id === '__all_futures__' || id === '__all_spot__');
     if (isAll && !_chInScreener()) return;   // "All exchanges" is a screener-only mode
+    const requested = isAll ? null : EXCHANGES.find(e => e.id === id);
+    if (requested && requested.available === false) {
+      if (window.PLAN && PLAN.toast) PLAN.toast(_exchangeUnavailableText());
+      const w=document.getElementById('ch-exch-wrap'); if(w)w.classList.remove('open');
+      if (typeof _scrCloseMenus === 'function') _scrCloseMenus();
+      return;
+    }
     // A manual exchange switch drops any active profile (profile "applies once").
     if (!_pfApplying) {
       if (_pfAgg) { _pfAgg = false; _pfActiveExch = []; if (_pfAggTimer) { clearInterval(_pfAggTimer); _pfAggTimer = null; } }
@@ -28771,8 +28960,9 @@ document.querySelectorAll('#top-nav .sb-nav-item').forEach((el) => {
   // Sync the exchange name+icon on both the Charts sidebar button and the Screener button.
   function _syncExchButtons(ex) {
     ex = ex || getExch();
-    const iconHtml = ex.domain
-      ? `<img src="https://www.google.com/s2/favicons?domain=${ex.domain}&sz=32" width="16" height="16" style="border-radius:3px;display:block" onerror="this.style.display='none'">`
+    const logoSrc = ex.logo || (ex.domain ? `https://www.google.com/s2/favicons?domain=${ex.domain}&sz=32` : '');
+    const iconHtml = logoSrc
+      ? `<img src="${logoSrc}" width="16" height="16" style="border-radius:3px;display:block" onerror="this.style.display='none'">`
       : '';
     const n1 = document.getElementById('ch-exch-name'); if (n1) n1.textContent = ex.label;
     const i1 = document.getElementById('ch-exch-btn-icon'); if (i1) i1.innerHTML = iconHtml;
@@ -28787,20 +28977,18 @@ document.querySelectorAll('#top-nav .sb-nav-item').forEach((el) => {
     const grid = document.createElement('div');
     grid.className = 'ch-exch-grid';
     menu.appendChild(grid);
-    EXCHANGES.forEach(ex => {
-      const isActive = ex.id === chExch;
-      const locked = (window.PLAN && !PLAN.canExchange(ex.id));
-      const item = document.createElement('div');
-      item.className = 'ch-exch-item' + (isActive ? ' active' : '') + (locked ? ' ch-exch-locked' : '');
-      item.dataset.market = /_spot$/.test(ex.id) ? 'spot' : 'futures';
-      const venueName = ex.label.replace(/\s+(Futures|Spot)$/i, '');
-      item.innerHTML =
-        _exchIconHtml(ex) +
-        `<span class="ch-exch-name">${venueName}</span>` +
-        (locked ? '<span class="ch-exch-pro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4.5" y="11" width="15" height="9.5" rx="2.2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>PRO</span>' : '');
-      item.addEventListener('click', () => _chSwitchExchange(ex.id));
-      grid.appendChild(item);
-    });
+    const families=[], byFamily=new Map();
+    EXCHANGES.forEach(ex=>{const key=ex.id.replace(/_(futures|spot)$/,'');if(!byFamily.has(key)){const row={key};byFamily.set(key,row);families.push(row)}const row=byFamily.get(key);row[ex.id.endsWith('_spot')?'spot':'futures']=ex});
+    families.forEach(row=>['futures','spot'].forEach(market=>{
+      const ex=row[market];
+      if(!ex){const blank=document.createElement('div');blank.className='ch-exch-item';blank.style.visibility='hidden';grid.appendChild(blank);return}
+      const isActive=ex.id===chExch, locked=(window.PLAN&&!PLAN.canExchange(ex.id));
+      const item=document.createElement('div');
+      item.className='ch-exch-item'+(isActive?' active':'')+(locked?' ch-exch-locked':'');item.dataset.market=market;
+      const venueName=ex.label.replace(/\s+(Futures|Spot)$/i,'');
+      item.innerHTML=_exchIconHtml(ex)+`<span class="ch-exch-name">${venueName}</span>`+(locked?'<span class="ch-exch-pro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4.5" y="11" width="15" height="9.5" rx="2.2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>PRO</span>':'');
+      item.addEventListener('click',()=>_chSwitchExchange(ex.id));grid.appendChild(item);
+    }));
   }
 
   // Build exchange menus — both the Charts sidebar and the Screener panel, so any
@@ -39112,33 +39300,15 @@ connect();
 <script src="/static/i18n-extra.js?v=20260908-4"></script>
 <!-- Auth + role gating UI -->
 <div id="auth-overlay"><div id="auth-card" role="dialog" aria-modal="true">
-  <div id="auth-tg-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.66a1.3 1.3 0 0 0-1.35-.2L3.4 11.12c-.87.35-.85 1.6.03 1.92l4.29 1.5 1.63 5.02c.2.63 1 .82 1.46.34l2.35-2.37 4.42 3.26c.5.37 1.22.1 1.36-.5l3.31-15.03a1.3 1.3 0 0 0-.31-1.6zM9.72 14.35l8.02-5.08c.16-.1.33.12.19.25l-6.6 6.03c-.23.2-.38.5-.42.8l-.22 1.95-.97-3.95z"/></svg></div>
+  <div id="auth-access-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
   <h2 id="auth-title"></h2>
   <p id="auth-sub"></p>
-  <button type="button" id="auth-tg-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.66a1.3 1.3 0 0 0-1.35-.2L3.4 11.12c-.87.35-.85 1.6.03 1.92l4.29 1.5 1.63 5.02c.2.63 1 .82 1.46.34l2.35-2.37 4.42 3.26c.5.37 1.22.1 1.36-.5l3.31-15.03a1.3 1.3 0 0 0-.31-1.6z"/></svg><span id="auth-tg-lbl"></span></button>
-  <div id="auth-tg-wait">
-    <div class="auth-spin"></div>
-    <p id="auth-tg-waitmsg"></p>
-    <a id="auth-tg-link" href="#" target="_blank" rel="noopener"></a>
-  </div>
-  <div id="auth-error"></div>
+  <form id="auth-form"><label class="auth-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg><input id="auth-email" type="email" autocomplete="username" required></label><label class="auth-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input id="auth-password" type="password" minlength="6" autocomplete="current-password" required></label><div class="auth-actions"><button type="button" id="auth-request"></button><button type="submit" id="auth-login"></button></div></form>
+  <div id="auth-error"></div><div id="auth-success"></div>
   <p class="auth-foot" id="auth-note"></p>
 </div></div>
-<style id="auth-tg-style">
-#auth-tg-badge{ width:60px;height:60px;margin:0 auto 14px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2aabee,#229ed9);box-shadow:0 10px 30px rgba(34,158,217,.35); }
-#auth-tg-badge svg{ width:34px;height:34px;color:#fff; }
-#auth-tg-btn{ width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:13px 18px;margin-top:8px;border:none;border-radius:12px;background:linear-gradient(135deg,#2aabee,#229ed9);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:filter .15s,transform .1s; }
-#auth-tg-btn:hover:not(:disabled){ filter:brightness(1.07); }
-#auth-tg-btn:active:not(:disabled){ transform:translateY(1px); }
-#auth-tg-btn:disabled{ opacity:.55;cursor:default; }
-#auth-tg-btn svg{ width:22px;height:22px; }
-#auth-tg-wait{ display:none;flex-direction:column;align-items:center;gap:9px;margin-top:16px; }
-#auth-tg-wait.show{ display:flex; }
-#auth-tg-wait p{ font-size:13px;color:rgba(235,240,246,.7);margin:0;text-align:center; }
-#auth-tg-link{ font-size:12px;color:#2aabee;text-decoration:underline;cursor:pointer; }
-.auth-spin{ width:26px;height:26px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:#2aabee;animation:authspin .8s linear infinite; }
-@keyframes authspin{ to{ transform:rotate(360deg); } }
-#auth-note{ text-align:center;font-size:12px;color:rgba(235,240,246,.45);margin-top:14px; }
+<style id="auth-email-style">
+#auth-access-badge{width:60px;height:60px;margin:0 auto 14px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#7248e8,#4e9cf5);box-shadow:0 10px 30px rgba(114,72,232,.3);color:#fff}#auth-access-badge svg{width:30px;height:30px}.auth-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.auth-actions button{height:48px;border-radius:12px;font:700 13.5px/1 inherit;cursor:pointer}.auth-actions button:disabled{opacity:.55;cursor:default}#auth-request{border:1px solid #7759cf;background:rgba(119,89,207,.12);color:#c8baff}#auth-login{border:0;background:linear-gradient(135deg,#8057ef,#568de9);color:#fff}#auth-success{display:none;margin:13px 0 0;padding:10px 12px;border-radius:10px;background:rgba(42,190,120,.12);border:1px solid rgba(42,190,120,.4);color:#77dea9;font-size:12.5px;text-align:center}#auth-success.show{display:block}#auth-note{text-align:center;font-size:12px;color:rgba(235,240,246,.45);margin-top:14px}@media(max-width:480px){.auth-actions{grid-template-columns:1fr}#auth-card{padding:28px 20px 24px}}
 </style>
 <div id="plan-lock"><video id="plan-lock-video" muted loop playsinline preload="metadata"></video><div id="plan-lock-card">
   <div id="plan-lock-cardvid-wrap" style="display:none"><video id="plan-lock-cardvid" muted loop playsinline preload="metadata"></video></div>
@@ -39154,71 +39324,34 @@ connect();
   "use strict";
   var ALLOWED_SORTS = ['natr__1m','volume__1d','chg_5m'];
   var LOCKED_SECTIONS = [];
-  window.AUTH = { authenticated:true, email:'', username:'', role:'pro', isPro:true, isAdmin:false, freeExchanges:[] };
-  try { var rc = localStorage.getItem('crypto_user_role');
-    if (rc && rc !== 'guest') { AUTH.authenticated=true; AUTH.isAdmin=false; AUTH.isPro=(rc==='pro'||rc==='admin'); AUTH.role=AUTH.isPro?'pro':'user'; AUTH.email=localStorage.getItem('crypto_user_email')||''; }
-  } catch(e){}
+  window.AUTH = {authenticated:false,email:'',username:'',role:'guest',isPro:false,isAdmin:false,freeExchanges:[]};
   function T(k){ return (typeof t==='function') ? t(k) : k; }
   function $(id){ return document.getElementById(id); }
   var _tt=null;
   function toast(html){ var el=$('plan-toast'); if(!el)return; el.innerHTML='<span class="pt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4.5" y="11" width="15" height="9.5" rx="2.2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg></span><span class="pt-msg">'+html+'</span>'; el.style.setProperty('visibility','visible','important'); el.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(function(){ el.style.setProperty('visibility','hidden','important'); el.classList.remove('show'); },2800); }
-  function localizeAuth(){
-    $('auth-title').textContent=T('auth_tg_title'); $('auth-sub').textContent=T('auth_tg_sub');
-    $('auth-tg-lbl').textContent=T('auth_tg_btn'); $('auth-tg-waitmsg').textContent=T('auth_tg_wait');
-    $('auth-tg-link').textContent=T('auth_tg_open'); $('auth-note').textContent=T('auth_tg_note'); hideErr();
-  }
-  function openAuth(){ hideErr(); _tgReset(); $('auth-overlay').classList.add('show'); }
-  function closeAuth(){ if(_authForced && !AUTH.authenticated) return; $('auth-overlay').classList.remove('show'); _tgStop(); }
-
-  // ── Forced auth for long-lingering guests (ONLY case, kept self-contained) ──
-  // A guest who stays > 5 min in the session WITHOUT registering gets a
-  // non-dismissable auth modal. Strictly scoped: it fires only for unauthenticated
-  // users, `_authForced` is the ONLY flag closeAuth() honours, and nothing else in
-  // the app reads it — so this behaviour can never leak into another case. A
-  // resolved logged-in AUTH is never touched (checked at fire time, after
-  // /api/auth/me has resolved). Login reloads the page, which clears the flag.
-  var _authForced=false, _authForceTimer=null;
-  var _AUTH_FORCE_MS=5*60*1000;
-  function _forceAuthIfGuest(){
-    if(AUTH.authenticated) return;                                   // authorized → never force
-    _authForced=true;                                                // make it non-dismissable
-    if(!$('auth-overlay').classList.contains('show')) openAuth();    // don't reset an in-progress login
-  }
-  function _scheduleAuthForce(){
-    if(_authForceTimer || AUTH.authenticated) return;   // one timer/load; never for logged-in
-    var start=0;
-    try{
-      start=+sessionStorage.getItem('crypto_sess_start')||0;
-      if(!start){ start=Date.now(); sessionStorage.setItem('crypto_sess_start',String(start)); }
-    }catch(e){ start=Date.now(); }
-    var remain=Math.max(0,_AUTH_FORCE_MS-(Date.now()-start));
-    _authForceTimer=setTimeout(_forceAuthIfGuest,remain);
-  }
-  function showErr(c){ var el=$('auth-error'),k='auth_err_'+c,m=T(k); if(m===k)m=T('auth_err_tg'); el.textContent=m; el.classList.add('show'); }
-  function hideErr(){ var el=$('auth-error'); if(el){el.classList.remove('show'); el.textContent='';} }
-  var _tgPoll=null, _tgNonce='';
-  function _tgReset(){ _tgStop(); var w=$('auth-tg-wait'); if(w)w.classList.remove('show'); var b=$('auth-tg-btn'); if(b)b.disabled=false; }
-  function _tgStop(){ if(_tgPoll){ clearInterval(_tgPoll); _tgPoll=null; } _tgNonce=''; }
-  function startTgLogin(){ hideErr(); var b=$('auth-tg-btn'); if(b)b.disabled=true;
-    fetch('/api/auth/tg/start',{method:'POST',credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){
-      if(!d||!d.ok||!d.deep_link){ showErr('tg'); if(b)b.disabled=false; return; }
-      _tgNonce=d.nonce; var lk=$('auth-tg-link'); if(lk) lk.href=d.deep_link;
-      var w=$('auth-tg-wait'); if(w) w.classList.add('show');
-      try{ window.open(d.deep_link,'_blank','noopener'); }catch(e){}
-      _tgStartPoll();
-    }).catch(function(){ showErr('tg'); if(b)b.disabled=false; });
-  }
-  function _tgStartPoll(){ if(_tgPoll) clearInterval(_tgPoll); var tries=0;
-    _tgPoll=setInterval(function(){ tries++; if(tries>150||!_tgNonce){ _tgStop(); return; }
-      fetch('/api/auth/tg/poll?nonce='+encodeURIComponent(_tgNonce),{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){
-        if(!d||!d.ok) return;
-        if(d.status==='ok'&&d.user){ _tgStop(); var u=d.user;
-          try{ localStorage.setItem('crypto_user_role',u.is_admin?'admin':(u.is_pro?'pro':'user')); localStorage.setItem('crypto_user_email',u.email); localStorage.setItem('crypto_user_handle',u.tg_username||u.username||''); }catch(e){}
-          location.reload();
-        } else if(d.status==='expired'){ _tgStop(); _tgReset(); showErr('tg'); }
-      }).catch(function(){});
-    }, 2000);
-  }
+  var AUTH_COPY={
+    en:{title:'Access to Crypto Screener',sub:'Enter your email and password. New users can request access.',email:'Email',password:'Password',request:'Request access',login:'Sign in',note:'Access requests are reviewed by an administrator.',requested:'Request sent. Sign in after an administrator approves access.',invalid_email:'Enter a valid email',weak_password:'Password must be at least 6 characters',email_taken:'This email is already registered',invalid_credentials:'Wrong email or password',not_found:'Account not found. Request access first.',access_pending:'Your access request is awaiting approval.',network:'Network error. Try again.'},
+    ru:{title:'Доступ к Crypto Screener',sub:'Введите почту и пароль. Новый пользователь может запросить доступ.',email:'Электронная почта',password:'Пароль',request:'Запросить доступ',login:'Войти',note:'Заявки на доступ подтверждаются администратором.',requested:'Заявка отправлена. После одобрения администратором нажмите «Войти».',invalid_email:'Введите корректный email',weak_password:'Пароль должен быть не короче 6 символов',email_taken:'Эта почта уже зарегистрирована',invalid_credentials:'Неверная почта или пароль',not_found:'Аккаунт не найден. Сначала запросите доступ.',access_pending:'Заявка на доступ ожидает одобрения.',network:'Ошибка сети. Попробуйте снова.'},
+    es:{title:'Acceso a Crypto Screener',sub:'Introduce tu correo y contraseña. Los nuevos usuarios pueden solicitar acceso.',email:'Correo electrónico',password:'Contraseña',request:'Solicitar acceso',login:'Entrar',note:'Un administrador revisará tu solicitud.',requested:'Solicitud enviada. Inicia sesión cuando sea aprobada.',invalid_email:'Introduce un correo válido',weak_password:'La contraseña debe tener al menos 6 caracteres',email_taken:'Este correo ya está registrado',invalid_credentials:'Correo o contraseña incorrectos',not_found:'Cuenta no encontrada. Solicita acceso primero.',access_pending:'Tu solicitud está pendiente de aprobación.',network:'Error de red. Inténtalo de nuevo.'},
+    uk:{title:'Доступ до Crypto Screener',sub:'Введіть пошту та пароль. Нові користувачі можуть запросити доступ.',email:'Електронна пошта',password:'Пароль',request:'Запросити доступ',login:'Увійти',note:'Заявку перевірить адміністратор.',requested:'Заявку надіслано. Увійдіть після схвалення.',invalid_email:'Введіть коректний email',weak_password:'Пароль має містити щонайменше 6 символів',email_taken:'Цю пошту вже зареєстровано',invalid_credentials:'Невірна пошта або пароль',not_found:'Обліковий запис не знайдено. Спочатку запросіть доступ.',access_pending:'Заявка очікує схвалення.',network:'Помилка мережі. Спробуйте ще раз.'},
+    de:{title:'Zugang zu Crypto Screener',sub:'E-Mail und Passwort eingeben. Neue Nutzer können Zugang anfragen.',email:'E-Mail',password:'Passwort',request:'Zugang anfragen',login:'Anmelden',note:'Anfragen werden von einem Administrator geprüft.',requested:'Anfrage gesendet. Nach der Freigabe anmelden.',invalid_email:'Gültige E-Mail eingeben',weak_password:'Das Passwort muss mindestens 6 Zeichen haben',email_taken:'Diese E-Mail ist bereits registriert',invalid_credentials:'E-Mail oder Passwort ist falsch',not_found:'Konto nicht gefunden. Bitte zuerst Zugang anfragen.',access_pending:'Ihre Anfrage wartet auf Freigabe.',network:'Netzwerkfehler. Erneut versuchen.'},
+    fr:{title:'Accès à Crypto Screener',sub:'Saisissez votre e-mail et votre mot de passe. Les nouveaux utilisateurs peuvent demander un accès.',email:'E-mail',password:'Mot de passe',request:'Demander l’accès',login:'Se connecter',note:'Les demandes sont validées par un administrateur.',requested:'Demande envoyée. Connectez-vous après validation.',invalid_email:'Saisissez un e-mail valide',weak_password:'Le mot de passe doit contenir au moins 6 caractères',email_taken:'Cet e-mail est déjà enregistré',invalid_credentials:'E-mail ou mot de passe incorrect',not_found:'Compte introuvable. Demandez d’abord un accès.',access_pending:'Votre demande est en attente de validation.',network:'Erreur réseau. Réessayez.'},
+    pt:{title:'Acesso ao Crypto Screener',sub:'Digite seu e-mail e senha. Novos usuários podem solicitar acesso.',email:'E-mail',password:'Senha',request:'Solicitar acesso',login:'Entrar',note:'As solicitações são analisadas por um administrador.',requested:'Solicitação enviada. Entre após a aprovação.',invalid_email:'Digite um e-mail válido',weak_password:'A senha deve ter pelo menos 6 caracteres',email_taken:'Este e-mail já está registrado',invalid_credentials:'E-mail ou senha incorretos',not_found:'Conta não encontrada. Solicite acesso primeiro.',access_pending:'Sua solicitação aguarda aprovação.',network:'Erro de rede. Tente novamente.'},
+    tr:{title:'Crypto Screener erişimi',sub:'E-posta ve şifrenizi girin. Yeni kullanıcılar erişim talep edebilir.',email:'E-posta',password:'Şifre',request:'Erişim iste',login:'Giriş yap',note:'Talepler bir yönetici tarafından incelenir.',requested:'Talep gönderildi. Onaylandıktan sonra giriş yapın.',invalid_email:'Geçerli bir e-posta girin',weak_password:'Şifre en az 6 karakter olmalıdır',email_taken:'Bu e-posta zaten kayıtlı',invalid_credentials:'E-posta veya şifre yanlış',not_found:'Hesap bulunamadı. Önce erişim isteyin.',access_pending:'Talebiniz onay bekliyor.',network:'Ağ hatası. Tekrar deneyin.'},
+    zh:{title:'访问 Crypto Screener',sub:'请输入邮箱和密码。新用户可以申请访问权限。',email:'电子邮箱',password:'密码',request:'申请访问',login:'登录',note:'访问申请由管理员审核。',requested:'申请已发送。管理员批准后即可登录。',invalid_email:'请输入有效邮箱',weak_password:'密码至少需要 6 个字符',email_taken:'该邮箱已注册',invalid_credentials:'邮箱或密码错误',not_found:'未找到帐户，请先申请访问。',access_pending:'您的申请正在等待批准。',network:'网络错误，请重试。'},
+    ja:{title:'Crypto Screener へのアクセス',sub:'メールアドレスとパスワードを入力してください。新規ユーザーはアクセスを申請できます。',email:'メールアドレス',password:'パスワード',request:'アクセスを申請',login:'ログイン',note:'申請は管理者が確認します。',requested:'申請を送信しました。承認後にログインしてください。',invalid_email:'有効なメールアドレスを入力してください',weak_password:'パスワードは6文字以上必要です',email_taken:'このメールアドレスは登録済みです',invalid_credentials:'メールアドレスまたはパスワードが違います',not_found:'アカウントがありません。先にアクセスを申請してください。',access_pending:'申請は承認待ちです。',network:'ネットワークエラーです。もう一度お試しください。'}
+  };
+  function authLang(){var l=((typeof currentLang==='string'&&currentLang)||localStorage.getItem('crypto_lang')||document.documentElement.lang||'en').toLowerCase().slice(0,2);return AUTH_COPY[l]?l:'en'}
+  function AC(){return AUTH_COPY[authLang()]}
+  function localizeAuth(){var c=AC();$('auth-title').textContent=c.title;$('auth-sub').textContent=c.sub;$('auth-email').placeholder=c.email;$('auth-password').placeholder=c.password;$('auth-request').textContent=c.request;$('auth-login').textContent=c.login;$('auth-note').textContent=c.note;hideErr()}
+  var _authForced=true;
+  function openAuth(){hideErr();hideSuccess();$('auth-overlay').classList.add('show');setTimeout(function(){var e=$('auth-email');if(e)e.focus()},30)}
+  function closeAuth(){if(_authForced&&!AUTH.authenticated)return;$('auth-overlay').classList.remove('show')}
+  function showErr(c){var el=$('auth-error'),m=AC()[c]||AC().network;hideSuccess();el.textContent=m;el.classList.add('show')}
+  function hideErr(){var el=$('auth-error');if(el){el.classList.remove('show');el.textContent=''}}
+  function showSuccess(m){var el=$('auth-success');hideErr();el.textContent=m;el.classList.add('show')}
+  function hideSuccess(){var el=$('auth-success');if(el){el.classList.remove('show');el.textContent=''}}
+  function submitAuth(action){hideErr();hideSuccess();var email=($('auth-email').value||'').trim(),password=$('auth-password').value||'';if(!/^\S+@\S+\.\S+$/.test(email)){showErr('invalid_email');return}if(password.length<6){showErr('weak_password');return}var a=$('auth-request'),b=$('auth-login');a.disabled=b.disabled=true;fetch(action==='request'?'/api/auth/register':'/api/auth/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,password:password})}).then(async function(r){var d={};try{d=await r.json()}catch(e){}if(!r.ok||!d.ok)throw new Error(d.error||'network');if(action==='request'){showSuccess(AC().requested);$('auth-password').value='';return}var u=d.user||{};try{localStorage.setItem('crypto_user_role',u.is_admin?'admin':'pro');localStorage.setItem('crypto_user_email',u.email||email)}catch(e){}location.reload()}).catch(function(e){showErr(e.message||'network')}).finally(function(){a.disabled=b.disabled=false})}
   var DEMO_VIDEOS=['densities','arbitrage','alerts','formations','builder'];
   function fillLock(sec){ var has=LOCKED_SECTIONS.indexOf(sec)>=0;
     $('plan-lock-title').textContent=has?T('lock_'+sec+'_title'):T('lock_generic_title');
@@ -39852,7 +39985,7 @@ connect();
     ensureAdminMenu();
   }
   window.PLAN = {
-    isPaid:function(){ return true; },
+    isPaid:function(){ return !!(AUTH.authenticated&&(AUTH.isPro||AUTH.isAdmin)); },
     canExchange:function(id){ return true; },
     canSort:function(k){ return true; },
     beforeSection:function(s){ return ['charts','screener','arbitrage','listings','formations'].indexOf(s)>=0; },
@@ -39860,15 +39993,20 @@ connect();
     toast:toast, openAuth:openAuth, closeAuth:closeAuth,
     closeMenusSoft:function(){ document.querySelectorAll('.ch-scr-menu.open').forEach(function(m){m.classList.remove('open');}); },
     refresh:function(){ var self=this;
-      AUTH={authenticated:true,email:'',username:'',tgUsername:'',role:'pro',isPro:true,isAdmin:false,createdTs:0,proUntil:null,freeExchanges:[]};
-      applyRole();
-      var cur=(typeof activeSection!=='undefined')?activeSection:'screener'; self.afterSection(cur);
-      return Promise.resolve(AUTH);
+      return fetch('/api/auth/me',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json()}).then(function(u){
+        var approved=!!(u&&u.authenticated&&(u.is_pro||u.is_admin));
+        AUTH=approved?{authenticated:true,email:u.email||'',username:u.username||'',tgUsername:u.tg_username||'',role:u.role||'pro',isPro:!!u.is_pro,isAdmin:!!u.is_admin,createdTs:+u.created_ts||0,proUntil:u.pro_until||null,freeExchanges:u.free_exchanges||[]}:{authenticated:false,email:(u&&u.email)||'',username:'',role:'guest',isPro:false,isAdmin:false,freeExchanges:[]};
+        window.AUTH=AUTH; _authForced=!approved; applyRole();
+        var cur=(typeof activeSection!=='undefined')?activeSection:'screener'; self.afterSection(cur);
+        if(!approved) openAuth(); else closeAuth();
+        return AUTH;
+      }).catch(function(){AUTH.authenticated=false;_authForced=true;applyRole();openAuth();return AUTH});
     },
     logout:function(){ var done=function(){ try{ localStorage.setItem('crypto_user_role','guest'); localStorage.removeItem('crypto_user_email'); localStorage.removeItem('crypto_user_handle'); localStorage.setItem('crypto_section','screener'); sessionStorage.removeItem('crypto_sess_start'); }catch(e){} location.reload(); }; fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'}).then(done,done); },
   };
   function wire(){
-    var tgb=$('auth-tg-btn'); if(tgb) tgb.addEventListener('click',startTgLogin);
+    $('auth-form').addEventListener('submit',function(e){e.preventDefault();submitAuth('login')});
+    $('auth-request').addEventListener('click',function(){submitAuth('request')});
     $('auth-overlay').addEventListener('mousedown',function(e){ if(e.target.id==='auth-overlay') closeAuth(); });
     document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeAuth(); });
     var lb=$('tb-login-btn'); if(lb) lb.addEventListener('click',function(){ openAuth('login'); });
@@ -39885,7 +40023,6 @@ connect();
         e.preventDefault(); e.stopPropagation(); openAuth('register'); }
     }, true);
     applyRole(); window.PLAN.refresh();
-    // Free edition intentionally has no forced authentication.
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire); else wire();
 })();
@@ -40871,433 +41008,10 @@ body.crypto-free.sec-formations #formations-main .fm-card-body{
   flex:0 0 auto!important;
   min-height:64px!important;
 }
-/* Floating support mascot. Kept outside the application grids so it never
-   changes chart/screener sizing or captures pointer events when closed. */
-#support-mascot-wrap{
-  position:fixed;right:15px;bottom:-12px;z-index:100080;
-  width:116px;height:116px;pointer-events:none;
-}
-#support-mascot-btn{
-  position:absolute;inset:0;display:grid;place-items:center;
-  margin:0;padding:0;border:0;background:transparent;cursor:pointer;
-  pointer-events:auto;filter:drop-shadow(0 13px 20px rgba(0,0,0,.58));
-  transition:transform .18s ease,filter .18s ease;
-}
-#support-mascot-btn::before{
-  content:'';position:absolute;left:14px;right:14px;bottom:5px;height:17px;
-  border-radius:50%;background:rgba(99,72,210,.25);filter:blur(10px);
-}
-#support-mascot-btn:hover{transform:scale(1.045);filter:drop-shadow(0 16px 25px rgba(0,0,0,.66))}
-#support-mascot-btn:active{transform:translateY(-1px) scale(.98)}
-#support-mascot-btn:focus-visible{outline:2px solid #9275ff;outline-offset:3px;border-radius:24px}
-#support-mascot-btn .support-mascot-frame{position:absolute;inset:0;width:116px;height:116px;display:block;object-fit:contain;user-select:none;-webkit-user-drag:none;transform-origin:50% 92%}
-.support-mascot-expr-idle{opacity:1}
-.support-mascot-expr-rect{opacity:0;animation:supportMascotExprRect 21s steps(1,end) infinite}
-.support-mascot-expr-bulge{opacity:0;animation:supportMascotExprBulge 21s steps(1,end) infinite}
-.support-mascot-expr-wink{opacity:0;animation:supportMascotExprWink 21s steps(1,end) infinite}
-.support-mascot-expr-surprised{opacity:0;animation:supportMascotExprSurprised 21s steps(1,end) infinite}
-.support-mascot-expr-sleepy{opacity:0;animation:supportMascotExprSleepy 21s steps(1,end) infinite}
-.support-mascot-expr-wave{opacity:0;animation:supportMascotExprWave 21s steps(1,end) infinite}
-.support-mascot-delivery-error,.support-mascot-chat-open{opacity:0}
-#support-mascot-btn:hover .support-mascot-frame{opacity:0;animation:none}
-#support-mascot-btn:hover .support-mascot-expr-wave{opacity:1;animation:supportMascotWave .28s ease-in-out infinite alternate}
-@keyframes supportMascotExprRect{0%,14.27%,28.58%,100%{opacity:0}14.28%,28.57%{opacity:1}}
-@keyframes supportMascotExprBulge{0%,28.56%,42.87%,100%{opacity:0}28.57%,42.86%{opacity:1}}
-@keyframes supportMascotExprWink{0%,42.84%,57.15%,100%{opacity:0}42.85%,57.14%{opacity:1}}
-@keyframes supportMascotExprSurprised{0%,57.13%,71.44%,100%{opacity:0}57.14%,71.43%{opacity:1}}
-@keyframes supportMascotExprSleepy{0%,71.41%,85.72%,100%{opacity:0}71.42%,85.71%{opacity:1}}
-@keyframes supportMascotExprWave{0%,85.70%,99.99%,100%{opacity:0}85.71%,99.98%{opacity:1}}
-@keyframes supportMascotWave{from{transform:rotate(-2.5deg) translateX(-1px)}to{transform:rotate(2.5deg) translateX(1px)}}
-#support-mascot-badge{
-  display:none!important;position:absolute;right:10px;top:14px;width:12px;height:12px;border:3px solid #070b12;
-  border-radius:50%;background:#38d890;box-shadow:0 0 0 2px rgba(56,216,144,.12),0 0 12px rgba(56,216,144,.45);
-}
-#support-mascot-alert{
-  position:absolute;right:100px;bottom:62px;width:382px;box-sizing:border-box;padding:18px 21px 18px 61px;
-  border:1px solid rgba(142,113,255,.3);border-radius:19px;background:rgba(13,17,27,.97);color:#dce3ef;
-  box-shadow:0 18px 50px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.045),0 0 0 1px rgba(126,91,238,.035);
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  opacity:0;visibility:hidden;transform:translateY(7px) scale(.975);transform-origin:100% 100%;transition:opacity .2s ease,transform .2s ease,visibility .2s;pointer-events:none;
-}
-#support-mascot-alert::after{content:'';position:absolute;right:-7px;bottom:17px;width:13px;height:13px;background:#0d111b;border-top:1px solid rgba(142,113,255,.3);border-right:1px solid rgba(142,113,255,.3);transform:rotate(45deg);border-radius:0 3px 0 0}
-.support-delivery-icon{position:absolute;left:19px;top:19px;width:29px;height:29px;display:grid;place-items:center;border:1px solid rgba(255,91,125,.55);border-radius:9px;background:rgba(255,75,111,.12);color:#ff7894;font:800 17px/1 Inter,sans-serif;box-shadow:0 0 18px rgba(255,77,116,.12)}
-.support-delivery-copy{display:flex;min-width:0;flex-direction:column;align-items:flex-start}
-.support-delivery-title{color:#f3f5fa;font-size:15px;font-weight:780;line-height:1.2;letter-spacing:-.01em}
-.support-delivery-text{margin-top:6px;color:#9aa6b8;font-size:13px;font-weight:520;line-height:1.42}
-#support-delivery-action{position:relative;z-index:1;margin:11px 0 0;padding:0;border:0;background:transparent;color:#aa8cff;font:720 13.5px/1.25 Inter,ui-sans-serif,sans-serif;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;cursor:pointer}
-#support-delivery-action:hover{color:#c0adff}
-#support-delivery-action:focus-visible{outline:2px solid #9275ff;outline-offset:4px;border-radius:2px}
-#support-mascot-wrap.is-error #support-mascot-badge{background:#ff5f7d;box-shadow:0 0 0 2px rgba(255,95,125,.13),0 0 14px rgba(255,95,125,.55);animation:supportErrorPulse 1.1s ease-in-out infinite}
-#support-mascot-wrap.is-error #support-mascot-alert,#support-mascot-wrap.is-delivery-error #support-mascot-alert{opacity:1;visibility:visible;transform:none;pointer-events:auto}
-#support-mascot-wrap.is-error #support-mascot-btn{animation:supportErrorNudge .42s ease 2}
-#support-mascot-wrap.is-delivery-error #support-mascot-btn .support-mascot-frame{opacity:0!important;animation:none!important}
-#support-mascot-wrap.is-delivery-error #support-mascot-btn .support-mascot-delivery-error{opacity:1!important;animation:supportDeliveryPoint .82s cubic-bezier(.5,.05,.38,.96) infinite!important;transform-origin:48% 90%}
-#support-mascot-wrap.is-delivery-error #support-mascot-btn:hover{transform:none;filter:drop-shadow(0 16px 25px rgba(0,0,0,.66))}
-#support-mascot-wrap.is-chat-open #support-mascot-btn .support-mascot-frame{opacity:0!important;animation:none!important}
-#support-mascot-wrap.is-chat-open #support-mascot-btn .support-mascot-chat-open{opacity:1!important;animation:supportChatLookUp 1.65s ease-in-out infinite!important;transform-origin:50% 92%}
-#support-mascot-wrap.is-chat-open #support-mascot-btn:hover{transform:none;filter:drop-shadow(0 16px 25px rgba(0,0,0,.66))}
-@keyframes supportErrorPulse{50%{transform:scale(1.3)}}
-@keyframes supportErrorNudge{25%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
-@keyframes supportDeliveryPoint{0%,100%{transform:translateX(0) rotate(0)}32%{transform:translateX(-5px) rotate(-.8deg)}52%{transform:translateX(-2px) rotate(-.25deg)}72%{transform:translateX(-6px) rotate(-1deg)}}
-@keyframes supportChatLookUp{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.015)}}
-#support-chat-panel{
-  position:fixed;right:25px;bottom:74px;z-index:100079;width:840px;height:min(780px,calc(100vh - 98px));
-  max-width:calc(100vw - 40px);max-height:calc(100vh - 98px);overflow:hidden;border:1px solid #273146;
-  border-radius:16px;background:#090e17;color:#e8edf6;
-  box-shadow:0 28px 80px rgba(0,0,0,.72),0 0 0 1px rgba(139,108,255,.06);
-  opacity:0;visibility:hidden;pointer-events:none;transform:translateY(12px) scale(.97);
-  transform-origin:calc(100% - 42px) 100%;transition:opacity .18s ease,transform .18s ease,visibility .18s;
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;
-}
-#support-chat-panel.open{opacity:1;visibility:visible;pointer-events:auto;transform:none}
-.support-chat-head{display:flex;align-items:center;gap:15px;padding:21px 23px 19px;background:#0c121d;border-bottom:1px solid #1d2736}
-.support-chat-avatar{width:54px;height:54px;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(0,0,0,.4))}
-.support-chat-heading{min-width:0;flex:1}
-.support-chat-title{font-size:19px;font-weight:760;letter-spacing:-.01em;color:#f0f3f9}
-.support-chat-status{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:#7f8da3}
-.support-chat-status::before{content:'';width:8px;height:8px;border-radius:50%;background:#38d890;box-shadow:0 0 8px rgba(56,216,144,.6)}
-#support-chat-close{width:38px;height:38px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:transparent;color:#8290a5;cursor:pointer;font-size:25px;line-height:1}
-#support-chat-close:hover{background:#151d2a;color:#e9edf5}
-.support-chat-body{padding:28px 27px 25px;display:flex;flex:1;min-height:0;flex-direction:column}
-.support-chat-messages{display:flex;flex:1;min-height:0;flex-direction:column;gap:13px;overflow-y:auto;padding:0 6px 3px 0;scrollbar-width:thin;scrollbar-color:#39445a transparent}
-.support-chat-message{padding:20px 22px;border:1px solid #202b3b;border-radius:6px 16px 16px 16px;background:#101722;color:#bdc7d7;font-size:15.5px;line-height:1.65;box-sizing:border-box;white-space:pre-line}
-.support-chat-message.is-user{align-self:flex-end;max-width:78%;border-color:#7258d7;border-radius:16px 6px 16px 16px;background:#6f50dc;color:#fff;font-weight:650}
-.support-chat-message.is-bot{align-self:flex-start;width:min(100%,690px)}
-.support-chat-instruction-image{display:block;align-self:flex-start;width:min(100%,690px);height:auto;border:1px solid #28344a;border-radius:12px;background:#fff;box-sizing:border-box}
-#support-chat-not-helped{display:none;align-items:center;justify-content:center;gap:10px;width:100%;height:56px;border:1px solid #7157d6;border-radius:13px;background:#6f50dc;color:#fff;font:720 15px/1 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;box-shadow:0 9px 24px rgba(74,48,166,.24);transition:background .15s,border-color .15s,transform .15s}
-#support-chat-not-helped.visible{display:flex}
-#support-chat-not-helped:hover{background:#7b5de4;border-color:#947cf0;transform:translateY(-1px)}
-#support-chat-not-helped:disabled{opacity:.58;cursor:wait;transform:none}
-.support-chat-os-actions{display:none;grid-template-columns:1fr 1fr;gap:12px;width:100%}
-.support-chat-os-actions.visible{display:grid}
-.support-chat-os-choice{display:flex;align-items:center;justify-content:center;height:56px;border:1px solid #7157d6;border-radius:13px;background:#6f50dc;color:#fff;font:720 15px/1 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;box-shadow:0 9px 24px rgba(74,48,166,.2);transition:background .15s,border-color .15s,transform .15s}
-.support-chat-os-choice:hover{background:#7b5de4;border-color:#947cf0;transform:translateY(-1px)}
-.support-chat-command{display:none;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 8px 8px 16px;border:1px solid #2b3650;border-radius:13px;background:#080d15;box-sizing:border-box}
-.support-chat-command.visible{display:flex}
-.support-chat-command code{min-width:0;flex:1;overflow-x:auto;color:#c9d3e4;font:600 13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:nowrap;scrollbar-width:thin}
-#support-chat-command-copy{width:42px;height:40px;display:grid;place-items:center;flex:none;border:1px solid #7157d6;border-radius:10px;background:#6f50dc;color:#fff;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
-#support-chat-command-copy:hover{background:#7b5de4;border-color:#947cf0;transform:translateY(-1px)}
-#support-chat-command-copy svg{width:19px;height:19px}
-.support-chat-remote-buttons{display:flex;flex-wrap:wrap;gap:8px;align-self:flex-start;width:min(100%,690px)}
-.support-chat-remote-button{min-height:42px;padding:10px 15px;border:1px solid #7157d6;border-radius:11px;background:rgba(111,80,220,.14);color:#cbbfff;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
-.support-chat-remote-button:hover{background:#6f50dc;color:#fff}
-.support-chat-remote-image{display:block;align-self:flex-start;max-width:min(100%,690px);max-height:360px;object-fit:contain;border:1px solid #28344a;border-radius:12px;background:#080d15}
-.support-copy-toast{position:absolute;left:50%;top:50%;z-index:5;display:flex;align-items:center;gap:9px;max-width:calc(100% - 36px);padding:12px 17px;border:1px solid rgba(132,105,255,.58);border-radius:13px;background:rgba(18,24,38,.96);box-shadow:0 18px 55px rgba(0,0,0,.48),0 0 24px rgba(111,80,220,.2);color:#f2efff;font:700 13px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,-42%) scale(.92);transition:opacity .18s ease,transform .22s cubic-bezier(.2,.8,.2,1),visibility .18s}
-.support-copy-toast.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
-.support-copy-toast-check{display:grid;place-items:center;width:23px;height:23px;flex:none;border-radius:50%;background:#7256df;color:#fff;font-size:15px}
-.support-chat-compose{display:flex;align-items:flex-end;gap:9px;margin-top:13px;padding-top:13px;border-top:1px solid #202b3b;flex:none}
-#support-chat-input{flex:1;min-width:0;min-height:46px;max-height:120px;resize:none;padding:12px 14px;border:1px solid #29364a;border-radius:12px;background:#080d15;color:#e7ecf5;font:500 14px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;outline:none}
-#support-chat-input:focus{border-color:#7157d6;box-shadow:0 0 0 3px rgba(111,80,220,.12)}
-#support-chat-input::placeholder{color:#58677c}
-#support-chat-send{width:46px;height:46px;display:grid;place-items:center;flex:none;border:1px solid #7157d6;border-radius:12px;background:#6f50dc;color:#fff;cursor:pointer}
-#support-chat-send:hover{background:#7b5de4}#support-chat-send:disabled{opacity:.5;cursor:wait}
-#support-chat-send svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
-@media(max-width:640px){
-  #support-mascot-wrap{right:5px;bottom:-10px;width:94px;height:94px}
-  #support-mascot-btn .support-mascot-frame{width:94px;height:94px}
-  #support-mascot-badge{right:5px;top:10px}
-  #support-mascot-alert{right:76px;bottom:55px;width:min(320px,calc(100vw - 92px));padding:15px 15px 15px 50px}
-  .support-delivery-icon{left:13px;top:16px;width:27px;height:27px;font-size:16px}
-  .support-delivery-title{font-size:14px}
-  .support-delivery-text{font-size:12px}
-  #support-delivery-action{font-size:12.5px}
-  #support-chat-panel{right:8px;bottom:82px;width:calc(100vw - 16px);height:calc(100vh - 94px);max-width:none;max-height:none}
-  .support-chat-head{padding:17px 18px 15px}
-  .support-chat-avatar{width:46px;height:46px}
-  .support-chat-title{font-size:17px}
-  .support-chat-body{padding:19px 17px 17px}
-  .support-chat-message{padding:16px;font-size:14px}
-  .support-chat-message.is-user{max-width:88%}
-}
-@media(prefers-reduced-motion:reduce){#support-mascot-btn,#support-mascot-badge,.support-mascot-frame{animation:none!important;transition:none!important}.support-mascot-frame:not(.support-mascot-expr-idle){opacity:0!important}#support-mascot-wrap.is-delivery-error .support-mascot-expr-idle{opacity:0!important}#support-mascot-wrap.is-delivery-error .support-mascot-delivery-error{opacity:1!important}}
-@media(max-width:520px){body.crypto-free #sb-lang-menu{width:260px!important;grid-template-columns:1fr!important}}
+/* Support bot UI removed from the public site. */
 </style>
 
-<aside id="support-chat-panel" role="dialog" aria-modal="false" aria-labelledby="support-chat-title" aria-hidden="true">
-  <div id="support-copy-toast" class="support-copy-toast" role="status" aria-live="polite"><span class="support-copy-toast-check">✓</span><span id="support-copy-toast-text"></span></div>
-  <div class="support-chat-head">
-    <img class="support-chat-avatar" src="/static/assets/support-mascot-expr-idle.png" alt="" draggable="false">
-    <div class="support-chat-heading">
-      <div class="support-chat-title" id="support-chat-title">Support</div>
-      <div class="support-chat-status" id="support-chat-status">Online support</div>
-    </div>
-    <button id="support-chat-close" type="button" aria-label="Close">×</button>
-  </div>
-  <div class="support-chat-body">
-    <div class="support-chat-messages" id="support-chat-messages" aria-live="polite">
-      <div class="support-chat-message is-bot">Hi! If you have a question about Crypto Screener, send us a message.</div>
-    </div>
-    <button id="support-chat-not-helped" type="button">
-      <span id="support-chat-not-helped-label">It didn't help</span>
-    </button>
-    <div class="support-chat-os-actions" id="support-chat-os-actions" role="group" aria-label="Operating system">
-      <button class="support-chat-os-choice" type="button" data-support-os="windows">Windows</button>
-      <button class="support-chat-os-choice" type="button" data-support-os="macos">macOS</button>
-    </div>
-    <div class="support-chat-command" id="support-chat-command">
-      <code id="support-chat-command-text"></code>
-      <button id="support-chat-command-copy" type="button" aria-label="Copy command" title="Copy command">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
-      </button>
-    </div>
-    <div class="support-chat-compose">
-      <textarea id="support-chat-input" rows="1" maxlength="10000" placeholder="Напишите сообщение…"></textarea>
-      <button id="support-chat-send" type="button" aria-label="Отправить">
-        <svg viewBox="0 0 24 24"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></svg>
-      </button>
-    </div>
-  </div>
-</aside>
-<div id="support-mascot-wrap">
-  <button id="support-mascot-btn" type="button" aria-label="Open support chat" aria-expanded="false" aria-controls="support-chat-panel">
-    <img class="support-mascot-frame support-mascot-expr-idle" src="/static/assets/support-mascot-expr-idle.png" alt="" draggable="false">
-    <img class="support-mascot-frame support-mascot-expr-rect" src="/static/assets/support-mascot-expr-rect.png" alt="" draggable="false">
-    <img class="support-mascot-frame support-mascot-expr-bulge" src="/static/assets/support-mascot-expr-bulge.png" alt="" draggable="false">
-    <img class="support-mascot-frame support-mascot-expr-wink" src="/static/assets/support-mascot-expr-wink.png" alt="" draggable="false">
-    <img class="support-mascot-frame support-mascot-expr-surprised" src="/static/assets/support-mascot-expr-surprised.png" alt="" draggable="false">
-    <img class="support-mascot-frame support-mascot-expr-sleepy" src="/static/assets/support-mascot-expr-sleepy.png" alt="" draggable="false">
-    <img class="support-mascot-frame support-mascot-expr-wave" src="/static/assets/support-mascot-expr-wave.png" alt="" draggable="false">
-    <img class="support-mascot-frame support-mascot-delivery-error" src="/static/assets/support-mascot-delivery-error.png" alt="" draggable="false">
-    <img class="support-mascot-frame support-mascot-chat-open" src="/static/assets/support-mascot-chat-open.png?v=2" alt="" draggable="false">
-    <span id="support-mascot-badge" aria-hidden="true"></span>
-  </button>
-  <div id="support-mascot-alert" role="alert" aria-live="assertive" aria-atomic="true">
-    <span class="support-delivery-icon" aria-hidden="true">!</span>
-    <div class="support-delivery-copy">
-      <strong class="support-delivery-title" id="support-delivery-title">Error</strong>
-      <span class="support-delivery-text" id="support-delivery-text">Exchange data transmission via WebSocket has been interrupted</span>
-      <button id="support-delivery-action" type="button">Take action</button>
-    </div>
-  </div>
-</div>
-<script>
-(function(){
-  var panel=document.getElementById('support-chat-panel');
-  var wrap=document.getElementById('support-mascot-wrap');
-  var openBtn=document.getElementById('support-mascot-btn');
-  var closeBtn=document.getElementById('support-chat-close');
-  var deliveryNoticeDismissed=false;
-  var deliveryChatContext=false;
-  var supportHistoryKey='crypto_support_history_v1';
-  var supportHistory=[];
-  var remoteSupportMessages=[];
-  var remoteSupportLoading=false;
-  var supportFlow=null;
-  var supportFlowState={revealed:[],replies:{}};
-  try{var savedFlowState=JSON.parse(localStorage.getItem('crypto_support_flow_state_v1')||'{}');if(savedFlowState&&typeof savedFlowState==='object'){supportFlowState.revealed=Array.isArray(savedFlowState.revealed)?savedFlowState.revealed:[];supportFlowState.replies=savedFlowState.replies||{}}}catch(e){}
-  try{
-    var storedHistory=JSON.parse(localStorage.getItem(supportHistoryKey)||'[]');
-    if(Array.isArray(storedHistory)){
-      var introFound=false;
-      supportHistory=storedHistory.filter(function(item){
-        if(!item||['delivery_intro','user_not_helped','bot_os_question','user_os','bot_os_instructions'].indexOf(item.type)<0)return false;
-        if(item.type==='delivery_intro'){if(introFound)return false;introFound=true}
-        return true;
-      }).slice(-50);
-    }
-  }catch(e){}
-  if(!panel||!openBtn||!closeBtn)return;
-  var copy={
-    en:['Support','Online support','Hi! If you have a question about Crypto Screener, send us a message.','We usually reply within a few minutes.','Contact support','Open support chat','Close'],
-    es:['Soporte','Soporte en línea','¡Hola! Si tienes alguna pregunta sobre Crypto Screener, escríbenos.','Normalmente respondemos en pocos minutos.','Contactar con soporte','Abrir chat de soporte','Cerrar'],
-    ru:['Поддержка','Поддержка онлайн','Здравствуйте! Если у вас есть вопрос по Crypto Screener, напишите нам.','Обычно отвечаем в течение нескольких минут.','Написать в поддержку','Открыть чат поддержки','Закрыть'],
-    uk:['Підтримка','Підтримка онлайн','Вітаємо! Якщо у вас є запитання щодо Crypto Screener, напишіть нам.','Зазвичай відповідаємо протягом кількох хвилин.','Написати в підтримку','Відкрити чат підтримки','Закрити'],
-    de:['Support','Support ist online','Hallo! Wenn du eine Frage zu Crypto Screener hast, schreib uns.','Wir antworten normalerweise innerhalb weniger Minuten.','Support kontaktieren','Support-Chat öffnen','Schließen'],
-    fr:['Assistance','Assistance en ligne','Bonjour ! Pour toute question sur Crypto Screener, écrivez-nous.','Nous répondons généralement en quelques minutes.','Contacter l’assistance','Ouvrir le chat d’assistance','Fermer'],
-    pt:['Suporte','Suporte online','Olá! Se tiver alguma dúvida sobre o Crypto Screener, fale conosco.','Normalmente respondemos em poucos minutos.','Falar com o suporte','Abrir chat de suporte','Fechar'],
-    tr:['Destek','Destek çevrimiçi','Merhaba! Crypto Screener hakkında bir sorunuz varsa bize yazın.','Genellikle birkaç dakika içinde yanıt veririz.','Desteğe yaz','Destek sohbetini aç','Kapat'],
-    zh:['支持','在线支持','您好！如果您对 Crypto Screener 有任何疑问，请给我们留言。','我们通常会在几分钟内回复。','联系支持','打开支持聊天','关闭'],
-    ja:['サポート','オンラインサポート','Crypto Screenerについてご質問があれば、メッセージをお送りください。','通常は数分以内に返信します。','サポートに連絡','サポートチャットを開く','閉じる']
-  };
-  var deliveryCopy={
-    en:['Error','Exchange data transmission via WebSocket has been interrupted','Take action'],
-    es:['Error','La transmisión de datos de los exchanges por WebSocket se ha interrumpido','Realizar acciones'],
-    ru:['Ошибка','Передача данных бирж по WebSocket прервана','Выполнить действия'],
-    uk:['Помилка','Передавання даних бірж через WebSocket перервано','Виконати дії'],
-    de:['Fehler','Die Übertragung der Börsendaten über WebSocket wurde unterbrochen','Maßnahmen ausführen'],
-    fr:['Erreur','La transmission des données des plateformes via WebSocket a été interrompue','Effectuer les actions'],
-    pt:['Erro','A transmissão de dados das exchanges via WebSocket foi interrompida','Executar ações'],
-    tr:['Hata','Borsa verilerinin WebSocket üzerinden aktarımı kesildi','İşlem yap'],
-    zh:['错误','交易所数据的 WebSocket 传输已中断','执行操作'],
-    ja:['エラー','取引所データのWebSocket送信が中断されました','対処する']
-  };
-  var deliveryIntroCopy={
-    en:"Hi, my name is Cryppi, and I'm the Crypto Screener assistant bot.\n\nYou're having trouble receiving live data from exchanges. This can happen because of an unstable connection. But fixing it once and for all is easy — it takes less than 30 seconds.\n\nFirst, refresh the page. If the charts are still frozen, click “It didn't help”.",
-    es:'Hola, me llamo Cryppi y soy el bot asistente de Crypto Screener.\n\nTienes un problema para recibir datos en vivo de los exchanges. Esto puede ocurrir por una conexión inestable, pero solucionarlo definitivamente es muy fácil y lleva menos de 30 segundos. Después podrás seguir usando Crypto Screener sin ningún problema.\n\nPrimero, simplemente vuelve a cargar la página. Si los gráficos siguen sin moverse, regresa a este chat y pulsa «No ayudó»; te daré una solución que funciona en el 99 % de los casos.',
-    ru:'Привет, меня зовут Cryppi, я бот-помощник Crypto Screener.\n\nУ тебя проблема с получением лайв-данных от бирж. Такое случается из-за нестабильности соединения. Но исправить это раз и навсегда очень легко — фикс займёт меньше 30 секунд. И ты дальше сможешь пользоваться Crypto Screener без каких-либо багов.\n\nДля начала попробуй просто обновить страницу. Если графики всё так же стоят на месте, вернись в этот чат и нажми кнопку «Не помогло», и я дам тебе решение, которое помогает в 99% случаев.',
-    uk:'Привіт, мене звати Cryppi, я бот-помічник Crypto Screener.\n\nУ тебе проблема з отриманням даних бірж у реальному часі. Таке трапляється через нестабільне з’єднання. Але виправити це раз і назавжди дуже легко — це займе менше 30 секунд. Після цього ти зможеш користуватися Crypto Screener без жодних помилок.\n\nСпочатку просто онови сторінку. Якщо графіки й далі не рухаються, повернися до цього чату й натисни «Не допомогло», і я дам рішення, яке допомагає у 99% випадків.',
-    de:'Hallo, ich heiße Cryppi und bin der Assistent-Bot von Crypto Screener.\n\nDu hast ein Problem beim Empfang von Live-Daten der Börsen. Das kann durch eine instabile Verbindung passieren. Die dauerhafte Lösung ist aber sehr einfach und dauert weniger als 30 Sekunden. Danach kannst du Crypto Screener ohne weitere Fehler verwenden.\n\nLade zuerst einfach die Seite neu. Wenn sich die Charts weiterhin nicht bewegen, kehre zu diesem Chat zurück und klicke auf „Hat nicht geholfen“. Dann gebe ich dir eine Lösung, die in 99 % der Fälle hilft.',
-    fr:'Bonjour, je m’appelle Cryppi et je suis le bot assistant de Crypto Screener.\n\nTu rencontres un problème de réception des données en direct des plateformes. Cela peut arriver à cause d’une connexion instable. Mais le corriger définitivement est très simple et prend moins de 30 secondes. Tu pourras ensuite continuer à utiliser Crypto Screener sans aucun bug.\n\nCommence par recharger la page. Si les graphiques restent immobiles, reviens dans ce chat et clique sur « Ça n’a pas aidé » : je te donnerai une solution efficace dans 99 % des cas.',
-    pt:'Olá, meu nome é Cryppi e sou o bot assistente do Crypto Screener.\n\nVocê está com um problema para receber dados ao vivo das exchanges. Isso pode acontecer devido a uma conexão instável. Mas corrigir definitivamente é muito fácil e leva menos de 30 segundos. Depois disso, você poderá continuar usando o Crypto Screener sem nenhum problema.\n\nPrimeiro, apenas recarregue a página. Se os gráficos continuarem parados, volte a este chat e clique em «Não ajudou»; darei uma solução que funciona em 99% dos casos.',
-    tr:'Merhaba, benim adım Cryppi. Crypto Screener yardımcı botuyum.\n\nBorsalardan canlı veri alma konusunda bir sorun yaşıyorsun. Bu, bağlantının kararsız olmasından kaynaklanabilir. Ancak kalıcı olarak düzeltmek çok kolaydır ve 30 saniyeden kısa sürer. Ardından Crypto Screener’ı herhangi bir hata olmadan kullanmaya devam edebilirsin.\n\nÖnce sayfayı yenilemeyi dene. Grafikler hâlâ hareket etmiyorsa bu sohbete geri dönüp «Yardımcı olmadı» düğmesine bas; sana vakaların %99’unda işe yarayan çözümü vereceğim.',
-    zh:'你好，我叫 Cryppi，是 Crypto Screener 的助手机器人。\n\n你在接收交易所实时数据时遇到了问题。这可能是连接不稳定造成的。不过，彻底解决它非常简单，只需不到 30 秒。之后你就可以继续使用 Crypto Screener，而不会再遇到任何错误。\n\n请先尝试刷新页面。如果图表仍然没有变化，请返回此聊天并点击“没有帮助”，我会提供一个在 99% 的情况下都有效的解决方案。',
-    ja:'こんにちは、Crypto Screenerのアシスタントボット、Cryppiです。\n\n取引所のライブデータを受信できない問題が発生しています。接続が不安定な場合に起こることがありますが、30秒もかからず簡単に解決できます。その後は、不具合なくCrypto Screenerを引き続き利用できます。\n\nまずページを再読み込みしてください。それでもチャートが動かない場合は、このチャットに戻って「解決しなかった」を押してください。99%のケースで有効な解決方法をご案内します。'
-  };
-  var notHelpedCopy={
-    en:"It didn't help",es:'No ayudó',ru:'Не помогло',uk:'Не допомогло',de:'Hat nicht geholfen',
-    fr:'Ça n’a pas aidé',pt:'Não ajudou',tr:'Yardımcı olmadı',zh:'没有帮助',ja:'解決しなかった'
-  };
-  var osQuestionCopy={
-    en:'Please specify which operating system you use. The way to fix the error depends on it.',
-    es:'Por favor, indica qué sistema operativo utilizas. La forma de corregir el error depende de ello.',
-    ru:'Пожалуйста, уточни, какая у тебя операционная система? От этого зависит вариант исправления ошибки.',
-    uk:'Будь ласка, уточни, яку операційну систему ти використовуєш. Від цього залежить спосіб виправлення помилки.',
-    de:'Bitte gib an, welches Betriebssystem du verwendest. Davon hängt die Lösung des Fehlers ab.',
-    fr:'Précise, s’il te plaît, quel système d’exploitation tu utilises. La solution à l’erreur en dépend.',
-    pt:'Por favor, informe qual sistema operacional você usa. A forma de corrigir o erro depende disso.',
-    tr:'Lütfen hangi işletim sistemini kullandığınızı belirtin. Hatanın nasıl düzeltileceği buna bağlıdır.',
-    zh:'请说明您使用的操作系统。错误的修复方式取决于此。',
-    ja:'お使いのオペレーティングシステムを教えてください。エラーの修正方法はそれによって異なります。'
-  };
-  var osInstructionCopy={
-    en:{
-      windows:'Great! Press Win + R and restore the WebSocket connection using the command below. Copy it, paste it into the “Open” field, then click “OK”.\n\nThis works in 99% of cases.\nIf you have any questions, message an operator using the field below.',
-      macos:'Press ⌘ Command + Space and open Terminal. Then copy the command, paste it into Terminal, and press Enter.\n\nThis works in 99% of cases.\nIf you have any questions, message an operator using the field below.'
-    },
-    es:{
-      windows:'¡Perfecto! Pulsa Win + R y restablece la conexión WebSocket con este comando. Cópialo, pégalo en el campo «Abrir» y pulsa Aceptar.\n\nEsto funciona en el 99 % de los casos y podrás seguir usando todas las funciones gratuitas de Crypto Screener sin errores.\n\nSi tienes alguna pregunta, escríbeme. También puedo llamar a un operador si me lo pides.',
-      macos:'¡Perfecto! Pulsa ⌘ Command + Espacio, escribe Terminal en la búsqueda y pega allí este comando. Después, pulsa Enter.\n\nEsto funciona en el 99 % de los casos y podrás seguir usando todas las funciones gratuitas de Crypto Screener sin errores.\n\nSi tienes alguna pregunta, escríbeme. También puedo llamar a un operador si me lo pides.'
-    },
-    ru:{
-      windows:'Отлично, нажми сочетание клавиш Win + R и восстанови подключение WebSocket с помощью этой команды. Скопируй её, затем вставь в строку «Открыть» и нажми «ОК».\n\nЭто помогает в 99% случаев, и дальше ты сможешь пользоваться функционалом бесплатного криптоскринера без ошибок.\n\nЕсли возникнут вопросы, обращайся! Также могу позвать оператора, если попросишь.',
-      macos:'Отлично, нажми сочетание клавиш ⌘Command + Space, после введи в поиске терминал и скопируй туда эту команду. После нажми Enter.\n\nЭто помогает в 99% случаев, и дальше ты сможешь пользоваться функционалом бесплатного криптоскринера без ошибок. Если возникнут вопросы, обращайся! Также могу позвать оператора, если попросишь.'
-    },
-    uk:{
-      windows:'Чудово, натисни Win + R і віднови WebSocket-з’єднання за допомогою цієї команди. Скопіюй її, встав у поле «Відкрити» та натисни «ОК».\n\nЦе допомагає у 99% випадків, і далі ти зможеш користуватися всіма можливостями безкоштовного Crypto Screener без помилок.\n\nЯкщо виникнуть запитання, звертайся! Також можу покликати оператора, якщо попросиш.',
-      macos:'Чудово, натисни ⌘ Command + Space, введи в пошуку Terminal і встав туди цю команду. Потім натисни Enter.\n\nЦе допомагає у 99% випадків, і далі ти зможеш користуватися всіма можливостями безкоштовного Crypto Screener без помилок.\n\nЯкщо виникнуть запитання, звертайся! Також можу покликати оператора, якщо попросиш.'
-    },
-    de:{
-      windows:'Super! Drücke Win + R und stelle die WebSocket-Verbindung mit diesem Befehl wieder her. Kopiere ihn, füge ihn in das Feld „Öffnen“ ein und klicke auf „OK“.\n\nDas hilft in 99 % der Fälle. Danach kannst du alle kostenlosen Funktionen von Crypto Screener fehlerfrei weiterverwenden.\n\nWenn du Fragen hast, melde dich einfach! Auf Wunsch kann ich auch einen Support-Mitarbeiter hinzuholen.',
-      macos:'Super! Drücke ⌘ Command + Leertaste, suche nach Terminal und füge diesen Befehl dort ein. Drücke anschließend Enter.\n\nDas hilft in 99 % der Fälle. Danach kannst du alle kostenlosen Funktionen von Crypto Screener fehlerfrei weiterverwenden.\n\nWenn du Fragen hast, melde dich einfach! Auf Wunsch kann ich auch einen Support-Mitarbeiter hinzuholen.'
-    },
-    fr:{
-      windows:'Parfait ! Appuie sur Win + R et rétablis la connexion WebSocket avec cette commande. Copie-la, colle-la dans le champ « Ouvrir », puis clique sur « OK ».\n\nCela fonctionne dans 99 % des cas et tu pourras continuer à utiliser gratuitement toutes les fonctionnalités de Crypto Screener sans erreur.\n\nSi tu as des questions, n’hésite pas ! Je peux aussi appeler un opérateur si tu me le demandes.',
-      macos:'Parfait ! Appuie sur ⌘ Command + Espace, saisis Terminal dans la recherche et colle cette commande. Appuie ensuite sur Entrée.\n\nCela fonctionne dans 99 % des cas et tu pourras continuer à utiliser gratuitement toutes les fonctionnalités de Crypto Screener sans erreur.\n\nSi tu as des questions, n’hésite pas ! Je peux aussi appeler un opérateur si tu me le demandes.'
-    },
-    pt:{
-      windows:'Ótimo! Pressione Win + R e restaure a conexão WebSocket usando este comando. Copie-o, cole-o no campo «Abrir» e clique em «OK».\n\nIsso funciona em 99% dos casos, e você poderá continuar usando todos os recursos gratuitos do Crypto Screener sem erros.\n\nSe tiver alguma dúvida, é só chamar! Também posso chamar um atendente se você pedir.',
-      macos:'Ótimo! Pressione ⌘ Command + Espaço, digite Terminal na busca e cole este comando. Depois, pressione Enter.\n\nIsso funciona em 99% dos casos, e você poderá continuar usando todos os recursos gratuitos do Crypto Screener sem erros.\n\nSe tiver alguma dúvida, é só chamar! Também posso chamar um atendente se você pedir.'
-    },
-    tr:{
-      windows:'Harika! Win + R tuşlarına bas ve bu komutla WebSocket bağlantısını yeniden kur. Komutu kopyala, «Aç» alanına yapıştır ve «Tamam» düğmesine bas.\n\nBu yöntem vakaların %99’unda işe yarar ve ücretsiz Crypto Screener’ın tüm özelliklerini hatasız kullanmaya devam edebilirsin.\n\nBir sorun olursa bana yaz! İstersen bir destek görevlisi de çağırabilirim.',
-      macos:'Harika! ⌘ Command + Space tuşlarına bas, aramaya Terminal yaz ve bu komutu oraya yapıştır. Ardından Enter tuşuna bas.\n\nBu yöntem vakaların %99’unda işe yarar ve ücretsiz Crypto Screener’ın tüm özelliklerini hatasız kullanmaya devam edebilirsin.\n\nBir sorun olursa bana yaz! İstersen bir destek görevlisi de çağırabilirim.'
-    },
-    zh:{
-      windows:'很好！按下 Win + R，并使用此命令恢复 WebSocket 连接。复制命令，将其粘贴到“打开”输入框中，然后点击“确定”。\n\n此方法在 99% 的情况下有效，之后你可以继续免费使用 Crypto Screener 的全部功能，不会再出现错误。\n\n如果有任何问题，随时联系我！如果你需要，我也可以帮你呼叫人工客服。',
-      macos:'很好！按下 ⌘ Command + Space，在搜索中输入 Terminal，然后将此命令粘贴进去。之后按下 Enter。\n\n此方法在 99% 的情况下有效，之后你可以继续免费使用 Crypto Screener 的全部功能，不会再出现错误。\n\n如果有任何问题，随时联系我！如果你需要，我也可以帮你呼叫人工客服。'
-    },
-    ja:{
-      windows:'いいですね！Win + Rを押し、このコマンドでWebSocket接続を復旧してください。コマンドをコピーして「開く」欄に貼り付け、「OK」を押します。\n\nこの方法は99%のケースで有効です。その後は、無料のCrypto Screenerの全機能をエラーなく引き続き利用できます。\n\n質問があればいつでも聞いてください。希望すれば担当者を呼ぶこともできます。',
-      macos:'いいですね！⌘ Command + Spaceを押し、検索にTerminalと入力して、このコマンドを貼り付けてください。その後、Enterを押します。\n\nこの方法は99%のケースで有効です。その後は、無料のCrypto Screenerの全機能をエラーなく引き続き利用できます。\n\n質問があればいつでも聞いてください。希望すれば担当者を呼ぶこともできます。'
-    }
-  };
-  var osCommands={windows:'ms-settings:network-status',macos:''};
-  var copyCommandCopy={en:'Copy command',es:'Copiar comando',ru:'Скопировать команду',uk:'Скопіювати команду',de:'Befehl kopieren',fr:'Copier la commande',pt:'Copiar comando',tr:'Komutu kopyala',zh:'复制命令',ja:'コマンドをコピー'};
-  var supportInputPlaceholder={en:'Write a message…',es:'Escribe un mensaje…',ru:'Напишите сообщение…',uk:'Напишіть повідомлення…',de:'Nachricht schreiben…',fr:'Écrivez un message…',pt:'Escreva uma mensagem…',tr:'Bir mesaj yazın…',zh:'输入消息…',ja:'メッセージを入力…'};
-  var flowCopyLabel={en:'Copy command',es:'Copiar comando',ru:'Копировать команду',uk:'Копіювати команду',de:'Befehl kopieren',fr:'Copier la commande',pt:'Copiar comando',tr:'Komutu kopyala',zh:'复制命令',ja:'コマンドをコピー'};
-  var flowCopiedMessage={en:'Copied to clipboard',es:'Copiado al portapapeles',ru:'Скопировано в буфер обмена',uk:'Скопійовано в буфер обміну',de:'In die Zwischenablage kopiert',fr:'Copié dans le presse-papiers',pt:'Copiado para a área de transferência',tr:'Panoya kopyalandı',zh:'已复制到剪贴板',ja:'クリップボードにコピーしました'};
-  function hasDeliveryIntro(){return supportHistory.some(function(item){return item&&item.type==='delivery_intro'})}
-  function saveSupportHistory(){try{localStorage.setItem(supportHistoryKey,JSON.stringify(supportHistory.slice(-50)))}catch(e){}}
-  function rememberDeliveryIntro(){if(hasDeliveryIntro())return;supportHistory.push({type:'delivery_intro',createdAt:Date.now()});saveSupportHistory()}
-  function lang(){var l=(typeof currentLang==='string'&&currentLang)||localStorage.getItem('crypto_lang')||document.documentElement.lang||'en';l=l.toLowerCase().slice(0,2);return copy[l]?l:'en'}
-  function hasHistoryType(type){return supportHistory.some(function(item){return item&&item.type===type})}
-  function lastHistoryType(type){for(var i=supportHistory.length-1;i>=0;i--)if(supportHistory[i]&&supportHistory[i].type===type)return supportHistory[i];return null}
-  function historyText(item,l){if(item.type==='delivery_intro')return deliveryIntroCopy[l];if(item.type==='user_not_helped')return notHelpedCopy[l];if(item.type==='bot_os_question')return osQuestionCopy[l];if(item.type==='user_os')return item.os==='macos'?'macOS':'Windows';if(item.type==='bot_os_instructions')return osInstructionCopy[l][item.os==='macos'?'macos':'windows'];return ''}
-  function localizedFlowText(step,l){if(!step)return'';if(l==='ru')return step.text||'';if(step.id==='flow_intro')return deliveryIntroCopy[l]||step.text||'';if(step.id==='flow_os')return osQuestionCopy[l]||step.text||'';if(step.id==='flow_windows')return osInstructionCopy[l]&&osInstructionCopy[l].windows||step.text||'';if(step.id==='flow_macos')return osInstructionCopy[l]&&osInstructionCopy[l].macos||step.text||'';return step.text||''}
-  function localizedFlowButtonLabel(step,button,l){if((button.action||'reply')==='copy')return flowCopyLabel[l]||flowCopyLabel.en;if(step.id==='flow_intro')return notHelpedCopy[l]||notHelpedCopy.en;return button.label||''}
-  function localizedFlowReply(step,reply,l){if(step.id==='flow_intro')return notHelpedCopy[l]||notHelpedCopy.en;return reply}
-  function appendRemoteSupport(host,item){
-    if(!item)return;
-    if(item.text){var bubble=document.createElement('div');bubble.className='support-chat-message '+(item.sender==='user'?'is-user':'is-bot');bubble.textContent=item.text;host.appendChild(bubble)}
-    if(item.image_url){var img=document.createElement('img');img.className='support-chat-remote-image';img.src=item.image_url;img.alt='';img.loading='lazy';host.appendChild(img)}
-    if(item.buttons&&item.buttons.length){var actions=document.createElement('div');actions.className='support-chat-remote-buttons';item.buttons.forEach(function(button,index){var b=document.createElement('button');b.type='button';b.className='support-chat-remote-button';b.textContent=button.label;b.addEventListener('click',function(){clickRemoteSupportButton(item.id,index,button)});actions.appendChild(b)});host.appendChild(actions)}
-  }
-  function saveSupportFlowState(){try{localStorage.setItem('crypto_support_flow_state_v1',JSON.stringify(supportFlowState))}catch(e){}}
-  var supportCopyToastTimer=null;
-  function showSupportCopyToast(){var toast=document.getElementById('support-copy-toast'),text=document.getElementById('support-copy-toast-text');if(!toast||!text)return;text.textContent=flowCopiedMessage[lang()]||flowCopiedMessage.en;toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');clearTimeout(supportCopyToastTimer);supportCopyToastTimer=setTimeout(function(){toast.classList.remove('show')},1800)}
-  function clearCopyButtonReplies(){var changed=false;(supportFlow&&supportFlow.steps||[]).forEach(function(step){var hasCopy=(step.buttons||[]).some(function(button){return (button.action||'reply')==='copy'});if(hasCopy&&Object.prototype.hasOwnProperty.call(supportFlowState.replies,step.id)){delete supportFlowState.replies[step.id];changed=true}});if(changed)saveSupportFlowState()}
-  function clickSupportFlowButton(step,button){
-    var action=button.action||'reply',value=button.value||button.label||'';
-    if(action==='copy'){
-      delete supportFlowState.replies[step.id];
-      var copied=function(){if(button.next_message_id&&supportFlowState.revealed.indexOf(button.next_message_id)<0)supportFlowState.revealed.push(button.next_message_id);saveSupportFlowState();renderSupportMessages();showSupportCopyToast()};
-      var fallback=function(){var f=document.createElement('textarea');f.value=value;f.style.position='fixed';f.style.opacity='0';document.body.appendChild(f);f.select();try{document.execCommand('copy')}catch(e){}f.remove();copied()};
-      if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(value).then(copied).catch(fallback);else fallback();
-      return;
-    }
-    else if(action==='url'){var url=String(button.url||value);if(url&&(url.charAt(0)==='/'||/^https?:\/\//i.test(url)))window.open(url,'_blank','noopener')}
-    else supportFlowState.replies[step.id]=localizedFlowButtonLabel(step,button,lang())||value;
-    if(button.next_message_id&&supportFlowState.revealed.indexOf(button.next_message_id)<0)supportFlowState.revealed.push(button.next_message_id);
-    saveSupportFlowState();renderSupportMessages();
-  }
-  function renderEditableSupportFlow(host){
-    var l=lang();(supportFlow.steps||[]).forEach(function(step){if(!step.visible&&supportFlowState.revealed.indexOf(step.id)<0)return;appendRemoteSupport(host,{id:step.id,sender:step.sender,text:localizedFlowText(step,l),image_url:step.image_url,buttons:[]});if(step.buttons&&step.buttons.length){var actions=document.createElement('div');actions.className='support-chat-remote-buttons';step.buttons.forEach(function(button){var b=document.createElement('button');b.type='button';b.className='support-chat-remote-button';b.textContent=localizedFlowButtonLabel(step,button,l);b.onclick=function(){clickSupportFlowButton(step,button)};actions.appendChild(b)});host.appendChild(actions)}var reply=supportFlowState.replies[step.id];if(reply){var bubble=document.createElement('div');bubble.className='support-chat-message is-user';bubble.textContent=localizedFlowReply(step,reply,l);host.appendChild(bubble)}});
-  }
-  function renderSupportMessages(){
-    var l=lang(),host=document.getElementById('support-chat-messages');
-    if(!host)return;
-    if(hasHistoryType('user_not_helped')&&!hasHistoryType('bot_os_question')&&!hasHistoryType('user_os')){supportHistory.push({type:'bot_os_question',createdAt:Date.now()});saveSupportHistory()}
-    var selectedOs=lastHistoryType('user_os');
-    if(selectedOs&&!hasHistoryType('bot_os_instructions')){supportHistory.push({type:'bot_os_instructions',os:selectedOs.os,createdAt:Date.now()});saveSupportHistory()}
-    var items=supportHistory.slice();
-    host.textContent='';
-    if(supportFlow&&supportFlow.steps&&supportFlow.steps.length&&(deliveryChatContext||hasDeliveryIntro())){
-      renderEditableSupportFlow(host);remoteSupportMessages.forEach(function(item){appendRemoteSupport(host,item)});
-      var legacyHelp=document.getElementById('support-chat-not-helped'),legacyOs=document.getElementById('support-chat-os-actions'),legacyCommand=document.getElementById('support-chat-command');if(legacyHelp)legacyHelp.classList.remove('visible');if(legacyOs)legacyOs.classList.remove('visible');if(legacyCommand)legacyCommand.classList.remove('visible');
-      if(panel.classList.contains('open'))requestAnimationFrame(function(){host.scrollTop=host.scrollHeight});return;
-    }
-    if(!items.length){var defaultBubble=document.createElement('div');defaultBubble.className='support-chat-message is-bot';defaultBubble.textContent=deliveryChatContext?deliveryIntroCopy[l]:copy[l][2];host.appendChild(defaultBubble)}
-    else items.forEach(function(item){var bubble=document.createElement('div');bubble.className='support-chat-message '+(item.type==='user_not_helped'||item.type==='user_os'?'is-user':'is-bot');bubble.textContent=historyText(item,l);host.appendChild(bubble);if(item.type==='bot_os_instructions'&&item.os==='windows'){var screenshot=document.createElement('img');screenshot.className='support-chat-instruction-image';screenshot.src='/static/assets/support-windows-run-safe-v2.png';screenshot.alt='Windows Run dialog';screenshot.loading='lazy';host.appendChild(screenshot)}});
-    remoteSupportMessages.forEach(function(item){appendRemoteSupport(host,item)});
-    var notHelped=document.getElementById('support-chat-not-helped');
-    var osActions=document.getElementById('support-chat-os-actions'),waitingForOs=hasHistoryType('bot_os_question')&&!hasHistoryType('user_os');
-    if(notHelped){var notHelpedLabel=document.getElementById('support-chat-not-helped-label');if(notHelpedLabel)notHelpedLabel.textContent=notHelpedCopy[l];notHelped.classList.toggle('visible',hasDeliveryIntro()&&!hasHistoryType('user_not_helped'))}
-    if(osActions)osActions.classList.toggle('visible',waitingForOs);
-    var commandBox=document.getElementById('support-chat-command'),commandText=document.getElementById('support-chat-command-text'),command=selectedOs?(osCommands[selectedOs.os]||''):'';
-    if(commandText)commandText.textContent=command;
-    if(commandBox)commandBox.classList.toggle('visible',!!command);
-    var copyButton=document.getElementById('support-chat-command-copy');
-    if(copyButton){copyButton.setAttribute('aria-label',copyCommandCopy[l]);copyButton.title=copyCommandCopy[l]}
-    if(panel.classList.contains('open'))requestAnimationFrame(function(){host.scrollTop=host.scrollHeight});
-  }
-  function localize(){var l=lang(),t=copy[l],d=deliveryCopy[l],cfg=supportFlow&&supportFlow.config||{};document.getElementById('support-chat-title').textContent=t[0];document.getElementById('support-chat-status').textContent=t[1];document.getElementById('support-chat-input').placeholder=supportInputPlaceholder[l]||supportInputPlaceholder.en;renderSupportMessages();document.getElementById('support-delivery-title').textContent=l==='ru'&&cfg.notice_title?cfg.notice_title:d[0];document.getElementById('support-delivery-text').textContent=l==='ru'&&cfg.notice_text?cfg.notice_text:d[1];document.getElementById('support-delivery-action').textContent=l==='ru'&&cfg.notice_action?cfg.notice_action:d[2];openBtn.setAttribute('aria-label',t[5]);closeBtn.setAttribute('aria-label',t[6])}
-  function loadSupportFlow(){return fetch('/api/support/flow',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json()}).then(function(d){if(d&&d.ok){supportFlow={config:d.config||{},steps:d.steps||[]};clearCopyButtonReplies();localize()}}).catch(function(){})}
-  function loadRemoteSupport(){if(remoteSupportLoading)return Promise.resolve();remoteSupportLoading=true;return fetch('/api/support/chat',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json()}).then(function(d){if(d&&d.ok&&Array.isArray(d.messages)){var changed=JSON.stringify(d.messages)!==JSON.stringify(remoteSupportMessages);remoteSupportMessages=d.messages;if(changed)renderSupportMessages()}}).catch(function(){}).finally(function(){remoteSupportLoading=false})}
-  function clickRemoteSupportButton(messageId,index,button){return fetch('/api/support/chat/messages/'+encodeURIComponent(messageId)+'/buttons/'+index,{method:'POST',credentials:'same-origin'}).then(function(r){return r.json()}).then(function(d){if(d&&d.ok){loadRemoteSupport();var url=String(button.url||'');if(url&&(url.charAt(0)==='/'||/^https?:\/\//i.test(url)))window.open(url,'_blank','noopener')}}).catch(function(){setError(true)})}
-  function sendRemoteSupport(){var input=document.getElementById('support-chat-input'),send=document.getElementById('support-chat-send'),text=(input.value||'').trim();if(!text||send.disabled)return;send.disabled=true;fetch('/api/support/chat/messages',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text,language:lang(),page:location.pathname})}).then(function(r){return r.json()}).then(function(d){if(!d||!d.ok)throw new Error('send');input.value='';input.style.height='';return loadRemoteSupport()}).catch(function(){setError(true)}).finally(function(){send.disabled=false;input.focus()})}
-  function applyVisitorId(id){if(!id)return;var shortId='CS-'+id.slice(3,11).toUpperCase();var el=document.getElementById('support-chat-visitor-id');if(el){el.textContent=shortId;el.title=id}}
-  function setError(on){wrap.classList.toggle('is-error',!!on);if(on)setTimeout(function(){wrap.classList.remove('is-error')},12000)}
-  function setDeliveryPaused(on){if(!on){deliveryNoticeDismissed=false;deliveryChatContext=false}if(on&&panel.classList.contains('open'))deliveryNoticeDismissed=true;wrap.classList.toggle('is-delivery-error',!!on&&!deliveryNoticeDismissed&&!panel.classList.contains('open'));if(on&&!deliveryNoticeDismissed){wrap.classList.remove('is-error');localize()}else if(!on&&panel.classList.contains('open'))localize()}
-  function setOpen(on){if(on&&wrap.classList.contains('is-delivery-error')){deliveryChatContext=true;rememberDeliveryIntro();deliveryNoticeDismissed=true;wrap.classList.remove('is-delivery-error')}panel.classList.toggle('open',on);wrap.classList.toggle('is-chat-open',on);panel.setAttribute('aria-hidden',on?'false':'true');openBtn.setAttribute('aria-expanded',on?'true':'false');if(on){wrap.classList.remove('is-error');localize();loadRemoteSupport();setTimeout(function(){document.getElementById('support-chat-input').focus({preventScroll:true})},30)}else{deliveryChatContext=false;openBtn.focus({preventScroll:true})}}
-  openBtn.addEventListener('click',function(){setOpen(!panel.classList.contains('open'))});
-  document.getElementById('support-delivery-action').addEventListener('click',function(){deliveryChatContext=true;rememberDeliveryIntro();deliveryNoticeDismissed=true;wrap.classList.remove('is-delivery-error');setOpen(true)});
-  document.getElementById('support-chat-not-helped').addEventListener('click',function(){
-    if(!hasDeliveryIntro())rememberDeliveryIntro();
-    if(!hasHistoryType('user_not_helped'))supportHistory.push({type:'user_not_helped',createdAt:Date.now()});
-    if(!hasHistoryType('bot_os_question'))supportHistory.push({type:'bot_os_question',createdAt:Date.now()});
-    saveSupportHistory();renderSupportMessages();
-  });
-  document.querySelectorAll('[data-support-os]').forEach(function(button){button.addEventListener('click',function(){if(hasHistoryType('user_os'))return;var os=button.getAttribute('data-support-os');supportHistory.push({type:'user_os',os:os,createdAt:Date.now()});supportHistory.push({type:'bot_os_instructions',os:os,createdAt:Date.now()});saveSupportHistory();renderSupportMessages()})});
-  document.getElementById('support-chat-command-copy').addEventListener('click',function(){var value=document.getElementById('support-chat-command-text').textContent;if(!value)return;if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(value).catch(function(){})}else{var field=document.createElement('textarea');field.value=value;field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();try{document.execCommand('copy')}catch(e){}field.remove()}});
-  document.getElementById('support-chat-send').addEventListener('click',sendRemoteSupport);
-  document.getElementById('support-chat-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendRemoteSupport()}});
-  document.getElementById('support-chat-input').addEventListener('input',function(){this.style.height='';this.style.height=Math.min(this.scrollHeight,120)+'px'});
-  closeBtn.addEventListener('click',function(){setOpen(false)});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&panel.classList.contains('open'))setOpen(false)});
-  document.addEventListener('pointerdown',function(e){if(panel.classList.contains('open')&&!panel.contains(e.target)&&!openBtn.contains(e.target))setOpen(false)});
-  window.cryptoSupportSetStatus=function(status){setError(status==='error')};
-  window.addEventListener('crypto-support-error',function(){setError(true)});
-  window.addEventListener('crypto-delivery-status',function(e){setDeliveryPaused(!!(e.detail&&e.detail.status==='pause'))});
-  window.addEventListener('error',function(e){var n=e.target&&e.target.nodeName;if(e.error||(n==='SCRIPT'||n==='LINK'))setError(true)},true);
-  window.addEventListener('unhandledrejection',function(e){if(e.reason&&e.reason.name==='AbortError')return;setError(true)});
-  new MutationObserver(localize).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
-  if(window.cryptoVisitorReady)window.cryptoVisitorReady.then(applyVisitorId);else fetch('/api/support/identity',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json()}).then(function(d){applyVisitorId(d&&d.visitor_id)}).catch(function(){});
-  setInterval(function(){if(panel.classList.contains('open'))loadRemoteSupport()},4000);
-  loadSupportFlow();setInterval(loadSupportFlow,30000);
-  localize();
-  setDeliveryPaused(window.CRYPTO_DELIVERY_PAUSED===true);
-})();
-</script>
+
 
 </body>
 

@@ -25,7 +25,8 @@ alerts_store = AlertsStore()
 _DB = Path(__file__).resolve().parents[1] / "screener.db"
 _ERR = {
     "invalid_email": 400, "invalid_username": 400, "weak_password": 400,
-    "email_taken": 409, "invalid_credentials": 401,
+    "email_taken": 409, "invalid_credentials": 401, "not_found": 404,
+    "access_pending": 403,
 }
 
 
@@ -54,19 +55,24 @@ async def register(email: str = Body(..., embed=True), password: str = Body(...,
     except ValueError as exc:
         code = str(exc)
         return _reply({"ok": False, "error": code}, _ERR.get(code, 400))
-    resp = _reply({"ok": True, "user": result["user"]})
-    _set_session(resp, result["token"])
-    return resp
+    # A registration is an access request. The account stays in the default
+    # `user` role until an administrator grants access; no session is issued yet.
+    return _reply({"ok": True, "status": "pending", "email": result["user"]["email"]})
 
 
 @router.post("/api/auth/login")
 async def login(email: str = Body(..., embed=True), password: str = Body(..., embed=True)):
+    if not auth_service.store.get_by_email(email):
+        return _reply({"ok": False, "error": "not_found"}, 404)
     try:
         result = auth_service.login(email, password)
     except ValueError as exc:
         code = str(exc)
         return _reply({"ok": False, "error": code}, _ERR.get(code, 401))
-    resp = _reply({"ok": True, "user": result["user"]})
+    user = result["user"]
+    if not (user.get("is_pro") or user.get("is_admin")):
+        return _reply({"ok": False, "error": "access_pending"}, 403)
+    resp = _reply({"ok": True, "user": user})
     _set_session(resp, result["token"])
     return resp
 
@@ -81,6 +87,8 @@ async def logout():
 @router.get("/api/auth/me")
 async def me(request: Request):
     user = _user(request)
+    if user and not (user.get("is_pro") or user.get("is_admin")):
+        return _reply({"authenticated": False, "access_pending": True, "email": user.get("email", "")})
     return _reply(user if user else {"authenticated": False, "free_exchanges": ["binance_futures"]})
 
 

@@ -713,10 +713,10 @@ async function loadUsers(){
   $('#mg-count').textContent=(d.users||[]).length+' польз.';
   $('#mg-users tbody').innerHTML=(d.users||[]).map(u=>{
     const pu=u.pro_until, pro=pu&&pu*1000>now, em=esc(u.email);
-    const access=u.role==='admin'?'<span class="pill g">ADMIN</span>':pro?`<span class="pill g">PRO</span> <span class="muted" style="font-size:11px">до ${fmtDate(pu)}</span>`:'<span class="pill n">free</span>';
+    const access=u.role==='admin'?'<span class="pill g">ADMIN</span>':pro?`<span class="pill g">ДОСТУП</span> <span class="muted" style="font-size:11px">до ${fmtDate(pu)}</span>`:'<span class="pill y">ОЖИДАЕТ</span>';
     return `<tr><td>${em}</td><td>${esc(u.username||'')}</td><td>${esc(u.role)}</td><td>${access}</td>
       <td>${fmtDate(u.created_ts)}</td><td>${u.last_login_ts?fmtDate(u.last_login_ts):'—'}</td>
-      <td style="white-space:nowrap"><button class="btn sm" data-grant="30" data-email="${em}">+30д</button>${pro&&u.role!=='admin'?` <button class="btn sm danger" data-grant="0" data-email="${em}">снять</button>`:''}</td></tr>`;
+      <td style="white-space:nowrap">${u.role!=='admin'&&!pro?`<button class="btn sm accent" data-grant="36500" data-email="${em}">Выдать доступ</button>`:''}${pro&&u.role!=='admin'?`<button class="btn sm danger" data-grant="0" data-email="${em}">Закрыть доступ</button>`:''}</td></tr>`;
   }).join('')||'<tr><td colspan="7" class="empty">пользователи не найдены</td></tr>';
 }
 function bindUsers(){

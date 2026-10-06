@@ -698,8 +698,8 @@ var (
 	gwMaxSubs         = gwEnvInt("GW_MAX_SUBS", 200)       // chart subscriptions per client
 	gwCmdPerSec       = gwEnvInt("GW_MAX_CMD_RATE", 20)    // inbound commands/sec per client
 	gwAllowedOrigins  = gwParseCSV(gwEnvStr("GW_ALLOWED_ORIGINS", "https://cryptoscreener.live,https://www.cryptoscreener.live"))
-	gwAllPro          = gwEnvStr("GW_ALL_PRO", "1") == "1"           // free edition: every visitor has full access to included modules
-	gwFirstVisitLimit = gwEnvInt("GW_FIRST_VISIT_LIMIT_SECONDS", 90) // desktop anonymous visitor: live WS trial
+	gwAllPro          = gwEnvStr("GW_ALL_PRO", "1") == "1"          // free edition: every visitor has full access to included modules
+	gwFirstVisitLimit = gwEnvInt("GW_FIRST_VISIT_LIMIT_SECONDS", 0) // disabled: live WS delivery does not expire
 )
 
 // gwKnownExch / gwKnownTF — allowlist so chart_sub can't spawn chartSubs entries
