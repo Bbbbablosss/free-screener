@@ -36,9 +36,10 @@ if (window.CRYPTO_MOBILE_GATE) {
         var raw = typeof input === 'string' ? input : input.url;
         var url = new URL(raw, location.href);
         if (url.origin === location.origin && url.pathname.indexOf('/api/') === 0) {
-          var allowed = url.pathname === '/api/charts/klines' &&
+          var allowed = ['/api/auth/me','/api/auth/register','/api/auth/login','/api/auth/logout'].indexOf(url.pathname) >= 0 ||
+            (url.pathname === '/api/charts/klines' &&
             url.searchParams.get('exchange') === 'binance_futures' &&
-            (url.searchParams.get('symbol') || '').toUpperCase() === 'BTCUSDT';
+            (url.searchParams.get('symbol') || '').toUpperCase() === 'BTCUSDT');
           if (!allowed) return Promise.resolve(new Response(
             JSON.stringify({error:'desktop_only'}),
             {status:403, headers:{'Content-Type':'application/json'}}
@@ -10185,6 +10186,31 @@ body.crypto-free.sec-charts #ch-exch-menu {
   max-height:min(680px,calc(100vh - 88px))!important;
   overflow-y:auto!important;
 }
+body.crypto-free.sec-charts #ch-exch-menu .ch-exch-search {
+  position:sticky;
+  top:-8px;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  margin:-8px -8px 8px;
+  color:#788597;
+  background:#0f141b;
+  border-bottom:1px solid #29313c;
+}
+body.crypto-free.sec-charts #ch-exch-menu .ch-exch-search input {
+  flex:1;
+  min-width:0;
+  height:30px;
+  padding:0;
+  color:#dce3ed;
+  background:transparent!important;
+  border:0!important;
+  outline:0;
+  font:500 12px/1 'Inter',sans-serif;
+}
+body.crypto-free.sec-charts #ch-exch-menu .ch-exch-search input::placeholder { color:#788597; }
 body.crypto-free.sec-charts #ch-exch-menu .ch-exch-grid-head {
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
@@ -11324,7 +11350,6 @@ if(localStorage.getItem('crypto_ch_draw_collapsed')==='1')document.body.classLis
       <div class="tb-profile-wrap" id="tb-profile-wrap">
         <button type="button" class="tb-btn tb-icon-btn" id="tb-profile-btn" title="Profile">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span class="tb-role-chip" id="tb-role-chip">PRO</span>
         </button>
         <div class="tb-profile-menu" id="tb-profile-menu" style="display:none">
           <button type="button" class="tb-profile-item" id="tb-profile-menu-profile">
@@ -28973,22 +28998,31 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
   // Populate an exchange dropdown (shared by Charts sidebar + Screener panel).
   function _populateExchMenu(menu) {
     if (!menu) return;
-    menu.innerHTML = '<div class="ch-exch-grid-head"><span>Futures</span><span>Spot</span></div>';
+    menu.innerHTML = `<label class="ch-exch-search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input type="search" placeholder="${t('scr_exch_search_ph')}" aria-label="${t('scr_exch_search_ph')}" autocomplete="off" spellcheck="false"></label><div class="ch-exch-grid-head"><span>Futures</span><span>Spot</span></div>`;
     const grid = document.createElement('div');
     grid.className = 'ch-exch-grid';
     menu.appendChild(grid);
     const families=[], byFamily=new Map();
     EXCHANGES.forEach(ex=>{const key=ex.id.replace(/_(futures|spot)$/,'');if(!byFamily.has(key)){const row={key};byFamily.set(key,row);families.push(row)}const row=byFamily.get(key);row[ex.id.endsWith('_spot')?'spot':'futures']=ex});
-    families.forEach(row=>['futures','spot'].forEach(market=>{
-      const ex=row[market];
-      if(!ex){const blank=document.createElement('div');blank.className='ch-exch-item';blank.style.visibility='hidden';grid.appendChild(blank);return}
-      const isActive=ex.id===chExch, locked=(window.PLAN&&!PLAN.canExchange(ex.id));
-      const item=document.createElement('div');
-      item.className='ch-exch-item'+(isActive?' active':'')+(locked?' ch-exch-locked':'');item.dataset.market=market;
-      const venueName=ex.label.replace(/\s+(Futures|Spot)$/i,'');
-      item.innerHTML=_exchIconHtml(ex)+`<span class="ch-exch-name">${venueName}</span>`+(locked?'<span class="ch-exch-pro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4.5" y="11" width="15" height="9.5" rx="2.2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>PRO</span>':'');
-      item.addEventListener('click',()=>_chSwitchExchange(ex.id));grid.appendChild(item);
-    }));
+    const searchRows=[];
+    families.forEach(row=>{
+      const cells=[];
+      ['futures','spot'].forEach(market=>{
+        const ex=row[market];
+        if(!ex){const blank=document.createElement('div');blank.className='ch-exch-item';blank.style.visibility='hidden';grid.appendChild(blank);cells.push(blank);return}
+        const isActive=ex.id===chExch, locked=(window.PLAN&&!PLAN.canExchange(ex.id));
+        const item=document.createElement('div');
+        item.className='ch-exch-item'+(isActive?' active':'')+(locked?' ch-exch-locked':'');item.dataset.market=market;
+        const venueName=ex.label.replace(/\s+(Futures|Spot)$/i,'');
+        item.innerHTML=_exchIconHtml(ex)+`<span class="ch-exch-name">${venueName}</span>`+(locked?'<span class="ch-exch-pro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4.5" y="11" width="15" height="9.5" rx="2.2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>PRO</span>':'');
+        item.addEventListener('click',()=>_chSwitchExchange(ex.id));grid.appendChild(item);cells.push(item);
+      });
+      searchRows.push({name:(row.futures||row.spot).label.replace(/\s+(Futures|Spot)$/i,'').toLocaleLowerCase(),cells});
+    });
+    menu.querySelector('.ch-exch-search input').addEventListener('input',e=>{
+      const query=e.target.value.trim().toLocaleLowerCase();
+      searchRows.forEach(row=>row.cells.forEach(cell=>{cell.style.display=row.name.includes(query)?'':'none'}));
+    });
   }
 
   // Build exchange menus — both the Charts sidebar and the Screener panel, so any
@@ -37305,6 +37339,8 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
         const _wasOpen = exchWrap.classList.contains('open');
         exchWrap.classList.toggle('open');
         if (!_wasOpen && exchMenu) {
+          const searchInput = exchMenu.querySelector('.ch-exch-search input');
+          if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
           const _r = exchBtn.getBoundingClientRect();
           if (exchMenu.parentElement !== document.body) document.body.appendChild(exchMenu);
           exchMenu.style.position = 'fixed';
@@ -37315,6 +37351,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
           exchMenu.style.maxHeight = Math.max(200, window.innerHeight - _r.bottom - 12) + 'px';
           exchMenu.style.overflowY = 'auto';
           exchMenu.style.display = 'block';
+          if (searchInput) searchInput.focus({preventScroll:true});
         } else if (_wasOpen && exchMenu) {
           exchMenu.style.display = 'none';
         }
@@ -39341,7 +39378,16 @@ connect();
     zh:{title:'访问 Crypto Screener',sub:'请输入邮箱和密码。新用户可以申请访问权限。',email:'电子邮箱',password:'密码',request:'申请访问',login:'登录',note:'访问申请由管理员审核。',requested:'申请已发送。管理员批准后即可登录。',invalid_email:'请输入有效邮箱',weak_password:'密码至少需要 6 个字符',email_taken:'该邮箱已注册',invalid_credentials:'邮箱或密码错误',not_found:'未找到帐户，请先申请访问。',access_pending:'您的申请正在等待批准。',network:'网络错误，请重试。'},
     ja:{title:'Crypto Screener へのアクセス',sub:'メールアドレスとパスワードを入力してください。新規ユーザーはアクセスを申請できます。',email:'メールアドレス',password:'パスワード',request:'アクセスを申請',login:'ログイン',note:'申請は管理者が確認します。',requested:'申請を送信しました。承認後にログインしてください。',invalid_email:'有効なメールアドレスを入力してください',weak_password:'パスワードは6文字以上必要です',email_taken:'このメールアドレスは登録済みです',invalid_credentials:'メールアドレスまたはパスワードが違います',not_found:'アカウントがありません。先にアクセスを申請してください。',access_pending:'申請は承認待ちです。',network:'ネットワークエラーです。もう一度お試しください。'}
   };
-  function authLang(){var l=((typeof currentLang==='string'&&currentLang)||localStorage.getItem('crypto_lang')||document.documentElement.lang||'en').toLowerCase().slice(0,2);return AUTH_COPY[l]?l:'en'}
+  function authLang(){
+    // The access form follows the visitor's browser/device language, even when
+    // the site has a different language saved from an earlier visit.
+    var preferred=(navigator.languages&&navigator.languages.length)?navigator.languages:[navigator.language||navigator.userLanguage||'en'];
+    for(var i=0;i<preferred.length;i++){
+      var l=String(preferred[i]||'').toLowerCase().split(/[-_]/)[0];
+      if(AUTH_COPY[l])return l;
+    }
+    return 'en';
+  }
   function AC(){return AUTH_COPY[authLang()]}
   function localizeAuth(){var c=AC();$('auth-title').textContent=c.title;$('auth-sub').textContent=c.sub;$('auth-email').placeholder=c.email;$('auth-password').placeholder=c.password;$('auth-request').textContent=c.request;$('auth-login').textContent=c.login;$('auth-note').textContent=c.note;hideErr()}
   var _authForced=true;
@@ -40718,8 +40764,8 @@ connect();
   /* ── 21. Профиль-кнопка с ролью (PRO/ADMIN) — аккуратная стеклянная пилюля ── */
   body.plan-pro #tb-profile-btn, body.plan-admin #tb-profile-btn{
     flex-direction:row !important; align-items:center !important; justify-content:center !important;
-    gap:6px !important; width:auto !important; min-width:0 !important; height:36px !important;
-    padding:0 12px 0 10px !important; border-radius:9px !important;
+    width:36px !important; min-width:36px !important; height:36px !important;
+    padding:0 !important; border-radius:9px !important;
     transition:background .16s var(--pz-ease), border-color .16s, color .16s !important;
   }
   body.plan-pro #tb-profile-btn > svg, body.plan-admin #tb-profile-btn > svg{ width:16px !important; height:16px !important; opacity:.95; }
