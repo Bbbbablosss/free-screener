@@ -1,6 +1,6 @@
 """
 Server-side render of a formation chart PNG — the blue-theme chart (candles +
-level + info panel + Crypto watermark) that the acer levels_screener sends to
+level + info panel) that the acer levels_screener sends to
 Telegram, reproduced on the VPS.
 
 Why here and not on acer: the РФ→VPS HTTPS path stalls on uploads past a few tens
@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 CHART_BARS = 300
 _ASSETS = Path(__file__).resolve().parent / "assets"
-_LOGO_PATH = _ASSETS / "logo.png"
 _CJK_PATH = _ASSETS / "NotoSansSC-CJK.ttf"
 
 THEME = {
@@ -45,7 +44,6 @@ TOUCH = {"1m": 0.0015, "15m": 0.0035, "1h": 0.0050}
 
 T = THEME
 _init_done = False
-_logo_cache = None
 _cjk_name = None
 
 
@@ -96,22 +94,6 @@ def _style():
             "text.color": T["text"], "font.size": 10,
         },
     )
-
-
-def _load_logo():
-    global _logo_cache
-    if _logo_cache is None:
-        try:
-            import matplotlib.image as mpimg
-            arr = mpimg.imread(str(_LOGO_PATH)).astype(float).copy()
-            if arr.max() > 1.5:
-                arr /= 255.0
-            if arr.shape[2] == 4:
-                arr[..., 3] *= 0.05            # watermark opacity (faint, per user)
-            _logo_cache = arr
-        except Exception:
-            _logo_cache = False
-    return _logo_cache
 
 
 def _fmt(v: float) -> str:
@@ -213,7 +195,6 @@ def _render_formation_impl(*, symbol, tf, strategy, direction, level=None,
     import numpy as np
     import pandas as pd
     import mplfinance as mpf
-    from matplotlib.offsetbox import AnnotationBbox, OffsetImage
     from matplotlib.ticker import MaxNLocator
     import matplotlib.pyplot as plt
 
@@ -254,14 +235,6 @@ def _render_formation_impl(*, symbol, tf, strategy, direction, level=None,
     ax.set_xlim(-0.5, right_edge)
 
     cur = float(cl[-1])
-
-    # logo watermark
-    logo = _load_logo()
-    if logo is not False and logo is not None:
-        oi = OffsetImage(logo, zoom=0.42)
-        ab = AnnotationBbox(oi, (0.5, 0.52), xycoords="axes fraction",
-                            frameon=False, zorder=0.4, box_alignment=(0.5, 0.5))
-        ax.add_artist(ab)
 
     # signal level: solid ray from its first touch in the window → right edge
     if level is not None:

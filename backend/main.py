@@ -1207,6 +1207,45 @@ async def formations_list(
     return JSONResponse({"items": items, "ts": int(_time.time())})
 
 
+_formation_history_sem = asyncio.Semaphore(4)
+_formation_history_cache: dict[str, dict] = {}
+
+
+@app.get("/api/formations/history/{item_id}")
+async def formations_history(item_id: str):
+    """Historical candles and signal geometry for watermark-free browser charts."""
+    item = formations_service.get(item_id)
+    if not item:
+        raise HTTPException(status_code=404)
+    from .charts.fetcher import fetch_klines
+    from .formations.clean import signal_line
+
+    tf = str(item.get("tf") or "1h")
+    bar_ms = {"1m": 60_000, "15m": 900_000, "1h": 3_600_000}.get(tf)
+    if not bar_ms:
+        raise HTTPException(status_code=404)
+    cache_key = f"{item_id}:{item.get('ts')}"
+    cached = _formation_history_cache.get(cache_key)
+    if cached is not None:
+        return JSONResponse(cached)
+    async with _formation_history_sem:
+        cached = _formation_history_cache.get(cache_key)
+        if cached is None:
+            candles = await fetch_klines(
+                str(item.get("exchange") or "binance").lower(),
+                str(item.get("market") or "perp").lower(),
+                str(item.get("symbol") or "").upper(), tf, 300,
+                int(item.get("ts") or 0) * 1000 + bar_ms,
+            )
+            if len(candles) < 20:
+                raise HTTPException(status_code=404, detail="history_unavailable")
+            cached = {"candles": candles, "level": item.get("level"), "line": signal_line(item)}
+            if len(_formation_history_cache) >= 512:
+                _formation_history_cache.pop(next(iter(_formation_history_cache)))
+            _formation_history_cache[cache_key] = cached
+    return JSONResponse(cached)
+
+
 def _fmt_price(v) -> str:
     v = float(v)
     if v >= 1000:
@@ -1294,11 +1333,8 @@ async def formations_ingest(
             png_bytes = base64.b64decode(png_b64)
         except Exception:
             return JSONResponse({"ok": False, "error": "bad_png"}, status_code=400)
-    # acer now renders the chart on its own spare CPU and publishes the PNG (base64)
-    # to redis over the SSH tunnel — the РФ→VPS HTTPS path can't carry a ~100KB upload,
-    # but the redis tunnel does it in ~0.1s. Pull it by the formation key here so the
-    # web never spends ~1s/formation rendering. Absent (acer old / tunnel down) → render
-    # locally below (fallback, so formations never break).
+    # Prefer the upstream PNG for archiving and Telegram. The site renders
+    # historical candles itself so baked-in marks never appear in the UI.
     if png_bytes is None:
         key = str(meta.get("key") or "")
         if key:
@@ -1306,10 +1342,9 @@ async def formations_ingest(
                 from .bus import r as _bus_r
                 raw = await _bus_r().get(f"scr:formation:png:{key}")
                 if raw:
-                    png_bytes = base64.b64decode(raw)  # b64decode accepts str or bytes
+                    png_bytes = base64.b64decode(raw)
             except Exception as e:
                 logger.warning("[formations] redis png fetch %s: %s", key, e)
-    # still nothing → render here from charts.db candles (fallback)
     if png_bytes is None:
         png_bytes = await _render_formation_png(meta)
     try:

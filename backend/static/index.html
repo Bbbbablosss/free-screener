@@ -28905,7 +28905,8 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     const src = ex.logo || (ex.domain ? `https://www.google.com/s2/favicons?domain=${ex.domain}&sz=32` : '');
     const initials=String(ex.label||'?').replace(/\s+(Futures|Spot)$/i,'').split(/\s+/).map(s=>s[0]||'').join('').slice(0,2).toUpperCase();
     if (!src) return `<div class="ch-exch-ico"><span>${initials}</span></div>`;
-    return `<div class="ch-exch-ico" style="position:relative"><span style="font-size:9px;font-weight:800;color:#8d98aa">${initials}</span><img src="${src}" alt="" loading="lazy" style="position:absolute" onerror="this.remove()"></div>`;
+    // Transparent logos must not reveal the fallback initials underneath them.
+    return `<div class="ch-exch-ico" style="position:relative"><span style="font-size:9px;font-weight:800;color:#8d98aa">${initials}</span><img src="${src}" alt="" loading="lazy" style="position:absolute" onload="this.previousElementSibling.remove()" onerror="this.remove()"></div>`;
   }
 
   function _exchangeUnavailableText(){
@@ -37834,8 +37835,8 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
    Standalone card feed of level / trendline formations — the web
    mirror of the acer `levels_screener` that pushes to Telegram.
    Data is pulled from /api/formations; until that backend feed
-   exists the section simply shows an empty state. Chart images are
-   the blue-theme PNGs rendered on acer (item.chart_url).
+   exists the section simply shows an empty state. Card charts use
+   formation-time candles, without the watermark baked into archived PNGs.
    Two filters only: strategy types + period (1m / 15m / 1h). */
 (function() {
   const $ = (id) => document.getElementById(id);
@@ -38126,22 +38127,47 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     ro.observe(container);
     const handle = { chart, destroy() { try { ro.disconnect(); } catch (e) {} try { chart.remove(); } catch (e) {} } };
     try {
-      const lim = CHART_LIMITS[item.tf] || 200;
-      const url = '/api/charts/klines?symbol=' + encodeURIComponent((item.symbol || '').toUpperCase())
-        + '&interval=' + encodeURIComponent(item.tf || '1h')
-        + '&limit=' + lim + '&exchange=' + encodeURIComponent(chartsExchId(item));
+      const url = '/api/formations/history/' + encodeURIComponent(item.id);
       const r = await fetch(url);
-      const raw = r.ok ? await r.json() : [];
+      const history = r.ok ? await r.json() : {};
+      const raw = Array.isArray(history.candles) ? history.candles : [];
       const candles = Array.isArray(raw) ? rawToCandles(raw) : [];
       if (candles.length) {
         series.setData(candles);
-        if (item.level != null && isFinite(+item.level)) {
+        if (history.level != null && isFinite(+history.level)) {
           series.createPriceLine({
-            price: +item.level, color: isFree ? '#8b6cff' : (isBlue ? '#5A99DD' : '#90CC00'),
+            price: +history.level, color: isFree ? '#8b6cff' : (isBlue ? '#5A99DD' : '#90CC00'),
             lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '',
           });
         }
+        if (Array.isArray(history.line) && history.line.length === 2) {
+          const [[t1,p1],[t2,p2]] = history.line;
+          const start = Math.max(candles[0].time, Math.floor(t1 / 1000));
+          const end = candles[candles.length - 1].time;
+          const at = time => +p1 + (+p2 - +p1) * (time * 1000 - +t1) / (+t2 - +t1);
+          if (+t2 !== +t1 && start < end && isFinite(at(start)) && isFinite(at(end))) {
+            const trend = chart.addSeries(LightweightCharts.LineSeries, {
+              color:isFree?'#8b6cff':'#5A99DD',lineWidth:2,priceLineVisible:false,lastValueVisible:false,
+            });
+            trend.setData([{time:start,value:at(start)},{time:end,value:at(end)}]);
+          }
+        }
+        try {
+          const volumeByTime = new Map(raw.map(k => [Math.floor(+k[0] / 1000), +k[5] || 0]));
+          const volume = chart.addSeries(LightweightCharts.HistogramSeries, {
+            priceScaleId:'',priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false,
+          });
+          volume.priceScale().applyOptions({scaleMargins:{top:.82,bottom:0}});
+          volume.setData(candles.map(c => ({time:c.time,value:volumeByTime.get(c.time)||0,
+            color:c.close>=c.open?'#164c65':'#25384b'})));
+        } catch (e) {}
         chart.timeScale().fitContent();
+        if (!opts.big) {
+          const title = document.createElement('div');
+          title.className = 'fm-card-chart-title';
+          title.textContent = (item.symbol||'').toUpperCase() + (item.tf ? ' · ' + item.tf : '');
+          container.appendChild(title);
+        }
       } else {
         container.classList.add('fm-chart-empty');
       }
@@ -38167,13 +38193,9 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     const strat = esc(stratLabel(item.strategy));
     const note  = esc(item.note || '');
     const exName = esc(exDisplay(item));
-    // Prefer the server-rendered PNG (acer-style chart); fall back to a live
-    // lightweight-chart when there's no image (e.g. symbol not in charts.db).
-    const chartInner = item.chart_url
-      ? `<img class="fm-card-img" data-src="${esc(item.chart_url)}" alt="${sym} ${tf}" onload="this.classList.add('fm-loaded')">`
-      : `<div class="fm-card-chart-title">${sym}${tf ? ' · ' + tf : ''}</div>`;
+    const chartInner = `<div class="fm-card-chart-title">${sym}${tf ? ' · ' + tf : ''}</div>`;
     return `<div class="fm-card${isNew ? ' fm-card-new' : ''}" data-id="${id}">
-      <div class="fm-card-chart" data-id="${id}" data-ph="${sym}${tf ? ' · ' + tf : ''}"${item.chart_url ? ' data-png="1"' : ''}>
+      <div class="fm-card-chart" data-id="${id}" data-ph="${sym}${tf ? ' · ' + tf : ''}">
         ${chartInner}
       </div>
       <div class="fm-card-body">
@@ -38192,14 +38214,8 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     </div>`;
   }
 
-  // render the chart for a single card container (live-chart cards only; PNG
-  // cards show an <img>). Stores the handle on the element for trim cleanup.
+  // Render the historical candles for a card. Stores the handle for cleanup.
   function renderContEl(cont) {
-    if (cont.dataset.png) {                       // PNG card → load its deferred <img> now
-      const img = cont.querySelector('img.fm-card-img');
-      if (img && !img.getAttribute('src') && img.dataset.src) img.setAttribute('src', img.dataset.src);
-      return;
-    }
     const it = byId[cont.dataset.id];
     if (it) fmRenderChart(cont, it).then(h => { if (h) { cont._fmChart = h; cardCharts.push(h); } });
   }
@@ -38365,18 +38381,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     if (modalChart) { try { modalChart.destroy(); } catch (e) {} modalChart = null; }
     const cont = $('fm-modal-chart');
     cont.innerHTML = '';
-    if (item.chart_url) {
-      // show the server-rendered PNG (high-res) full-size
-      const img = document.createElement('img');
-      img.className = 'fm-modal-img';
-      img.src = item.chart_url;
-      img.alt = sym;
-      cont.appendChild(img);
-    } else {
-      // no image → live interactive chart (the modal box is already display:flex,
-      // so the container has its size; the internal ResizeObserver handles reflow).
-      fmRenderChart(cont, item, { big: true }).then(h => { modalChart = h; });
-    }
+    fmRenderChart(cont, item, { big: true }).then(h => { modalChart = h; });
   }
   function closeChartModal() {
     const modal = $('fm-modal');
@@ -41045,6 +41050,62 @@ body.crypto-free.sec-formations #formations-main .fm-card-chart{
 body.crypto-free.sec-formations #formations-main .fm-card-body{
   flex:0 0 auto!important;
   min-height:64px!important;
+}
+/* Arbitrage desktop: opportunities + calculator on the left, spread above both legs on the right. */
+@media (min-width:1200px) {
+  body.crypto-free.sec-arbitrage:not(.embed-mode) #arb-main {
+    flex-direction:row!important;
+    align-items:stretch!important;
+    overflow:hidden!important;
+  }
+  body.crypto-free.sec-arbitrage:not(.embed-mode) #arb-feed-wrap {
+    flex:0 0 clamp(520px,32vw,650px)!important;
+    width:clamp(520px,32vw,650px)!important;
+    min-width:0;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:46px 31px minmax(0,1fr) auto!important;
+  }
+  body.crypto-free.sec-arbitrage:not(.embed-mode) #arb-feed-search { grid-column:1; grid-row:1; }
+  body.crypto-free.sec-arbitrage:not(.embed-mode) #arb-feed-hdr { grid-column:1; grid-row:2; }
+  body.crypto-free.sec-arbitrage:not(.embed-mode) #arb-feed { grid-column:1; grid-row:3; }
+  body.crypto-free.sec-arbitrage:not(.embed-mode) #arb-calc {
+    grid-column:1;
+    grid-row:4;
+    width:100%;
+    height:auto!important;
+    min-height:156px;
+    padding:14px 18px!important;
+    border:0!important;
+    border-top:1px solid #2c333d!important;
+  }
+  body.crypto-free.sec-arbitrage:not(.embed-mode) #arb-center {
+    flex:1 1 0!important;
+    width:auto!important;
+    min-width:0;
+  }
+  body.crypto-free.sec-arbitrage:not(.embed-mode) #arb-charts {
+    height:100%;
+    min-height:0;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,1.65fr) minmax(0,1fr)!important;
+  }
+  body.crypto-free.sec-arbitrage:not(.embed-mode) #arb-chart-spread-box {
+    grid-column:1;
+    grid-row:1;
+  }
+  body.crypto-free.sec-arbitrage:not(.embed-mode) #arb-legs-row {
+    grid-column:1;
+    grid-row:2;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:minmax(0,1fr)!important;
+    width:100%;
+    height:auto!important;
+    min-height:0;
+    flex:none!important;
+  }
 }
 /* Support bot UI removed from the public site. */
 </style>

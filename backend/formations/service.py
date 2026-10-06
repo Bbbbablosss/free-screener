@@ -234,6 +234,9 @@ class FormationsService:
                     pass
 
     # ── serve ────────────────────────────────────────────────────────────────
+    def get(self, item_id: str) -> dict[str, Any] | None:
+        return self._by_id.get(item_id)
+
     def list(
         self,
         strategies: Iterable[str] | None = None,
