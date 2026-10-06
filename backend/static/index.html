@@ -11352,14 +11352,6 @@ if(localStorage.getItem('crypto_ch_draw_collapsed')==='1')document.body.classLis
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
         <div class="tb-profile-menu" id="tb-profile-menu" style="display:none">
-          <button type="button" class="tb-profile-item" id="tb-profile-menu-profile">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span id="tb-profile-lbl-profile">Profile</span>
-          </button>
-          <button type="button" class="tb-profile-item tb-profile-item--invite" id="tb-profile-menu-invite">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            <span id="tb-profile-lbl-invite">Invite a friend</span>
-          </button>
           <button type="button" class="tb-profile-item tb-profile-item--logout" id="tb-profile-menu-logout">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             <span id="tb-profile-lbl-logout">Log out</span>
@@ -22549,11 +22541,6 @@ function initProfileDropdown() {
   menu.querySelectorAll('.tb-profile-item').forEach(item => {
     item.addEventListener('click', e => {
       e.stopPropagation();
-      if (item.id === 'tb-profile-menu-profile') {
-        openProfileTab('account');
-      } else if (item.id === 'tb-profile-menu-invite') {
-        openProfileTab('invite');
-      }
       wrap.classList.remove('open');
       resetFloatMenu(menu);
     });
@@ -40928,6 +40915,11 @@ body.crypto-free .fm-card:hover{background:#0d131e!important}
 body.crypto-free input,
 body.crypto-free .ch-scr-btn,
 body.crypto-free .tb-btn{background:#080d15!important;border-color:#1c2532!important}
+/* These fields sit inside styled containers; the global input fill creates dark bars. */
+body.crypto-free #auth-overlay .auth-field input,
+body.crypto-free .ch-scr-srch-inp,
+body.crypto-free #ch-exch-menu .ch-exch-search input,
+body.crypto-free #arb-calc-amt{background:transparent!important;border:0!important}
 body.crypto-free .sb-lang-menu,
 body.crypto-free .ws-menu,
 body.crypto-free #ch-exch-menu,
