@@ -44,6 +44,7 @@ from .listings.delistings_service import delistings_service
 from .listings.util import local_day_bounds_utc
 from .charts.service import klines_cache
 from .charts.constants import CHART_EXCH_MAP
+from .charts.arcus_feed import ARCUS_EXCHANGE, arcus_feed
 
 logging.basicConfig(
     level=logging.INFO,
@@ -129,6 +130,7 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(market_data.start()),
         asyncio.create_task(klines_cache.start()),
         asyncio.create_task(warm_symbol_lists()),
+        asyncio.create_task(arcus_feed.run()),
         listings_service.start(),
         delistings_service.start(),
     ]
@@ -158,6 +160,7 @@ async def lifespan(app: FastAPI):
             await t
         except asyncio.CancelledError:
             pass
+    await arcus_feed.close()
 
 
 app = FastAPI(title="Crypto Screener", lifespan=lifespan)
@@ -276,8 +279,41 @@ app.include_router(account_router)
 
 def _require_exchange(exchange: str) -> None:
     """Reject exchange IDs outside this edition's explicit allowlist."""
-    if exchange not in CHART_EXCH_MAP:
+    if exchange not in CHART_EXCH_MAP and exchange != ARCUS_EXCHANGE:
         raise HTTPException(status_code=400, detail="unsupported_exchange")
+
+
+@app.get("/api/arcus/snapshot")
+async def arcus_snapshot():
+    """One cached public batch for charts and the separate modeled-market panel."""
+    snapshot = await arcus_feed.get()
+    if not snapshot or not any(row["fresh"] for row in snapshot["markets"]):
+        raise HTTPException(status_code=503, detail="arcus_feed_unavailable")
+    return JSONResponse(snapshot, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/arcus/event")
+async def arcus_event(coin: str = Query(...)):
+    try:
+        return JSONResponse(await arcus_feed.event(coin), headers={"Cache-Control": "no-store"})
+    except (ValueError, LookupError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.warning("[arcus] event unavailable: %s", exc)
+        raise HTTPException(status_code=502, detail="arcus_event_unavailable") from exc
+
+
+@app.get("/api/arcus/reference_klines")
+async def arcus_reference_klines(symbol: str = Query(...), interval: str = Query("1m"),
+                                 limit: int = Query(300)):
+    try:
+        return JSONResponse(await arcus_feed.candles(symbol, interval, limit, reference=True),
+                            headers={"Cache-Control": "no-store"})
+    except (ValueError, LookupError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.warning("[arcus] reference history unavailable: %s", exc)
+        raise HTTPException(status_code=502, detail="arcus_reference_unavailable") from exc
 
 
 @app.get("/api/support/identity")
@@ -780,6 +816,8 @@ async def charts_price_changes(exchange: str = Query("okx_futures")):
     Returns {sym: {1m, 5m, 15m, 1d}}
     """
     _require_exchange(exchange)
+    if exchange == ARCUS_EXCHANGE:
+        return JSONResponse(await arcus_feed.price_changes())
     _now = _time.monotonic()
     _c = _pchg_cache.get(exchange)
     if _c and _now - _c[0] < _CHARTS_CACHE_TTL:
@@ -858,6 +896,8 @@ async def charts_metrics(exchange: str = Query("okx_futures")):
     First call for an exchange backfills its series from charts.db (warm-up); the
     closed-candle stream keeps them fresh thereafter."""
     _require_exchange(exchange)
+    if exchange == ARCUS_EXCHANGE:
+        return JSONResponse(await arcus_feed.metrics())
     _now = _time.monotonic()
     _c = _metrics_cache.get(exchange)
     if _c and _now - _c[0] < _CHARTS_CACHE_TTL:
@@ -965,6 +1005,15 @@ async def charts_klines(
     before_ts: int = Query(0),
 ):
     _require_exchange(exchange)
+    if exchange == ARCUS_EXCHANGE:
+        try:
+            return JSONResponse(await arcus_feed.candles(symbol, interval, limit, before_ts),
+                                headers={"Cache-Control": "no-store"})
+        except (ValueError, LookupError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.warning("[arcus] history unavailable: %s", exc)
+            raise HTTPException(status_code=502, detail="arcus_history_unavailable") from exc
     try:
         if before_ts > 0:
             # Scroll-left pagination: older bars (ts < before_ts). Returns [] when
@@ -986,6 +1035,8 @@ async def charts_klines(
 async def charts_tickers(exchange: str = Query("okx_futures")):
     """Symbol list for the given exchange with that exchange's own volume/change data."""
     _require_exchange(exchange)
+    if exchange == ARCUS_EXCHANGE:
+        return JSONResponse(await arcus_feed.tickers())
     from .charts.symbols import list_symbols
     slug, market = CHART_EXCH_MAP.get(exchange, ("okx", "perp"))
 
@@ -1042,6 +1093,8 @@ async def charts_symbols_index():
         for sym in cached:
             entry = result.setdefault(sym, {"spot": [], "futures": []})
             entry[category].append(exch_id)
+    for ticker in await arcus_feed.tickers():
+        result.setdefault(ticker["sym"], {"spot": [], "futures": []})["futures"].append(ARCUS_EXCHANGE)
     return JSONResponse(result)
 
 
@@ -1055,6 +1108,8 @@ async def charts_symbol_availability(sym: str = Query(...)):
         cached = _sym_cache.get(key)
         if cached and sym_u in cached:
             (futures if market == "perp" else spot).append(exch_id)
+    if any(row["sym"] == sym_u for row in await arcus_feed.tickers()):
+        futures.append(ARCUS_EXCHANGE)
     return JSONResponse({"sym": sym_u, "spot": spot, "futures": futures})
 
 
@@ -1072,7 +1127,7 @@ async def charts_tickers_all():
 @app.get("/api/charts/exchanges")
 async def charts_exchanges():
     """List of all supported exchange IDs."""
-    return JSONResponse(list(CHART_EXCH_MAP.keys()))
+    return JSONResponse([*CHART_EXCH_MAP.keys(), ARCUS_EXCHANGE])
 
 
 @app.get("/api/charts/ingest_health")

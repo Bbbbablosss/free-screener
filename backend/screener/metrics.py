@@ -428,6 +428,11 @@ class MetricsEngine:
                 entry["vol_spike"] = spk_d
             if natr_d:
                 entry["natr"] = natr_d
+                # Input candle time, not response time: consumers can detect a
+                # frozen feed without calculating NATR again. Existing fields
+                # and every exchange other than OKX remain unchanged.
+                if exch_id == "okx_futures" and "1m" in natr_d:
+                    entry["natr_time"] = {"1m": tfs["1m"].last_ts}
             if trades_d:
                 entry["trades"] = trades_d
             if tspk_d:

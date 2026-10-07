@@ -11237,7 +11237,7 @@ if (window.CRYPTO_MOBILE_GATE) {
   else mountMobileGate();
 }
 document.body.classList.add('crypto-free');
-window.CRYPTO_ALLOWED_EXCHANGES = ['binance_futures','binance_spot','bybit_futures','bybit_spot','okx_futures','okx_spot','gate_futures','gate_spot','bitget_futures','bitget_spot','mexc_futures','mexc_spot','hyperliquid_futures','hyperliquid_spot','aster_futures'];
+window.CRYPTO_ALLOWED_EXCHANGES = ['binance_futures','binance_spot','bybit_futures','bybit_spot','okx_futures','okx_spot','gate_futures','gate_spot','bitget_futures','bitget_spot','mexc_futures','mexc_spot','hyperliquid_futures','hyperliquid_spot','aster_futures','arcus_futures'];
 try {
   ['crypto_scr_exch','crypto_ch_exch'].forEach(function(k){
     var v=localStorage.getItem(k); if(v && window.CRYPTO_ALLOWED_EXCHANGES.indexOf(v)<0) localStorage.setItem(k,'binance_futures');
@@ -11688,8 +11688,17 @@ if(localStorage.getItem('crypto_ch_draw_collapsed')==='1')document.body.classLis
         <div class="arb-calc-note" data-i18n="arb_calc_note">excludes slippage and market risk</div>
       </div>
     </div>
+    <section id="arcus-arb" aria-label="Arcus versus OKX modeled market deviation" hidden></section>
     <!-- PHASE 3b: CENTER = cards row + two stacked exchange charts -->
     <div id="arb-center">
+      <div id="arcus-detail" hidden>
+        <div class="arcus-chart-box" id="arcus-spread-box"><div class="arcus-chart-title" id="arcus-spread-title">Arcus ↔ OKX · mark deviation</div><div class="arcus-chart-canvas" id="arcus-spread-chart"></div></div>
+        <div id="arcus-price-row">
+          <div class="arcus-chart-box"><div class="arcus-chart-title" id="arcus-mark-title">Arcus · model candles</div><div class="arcus-chart-canvas" id="arcus-mark-chart"></div></div>
+          <div class="arcus-chart-box"><div class="arcus-chart-title" id="arcus-reference-title">OKX · reference market candles</div><div class="arcus-chart-canvas" id="arcus-reference-chart"></div></div>
+        </div>
+        <div id="arcus-detail-status" hidden></div>
+      </div>
       <div id="arb-charts">
         <div class="arb-chart-box" id="arb-chart-spread-box">
           <div class="arb-chart-hdr" id="arb-chart-spread-hdr">
@@ -12553,6 +12562,7 @@ if(localStorage.getItem('crypto_ch_draw_collapsed')==='1')document.body.classLis
             </button>
             <div id="ch-scr-exch-menu" class="ch-scr-menu ch-scr-exch-menu"></div>
           </div>
+          <span class="ch-arcus-note" id="ch-scr-arcus-note">Arcus — modeled market</span>
           <!-- Sort parameter -->
           <div id="ch-scr-sort-wrap" class="ch-scr-ctl">
             <button type="button" id="ch-scr-sort-btn" class="ch-scr-btn" title="Sort parameter">
@@ -12684,6 +12694,7 @@ if(localStorage.getItem('crypto_ch_draw_collapsed')==='1')document.body.classLis
           </button>
           <div id="ch-exch-menu"></div>
         </div>
+        <span class="ch-arcus-note" id="ch-chart-arcus-note">Arcus — modeled market</span>
         <div class="ch-wl-top-search">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
           <input id="ch-wl-list-search" type="text" placeholder="Search…" autocomplete="off" spellcheck="false">
@@ -26587,6 +26598,7 @@ document.querySelectorAll('#top-nav .sb-nav-item').forEach((el) => {
     { id: 'hyperliquid_spot',    label: 'Hyperliquid Spot',    tvPrefix: 'HYPERLIQUID:', suffix: 'USDC', domain: 'hyperliquid.xyz' },
     { id: 'aster_futures',   label: 'Aster Futures',   tvPrefix: 'ASTER:',        suffix: 'USDT',   domain: 'asterdex.com'     },
     { id: 'aster_spot',      label: 'Aster Spot',      domain: 'asterdex.com', available:false },
+    { id: 'arcus_futures',   label: 'Arcus Futures',   suffix: 'USDC', logo: 'https://perpdexlist.com/logos/arcus.png', available:true },
   ];
   // Interface-only catalogue. Live connectors stay limited to the entries above;
   // the rest are deliberately marked unavailable and never trigger API/WS calls.
@@ -26989,6 +27001,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
       chActiveSlot = parseInt(_chLsGet(CH_ACTIVE_SLOT_LS, '0'), 10) || 0;
     }
     chSlots = _loadChSlots(sec);
+    document.body.classList.toggle('arcus-market', chExch === 'arcus_futures');
     // Screener: every pane runs on the single toolbar-selected candle TF — no
     // per-pane TF scatter. Normalize any loaded/legacy per-slot TFs to chTf.
     if (sec === 'screener' || sec === 'alerts') chSlots.forEach(s => { if (s) s.tf = chTf; });
@@ -28934,6 +28947,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     }
     const ex = isAll ? _scrAllPseudoEx(id) : (EXCHANGES.find(e => e.id === id) || EXCHANGES[0]);
     chExch = ex.id;
+    document.body.classList.toggle('arcus-market', chExch === 'arcus_futures');
     localStorage.setItem(_chInScreener() ? 'crypto_scr_exch' : 'crypto_ch_exch', chExch);
     // Never blacklist the exchange you're viewing (would hide every coin).
     if (typeof _scrBlacklist !== 'undefined' && _scrBlacklist.has(chExch)) { _scrBlacklist.delete(chExch); _scrSaveBlacklist(); }
@@ -29088,6 +29102,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
       .catch(() => {});
   }
   window._chRefreshCoins = function() {
+    if (chExch === 'arcus_futures') return; // merged exchange prices are not Arcus marks
     if (!window._chMarketData || !window._chMarketData.length || !chCoins.length) return;
     const byMD = new Map(window._chMarketData.map(c => [c.sym, c]));
     let changed = false;
@@ -29122,7 +29137,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
         // merged по биржам (берётся с биржи с макс. объёмом), накладывать их на
         // per-exchange список НЕЛЬЗЯ (это и был «чужой объём»). vol/chg оставляем
         // как есть — из /api/charts/tickers (собственные данные этой биржи).
-        if (window._chMarketData && window._chMarketData.length) {
+        if (chExch !== 'arcus_futures' && window._chMarketData && window._chMarketData.length) {
           const byMD = new Map(window._chMarketData.map(c => [c.sym, c]));
           data = data.map(c => { const md = byMD.get(c.sym); return (md && md.price) ? {...c, price: md.price} : c; });
         }
@@ -29645,19 +29660,19 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
       row.dataset.sym = c.sym;
       const cls = c.chg >= 0 ? 'ch-pos' : 'ch-neg';
       const volCol = !_chColShow.vol ? '' :
-        `<span class="ch-vol">${c.vol == null ? '0' : fmtVol(c.vol)}</span>`;
+        `<span class="ch-vol">${c.vol == null ? (chExch === 'arcus_futures' ? '—' : '0') : fmtVol(c.vol)}</span>`;
       const chgCol = !_chColShow.chg ? '' : ((c.chg == null)
-        ? `<span class="ch-chg" style="color:var(--muted2)">0.00%</span>`
+        ? `<span class="ch-chg" style="color:var(--muted2)">${chExch === 'arcus_futures' ? '—' : '0.00%'}</span>`
         : `<span class="ch-chg ${cls}">${c.chg>=0?'+':''}${c.chg.toFixed(2)}%</span>`);
       const pchgCols = _pchgTfs.map(tf => {
         const v = (_priceChgData[c.sym] || {})[tf];
-        if (v == null) return `<span class="ch-chg ch-pchg-col" style="color:var(--muted2)">0.00%</span>`;
+        if (v == null) return `<span class="ch-chg ch-pchg-col" style="color:var(--muted2)">${chExch === 'arcus_futures' ? '—' : '0.00%'}</span>`;
         const cc = v >= 0 ? 'ch-pos' : 'ch-neg';
         return `<span class="ch-chg ch-pchg-col ${cc}">${v>=0?'+':''}${v.toFixed(2)}%</span>`;
       }).join('');
       const metricCols = _mcols.map(({ m, tf }) => {
         const v = _metricVal(c.sym, m, tf);
-        if (v == null) return `<span class="ch-chg ch-metric-col" style="color:var(--muted2)">${_METRIC_META[m].fmt(0)}</span>`;
+        if (v == null) return `<span class="ch-chg ch-metric-col" style="color:var(--muted2)">${chExch === 'arcus_futures' ? '—' : _METRIC_META[m].fmt(0)}</span>`;
         const meta = _METRIC_META[m];
         return `<span class="ch-chg ch-metric-col ${meta.cls(v)}">${meta.fmt(v)}</span>`;
       }).join('');
@@ -33017,6 +33032,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
         volume: k[5] != null ? +k[5] : 0,
       });
       if (!c) continue;
+      if (k[6] === true) c.arcusModeled = true;
       all.push(c);
       if (_isFlatFiller(c)) continue;
       out.push(c);
@@ -33025,7 +33041,11 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     // minute -> exchange sends O=H=L=C, vol 0). Stripping ALL flat fillers leaves
     // nothing and paints "No data". If the non-flat set is too sparse, keep the real
     // (flat) bars so the chart still renders.
-    return _filterOutlierBars(_stitchOpens(out.length >= MIN_CHART_BARS ? out : all));
+    // Arcus history is authoritative modeled OHLC. Keep even flat candles and
+    // provenance; neither filter nor rewrite a source candle.
+    if (chExch === 'arcus_futures') return all;
+    const bars = out.length >= MIN_CHART_BARS ? out : all;
+    return _filterOutlierBars(_stitchOpens(bars));
   }
 
   // Пристёгиваем open каждой свечи к close предыдущей.
@@ -33763,7 +33783,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     // Primary path: HTTP GET from DB (instant, no hold/wait dance)
     // WS chart_sub is sent separately only to register active series for live ticks
     const ws = window._appWs;
-    if (ws && ws.readyState === WebSocket.OPEN) {
+    if (exch !== 'arcus_futures' && ws && ws.readyState === WebSocket.OPEN) {
       // Register active series for live tick updates (klines_tick via _active_poll_loop).
       ws.send(JSON.stringify(chartSubPayload(sym, tf, exch)));
       // Track the key so the debounced reconcile below can UNSUB the ones that are no
@@ -33897,6 +33917,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
       // must not hold 60 gateway subs (gwMaxSubs=200 would fill in 3-4 sessions).
       if (_scrMinfActive() && !slotWidgets[i]) continue;
       const sym = _slotSym(slot), tf = TF_MAP[slot.tf] || '1h', exch = slot.exch;
+      if (exch === 'arcus_futures') continue; // one shared Arcus batch drives its live marks
       want.add(exch + '|' + sym + '|' + tf);
       ws.send(JSON.stringify(chartSubPayload(sym, tf, exch)));
     }
@@ -34805,7 +34826,11 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
   const SCR_TF_LABELS = { '1m':'1m', '5m':'5m', '15m':'15m', '1h':'1h', '4h':'4h', '1d':'1d', 'now':'OI' };
   const SCR_TF_CODES  = ['1','5','15','60','240','D'];
   const SCR_CODE_TF   = { '1':'1m', '5':'5m', '15':'15m', '60':'1h', '240':'4h', 'D':'1d' };  // candle-TF code → label
-  function _scrPLabel(p) { return p ? t(p.tkey) : ''; }
+  function _scrPLabel(p) {
+    if (!p) return '';
+    if (chExch === 'arcus_futures' && p.key === 'natr') return 'OKX NATR (reference)';
+    return t(p.tkey);
+  }
 
   // Decode the current chSortKey into a screener-friendly {paramKey, tf, label}.
   function _scrDecodeSort() {
@@ -34902,7 +34927,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
       grp.appendChild(hd);
       const tfs = document.createElement('div');
       tfs.className = 'ch-scr-tfs';
-      p.tfs.forEach(tf => {
+      p.tfs.filter(tf => chExch !== 'arcus_futures' || tf === '1m').forEach(tf => {
         const sk = p.sortKey(tf);
         const locked = (window.PLAN && !PLAN.canSort(sk));
         const chip = document.createElement('button');
@@ -35024,6 +35049,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
   }
   function _scrParamAvailable(key) {
     if (key === 'pchg') return true;
+    if (chExch === 'arcus_futures') return key === 'natr';
     // Never derive the menu shape from a partially warmed live snapshot.
     // Capability follows the selected market type; spot has no OI family.
     if (/_spot$/.test(chExch || '') && (key === 'oi' || key === 'oi_chg' || key === 'oi_spike')) return false;
@@ -35041,8 +35067,8 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     const d = _scrDecodeSort();
     if (!d.paramKey || _scrParamAvailable(d.paramKey)) return;
     _scrFixingSort = true;
-    const tf = (_METRIC_TFS.indexOf(d.tf) >= 0) ? d.tf : '5m';
-    chSortKey = _scrParamAvailable('volume') ? ('volume__' + tf) : ('chg_' + tf);
+    const tf = chExch === 'arcus_futures' ? '1m' : ((_METRIC_TFS.indexOf(d.tf) >= 0) ? d.tf : '5m');
+    chSortKey = chExch === 'arcus_futures' ? 'natr__1m' : (_scrParamAvailable('volume') ? ('volume__' + tf) : ('chg_' + tf));
     chSortAsc = false;
     try { localStorage.setItem('crypto_scr_sort', chSortKey); localStorage.setItem('crypto_scr_sortasc', '0'); } catch (e) {}
     _scrUpdateSortLabel(); _scrUpdateDirBtn(); _scrSyncHdrIndicators(); _scrSyncFeeds(); renderCoinList();
@@ -35150,7 +35176,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     return lang === 'ru' ? ru : (lang === 'uk' ? uk : (lang === 'es' ? es : en));
   }
   function _scrParamLabel(key) { return _scrPLabel(SCR_PARAMS.find(x => x.key === key)); }
-  function _scrParamTfs(key) { const p = SCR_PARAMS.find(x => x.key === key); return p ? p.tfs : _METRIC_TFS; }
+  function _scrParamTfs(key) { const p = SCR_PARAMS.find(x => x.key === key); return chExch === 'arcus_futures' ? ['1m'] : (p ? p.tfs : _METRIC_TFS); }
   function _scrNum(v) { v = (v || '').trim().replace(',', '.'); if (v === '') return null; const n = parseFloat(v); return isFinite(n) ? n : null; }
   function _scrFmtNum(n) { return n == null ? '' : String(n); }
 
@@ -37506,6 +37532,73 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     _saveChartSession();
     _refreshSymBar();
   };
+
+  window._chHasArcusSlots = () => chInited && chSlots.some((slot, i) =>
+    slot && slot.exch === 'arcus_futures' && !!slotWidgets[i]);
+  window.addEventListener('arcus-snapshot', (event) => {
+    if (!chInited || !event.detail || !Array.isArray(event.detail.markets)) return;
+    const bySymbol = new Map(event.detail.markets.filter(row => row.fresh && row.mark > 0)
+      .map(row => [row.arcusSymbol, row]));
+    if (chExch === 'arcus_futures') {
+      let changed = false;
+      for (const coin of chCoins) {
+        const row = bySymbol.get(coin.sym);
+        if (row && coin.price !== row.mark) { coin.price = row.mark; changed = true; }
+      }
+      if (changed) renderCoinList();
+    }
+    for (let i = 0; i < _layoutCount(); i++) {
+      const slot = chSlots[i];
+      if (!slot || slot.exch !== 'arcus_futures') continue;
+      const row = bySymbol.get(_slotSym(slot));
+      if (row && slotWidgets[i] && !_widgetLoadStale(slotWidgets[i])) {
+        // The batch mark moves only the price label. Candles come exclusively
+        // from Arcus history, never from a synthetic tick-to-OHLC conversion.
+        _withSlotCtx(i, () => {
+          const widget = slotWidgets[i];
+          if (!widget || _widgetAwaitingKlines(widget)) return;
+          _setWidgetLastPrice(widget, row.mark, widget._lastPrice);
+          _positionPriceLabelForWidget(widget);
+        });
+      }
+    }
+  });
+  window.addEventListener('arcus-unavailable', () => {
+    if (!chInited) return;
+    if (chExch === 'arcus_futures') {
+      for (const coin of chCoins) { coin.price = null; coin.chg = null; }
+      _priceChgData = {};
+      _metricRaw = {};
+      renderCoinList();
+    }
+    for (let i = 0; i < _layoutCount(); i++) {
+      const slot = chSlots[i];
+      if (slot && slot.exch === 'arcus_futures') _showChartMessage(t('ch_load_error'), i);
+    }
+  });
+  // Batch marks keep the current price live. Refresh only visible Arcus chart
+  // windows every 10s to receive newly opened candles without a per-symbol SSE.
+  setInterval(() => {
+    if (!chInited || document.hidden || !['charts','screener'].includes(activeSection)) return;
+    for (let i = 0; i < _layoutCount(); i++) {
+      const slot = chSlots[i], widget = slotWidgets[i];
+      if (!slot || slot.exch !== 'arcus_futures' || !widget || _widgetLoadStale(widget)) continue;
+      const sym = _slotSym(slot), tf = TF_MAP[slot.tf] || '1h';
+      const key = chartKey(sym, tf, 'arcus_futures');
+      fetch(`/api/charts/klines?symbol=${encodeURIComponent(sym)}&interval=${tf}&limit=${OPEN_BARS}&exchange=arcus_futures`)
+        .then(r => r.ok ? r.json() : null)
+        .then(raw => {
+          if (!Array.isArray(raw) || !raw.length || chSlots[i] !== slot || slotWidgets[i] !== widget) return;
+          _withSlotCtx(i, () => {
+            if (widget._lastChartKey !== key) return;
+            const newest = raw[raw.length - 1];
+            const shown = widget._chartLwc && widget._chartLwc[widget._chartLwc.length - 1];
+            if (shown && newest && shown.time === newest[0] / 1000 && shown.close === +newest[4]) return;
+            _ingestRaw(key, raw, false);
+          });
+        }).catch(() => {});
+    }
+  }, 10000);
 })();
 
 // (Funding removed)
@@ -41108,9 +41201,38 @@ body.crypto-free.sec-formations #formations-main .fm-card-body{
   }
 }
 /* Support bot UI removed from the public site. */
+.ch-arcus-note { display:none; align-items:center; white-space:nowrap; color:#ad9af5; font:600 10px/1.2 Inter,sans-serif; }
+body.arcus-market .ch-arcus-note { display:inline-flex; }
+#arcus-arb[hidden] { display:none!important; }
+body.crypto-free.sec-arbitrage #arcus-arb {
+  flex:0 0 auto; min-height:0; max-height:128px; padding:8px 12px;
+  border:1px solid #44336c; border-radius:7px; background:#181425;
+  color:#e4dcff; overflow:hidden; font:11px/1.4 Inter,sans-serif;
+}
+.arcus-arb-head { display:flex; align-items:center; gap:14px; margin-bottom:6px; }
+.arcus-arb-head span { color:#a79ab9; font-size:10px; }
+.arcus-arb-list { display:flex; gap:8px; overflow:auto; scrollbar-width:thin; }
+.arcus-arb-item { display:flex; flex:0 0 auto; align-items:center; gap:10px; padding:6px 8px; border:1px solid #413558; border-radius:6px; background:#11121b; }
+.arcus-arb-item { cursor:pointer; }
+.arcus-arb-item.arcus-selected { border-color:#8b6cff; background:#242039; }
+.arcus-arb-item span { color:#a79ab9; }
+.arcus-arb-positive { color:#46d5a7; }
+.arcus-arb-negative { color:#ff7289; }
+#arcus-detail[hidden] { display:none!important; }
+body.arcus-arb-selected.sec-arbitrage #arb-charts { display:none!important; }
+body.sec-arbitrage #arcus-detail { width:100%; height:100%; min-height:0; display:grid; grid-template-rows:minmax(0,1.65fr) minmax(0,1fr); gap:10px; position:relative; }
+#arcus-price-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; min-height:0; }
+.arcus-chart-box { display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; border:1px solid #333049; border-radius:7px; background:#0d1119; }
+.arcus-chart-title { flex:0 0 auto; padding:8px 10px; color:#cdbdff; font:600 11px/1.2 Inter,sans-serif; border-bottom:1px solid #292638; }
+.arcus-chart-canvas { flex:1 1 auto; min-height:0; width:100%; }
+#arcus-detail-status { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; background:rgba(10,13,19,.74); color:#cdbdff; font:600 13px Inter,sans-serif; }
+#arcus-detail-status[hidden] { display:none!important; }
+@media(max-width:700px) { .arcus-arb-head { display:block; } .arcus-arb-item { gap:6px; } }
 </style>
 
 
+
+<script src="/static/arcus-bridge.js" defer></script>
 
 </body>
 
