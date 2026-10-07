@@ -26145,6 +26145,11 @@ async function _arbLoadArcusCharts(conn, attempt) {
   const richName = document.getElementById('arb-chart-rich-name');
   if (cheapName) cheapName.innerHTML = `${exchIcon('arcus')} ${conn.arcusSymbol} <span class="arb-model-badge">MODEL</span>`;
   if (richName) richName.innerHTML = `${exchIcon('okx')} ${conn.okxInstId} · reference`;
+  // Do not briefly show prices from the previously selected ordinary pair.
+  const cheapPx = document.getElementById('arb-chart-cheap-px');
+  const richPx = document.getElementById('arb-chart-rich-px');
+  if (cheapPx) cheapPx.textContent = '';
+  if (richPx) richPx.textContent = '';
   for (const id of ['arb-chart-spread-empty','arb-chart-cheap-empty','arb-chart-rich-empty']) {
     const el = document.getElementById(id);
     if (el) { el.textContent = t('arb_loading'); el.style.display = 'flex'; }
