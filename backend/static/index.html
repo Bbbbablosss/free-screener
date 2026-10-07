@@ -24499,7 +24499,7 @@ function _arbBindFeedDelegation() {
 let arbSortKey = 'spread', arbSortDir = 'desc';
 function _arbSortVal(conn, key) {
   if (conn._arcus) return key === 'spread'
-    ? (Number.isFinite(conn.differencePercent) ? Math.abs(conn.differencePercent) : -1)
+    ? (Number.isFinite(conn.differencePercent) ? conn.differencePercent : -1e100)
     : -1e100;
   switch (key) {
     case 'carry':   return arbCarry(conn);
