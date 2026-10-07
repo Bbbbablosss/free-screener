@@ -14,6 +14,10 @@ _spec.loader.exec_module(_module)
 ArcusFeed = _module.ArcusFeed
 expire_snapshot = _module.expire_snapshot
 normalize_snapshot = _module.normalize_snapshot
+reference_tickers = _module.reference_tickers
+reference_metrics = _module.reference_metrics
+reference_changes = _module.reference_changes
+okx_symbol = _module.okx_symbol
 
 
 def batch(now, *, phase="lag", status="on"):
@@ -56,6 +60,54 @@ class NormalizeTests(unittest.TestCase):
     def test_rejects_unrecognized_source(self):
         with self.assertRaises(ValueError):
             normalize_snapshot({"schemaVersion": 1, "source": "other", "status": "on", "markets": []})
+
+    def test_reference_mapping_preserves_exact_instrument_and_signed_metrics(self):
+        now = 1700000000000
+        snap = normalize_snapshot(batch(now), now)
+        row = snap["markets"][0]
+        self.assertEqual(okx_symbol(row), "BTCUSDT")
+        self.assertIsNone(okx_symbol({"coin": "BTC", "okxInstId": "BTC-USDC-SWAP"}))
+        pairs = {"BTCUSDT": {"volume_usd": 5000000, "change_pct": -1.25},
+                 "BTCUSDC": {"volume_usd": 999999999, "change_pct": 99}}
+        tickers = reference_tickers(snap, pairs)
+        self.assertEqual(tickers[0]["sym"], "BTCUSDC")
+        self.assertEqual(tickers[0]["price"], 102)  # Arcus mark, not OKX ticker price
+        self.assertEqual(tickers[0]["vol"], 5000000)
+        self.assertEqual(tickers[0]["chg"], -1.25)
+        metrics = reference_metrics(snap, {"BTCUSDT": {
+            "volume": {"1m": 999999999999}, "vol_spike": {"1m": 1234},
+            "natr": {"1m": 0.4, "5m": 0.7}, "natr_time": {"1m": now - 60000},
+            "oi_chg": {"1m": -0.3}, "trades": {"1m": 0},
+        }}, pairs, now)
+        item = metrics["BTCUSDC"]
+        self.assertEqual(item["volume"], {"1d": 5000000})
+        self.assertNotIn("vol_spike", item)
+        self.assertEqual(item["oi_chg"]["1m"], -0.3)
+        self.assertEqual(item["trades"]["1m"], 0)
+        self.assertEqual(item["natr"], {"1m": 0.4, "5m": 0.7})
+        changes = reference_changes(snap, {"BTCUSDT": {"1m": -0.2, "1h": 0,
+                                                         "1d": 1.2}, "BTCUSDC": {"1m": 99}})
+        self.assertEqual(changes["BTCUSDC"]["1m"], -0.2)
+        self.assertEqual(changes["BTCUSDC"]["1h"], 0)
+        self.assertEqual(changes["BTCUSDC"]["_source"], "okx_futures")
+        zero_pairs = {"BTCUSDT": {"volume_usd": 0, "change_pct": 0}}
+        self.assertEqual(reference_tickers(snap, zero_pairs)[0]["vol"], 0)
+        self.assertEqual(reference_metrics(snap, {}, zero_pairs, now)["BTCUSDC"]["volume"], {"1d": 0})
+
+    def test_reference_mapping_rejects_stale_quotes_and_stale_natr_1m(self):
+        now = 1700000000000
+        source_batch = batch(now)
+        source_batch["markets"][0]["referenceNatrTime"] = now - 300000
+        snap = normalize_snapshot(source_batch, now)
+        metrics = reference_metrics(snap, {"BTCUSDT": {
+            "natr": {"1m": 0.4, "5m": 0.7}, "natr_time": {"1m": now - 300000},
+        }}, {}, now)
+        self.assertNotIn("1m", metrics["BTCUSDC"]["natr"])
+        self.assertEqual(metrics["BTCUSDC"]["natr"]["5m"], 0.7)
+        stale = normalize_snapshot(batch(now - 6000), now)
+        self.assertEqual(reference_tickers(stale, {}), [])
+        self.assertEqual(reference_metrics(stale, {}, {}, now), {})
+        self.assertEqual(reference_changes(stale, {}), {})
 
 
 class FeedTests(unittest.IsolatedAsyncioTestCase):

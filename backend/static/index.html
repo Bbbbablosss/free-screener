@@ -11685,20 +11685,11 @@ if(localStorage.getItem('crypto_ch_draw_collapsed')==='1')document.body.classLis
           <div class="arb-calc-coins" id="arb-calc-coins"></div>
         </div>
         <div class="arb-calc-out" id="arb-calc-out">—</div>
-        <div class="arb-calc-note" data-i18n="arb_calc_note">excludes slippage and market risk</div>
+        <div class="arb-calc-note" id="arb-calc-note" data-i18n="arb_calc_note">excludes slippage and market risk</div>
       </div>
     </div>
-    <section id="arcus-arb" aria-label="Arcus versus OKX modeled market deviation" hidden></section>
     <!-- PHASE 3b: CENTER = cards row + two stacked exchange charts -->
     <div id="arb-center">
-      <div id="arcus-detail" hidden>
-        <div class="arcus-chart-box" id="arcus-spread-box"><div class="arcus-chart-title" id="arcus-spread-title">Arcus ↔ OKX · mark deviation</div><div class="arcus-chart-canvas" id="arcus-spread-chart"></div></div>
-        <div id="arcus-price-row">
-          <div class="arcus-chart-box"><div class="arcus-chart-title" id="arcus-mark-title">Arcus · model candles</div><div class="arcus-chart-canvas" id="arcus-mark-chart"></div></div>
-          <div class="arcus-chart-box"><div class="arcus-chart-title" id="arcus-reference-title">OKX · reference market candles</div><div class="arcus-chart-canvas" id="arcus-reference-chart"></div></div>
-        </div>
-        <div id="arcus-detail-status" hidden></div>
-      </div>
       <div id="arb-charts">
         <div class="arb-chart-box" id="arb-chart-spread-box">
           <div class="arb-chart-hdr" id="arb-chart-spread-hdr">
@@ -12562,7 +12553,7 @@ if(localStorage.getItem('crypto_ch_draw_collapsed')==='1')document.body.classLis
             </button>
             <div id="ch-scr-exch-menu" class="ch-scr-menu ch-scr-exch-menu"></div>
           </div>
-          <span class="ch-arcus-note" id="ch-scr-arcus-note">Arcus — modeled market</span>
+          <span class="ch-arcus-note" id="ch-scr-arcus-note" aria-label="Arcus and OKX data sources">ⓘ</span>
           <!-- Sort parameter -->
           <div id="ch-scr-sort-wrap" class="ch-scr-ctl">
             <button type="button" id="ch-scr-sort-btn" class="ch-scr-btn" title="Sort parameter">
@@ -12694,7 +12685,7 @@ if(localStorage.getItem('crypto_ch_draw_collapsed')==='1')document.body.classLis
           </button>
           <div id="ch-exch-menu"></div>
         </div>
-        <span class="ch-arcus-note" id="ch-chart-arcus-note">Arcus — modeled market</span>
+        <span class="ch-arcus-note" id="ch-chart-arcus-note" aria-label="Arcus and OKX data sources">ⓘ</span>
         <div class="ch-wl-top-search">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
           <input id="ch-wl-list-search" type="text" placeholder="Search…" autocomplete="off" spellcheck="false">
@@ -14230,6 +14221,7 @@ const EXCH_DOMAINS = {
   ascendex:'ascendex.com', backpack:'backpack.exchange', bitfinex:'bitfinex.com',
   bitmex:'bitmex.com', lighter:'lighter.xyz', edgex:'edgex.exchange', coinw:'coinw.com',
   kraken:'kraken.com', lbank:'lbank.com', toobit:'toobit.com', blofin:'blofin.com',
+  arcus:'arcusdex.xyz',
 };
 
 
@@ -14774,6 +14766,7 @@ function fmtAge(ts) {
 
 function exchIcon(ex) {
 
+  if (ex === 'arcus') return `<img src="https://perpdexlist.com/logos/arcus.png" width="17" height="17" alt="Arcus" title="Arcus modeled market" style="border-radius:2px;display:block" onerror="this.style.visibility='hidden'">`;
 
   const obj = EXCHANGES_LIST.find(e => e.key === ex) || (EXCH_DOMAINS[ex] ? {key:ex, abbr:ex.slice(0,2).toUpperCase(), domain:EXCH_DOMAINS[ex], color:"#888"} : null);
 
@@ -24169,6 +24162,10 @@ let arbSearch = '';                       // FIX 4: lowercased coin-name search 
 // card feed). Server pushes arb_new_batch / arb_update_batch / arb_remove_batch /
 // arb_sync; we keep a Map(id -> conn) and re-render a throttled left list.
 const arbState = new Map();   // id -> conn (latest server snapshot of that connection)
+const arcusArbState = new Map(); // separate modeled Arcus ↔ exact OKX references
+function _arbArcusText(en, ru) {
+  return (document.documentElement.lang || 'en').startsWith('ru') ? ru : en;
+}
 function _arbDemoData() {
   const now = Date.now();
   return [
@@ -24210,6 +24207,7 @@ function makerFee(slug) {
 // Client-side net spread: server net_pct is IGNORED, recomputed from gross minus
 // both legs' taker fees.
 function netSpread(conn) {
+  if (conn && conn._arcus) return Number.isFinite(conn.differencePercent) ? conn.differencePercent : NaN;
   const gross = Number(conn.gross_pct) || 0;
   return gross - (takerFee(conn.cheap_exchange) + takerFee(conn.rich_exchange));
 }
@@ -24291,6 +24289,7 @@ function _arbUsedExchanges() {
 // Non-exchange threshold gates (spread / vol / funding-spread / lifetime). gross-spread
 // vs arbMinSpread (grace bypasses), both-legs vol, funding-spread, lifetime.
 function _arbThresholdsPass(conn) {
+  if (conn._arcus) return true; // unknown Arcus volume is not a zero-volume rejection
   if (!conn.grace && Number(conn.gross_pct || 0) < arbMinSpread) return false;
   if (arbMinVol24 > 0) {
     const vc = Number(conn.vol24_cheap) || 0, vr = Number(conn.vol24_rich) || 0;
@@ -24299,6 +24298,7 @@ function _arbThresholdsPass(conn) {
   return true;
 }
 function _arbConnPasses(conn) {
+  if (conn._arcus) return !arbSearch || String(conn.symbol || '').toLowerCase().includes(arbSearch);
   if (!_arbExchAllowed(conn.cheap_exchange) || !_arbExchAllowed(conn.rich_exchange)) return false;
   if (arbSearch && !String(conn.symbol || '').toLowerCase().includes(arbSearch)) return false;
   return _arbThresholdsPass(conn);
@@ -24419,6 +24419,27 @@ function _arbSigned(v, digits, suffix, showPlus) {
 }
 // FIX 3: rows now mirror the Charts ticker (.ch-row) grid — PAIR | СПРЕД | CARRY | ОБЪЁМ | Ж.
 function _buildArbRow(conn) {
+  if (conn._arcus) {
+    const row = document.createElement('div');
+    row.className = 'arb-row' + (!conn.fresh ? ' arb-row-grace' : '');
+    row.dataset.arbId = String(conn.id);
+    const spread = Number.isFinite(conn.differencePercent)
+      ? _arbSigned(conn.differencePercent, 2, '%', true) : '—';
+    row.innerHTML = `
+      <div class="arb-cell-pair">
+        <span class="arb-cell-sym" data-sym="${conn.symbol}"><span class="arb-sym-base">${conn.coin}</span><span class="arb-sym-quote">USDC</span></span>
+        <span class="arb-cell-route" title="Arcus modeled mark / ${conn.okxInstId} OKX reference mark">${exchIcon('arcus')}<span class="arb-route-arrow">↔</span>${exchIcon('okx')}<span class="arb-model-badge">MODEL</span></span>
+      </div>
+      <div class="arb-cell-net" style="color:${conn.fresh ? (conn.differencePercent >= 0 ? 'var(--accent)' : '#e0566a') : 'var(--muted2)'}">${spread}</div>
+      <div class="arb-cell-carry">—</div>
+      <div class="arb-cell-fund">—</div>
+      <div class="arb-cell-vol">—</div>
+      <div class="arb-cell-life">${arbLifetimeFmt(conn)}</div>
+      <div class="arb-cell-pnl">—</div>`;
+    row._arbConn = conn;
+    if (String(conn.id) === String(arbActiveId)) row.classList.add('arb-active');
+    return row;
+  }
   const { base, quote } = symParts(conn.symbol || '');
   const net = netSpread(conn);
   const carry = arbCarry(conn);
@@ -24467,7 +24488,7 @@ function _arbBindFeedDelegation() {
     const row = e.target.closest('.arb-row');
     if (!row || !feed.contains(row) || !row._arbConn) return;
     const conn = row._arbConn;
-    const c = arbState.get(String(conn.id)) || conn;
+    const c = conn._arcus ? (arcusArbState.get(conn.coin) || conn) : (arbState.get(String(conn.id)) || conn);
     _arbSelect(c);
   });
 }
@@ -24477,6 +24498,9 @@ function _arbBindFeedDelegation() {
 // flip direction. Default: net spread, descending (pure spread; carry is informational only).
 let arbSortKey = 'spread', arbSortDir = 'desc';
 function _arbSortVal(conn, key) {
+  if (conn._arcus) return key === 'spread'
+    ? (Number.isFinite(conn.differencePercent) ? Math.abs(conn.differencePercent) : -1)
+    : -1e100;
   switch (key) {
     case 'carry':   return arbCarry(conn);
     case 'funding': return Number(conn.funding_cheap) || 0;
@@ -24499,7 +24523,10 @@ function _renderArbFeed() {
   _arbBindFeedDelegation();
   // Per-coin chip mode (Phase B): show the active coin's ALL связки instead of the
   // live sticky feed. No chips selected → fall through to the live arbState render.
-  if (typeof _arbInCoinMode === 'function' && _arbInCoinMode()) { _renderArbCoinFeed(); return; }
+  if (typeof _arbInCoinMode === 'function' && _arbInCoinMode()) {
+    _arbSyncSelection(_renderArbCoinFeed());
+    return;
+  }
   let list;
   if (!_arbAnyExcluded()) {
     list = [...arbState.values()].filter(_arbConnPasses);
@@ -24517,9 +24544,14 @@ function _renderArbFeed() {
       }
     }
   }
+  list.push(...[...arcusArbState.values()].filter(_arbConnPasses));
   list.sort((a, b) => { const d = _arbSortVal(b, arbSortKey) - _arbSortVal(a, arbSortKey); return arbSortDir === 'asc' ? -d : d; });
   feed.innerHTML = '';
   list.forEach(conn => feed.appendChild(_buildArbRow(conn)));
+  _arbSyncSelection(list);
+}
+function _arbSyncSelection(list) {
+  list = list || [];
   // FIX 1: keep the active selection by CANON symbol so a still-open coin never
   // flashes "(закрыт)" when its cheap/rich legs flip (the directed id changes but
   // the SAME coin arb is still live under a new id).
@@ -24534,11 +24566,13 @@ function _renderArbFeed() {
     if (!live) {
       // filtered out of the visible list but STILL in arbState → the coin's arb is
       // OPEN (just hidden by a filter), so treat it as live, not "(закрыт)".
-      live = [...arbState.values()].find(c => c.symbol === arbActiveCanon) || null;
+      live = [...arbState.values(), ...arcusArbState.values()].find(c => c.symbol === arbActiveCanon) || null;
     }
     if (live) {
       // Still open & visible → render LIVE; follow the flip (highlight + charts).
-      const flipped = !_arbLastConn || _arbLastConn.cheap_exchange !== live.cheap_exchange || _arbLastConn.rich_exchange !== live.rich_exchange;
+      const flipped = !_arbLastConn || _arbLastConn.cheap_exchange !== live.cheap_exchange ||
+        _arbLastConn.rich_exchange !== live.rich_exchange ||
+        (live._arcus && _arbLastConn.event !== live.event);
       if (String(live.id) !== String(arbActiveId)) {
         arbActiveId = String(live.id);
         document.querySelectorAll('#arb-feed .arb-row').forEach(r => r.classList.toggle('arb-active', r.dataset.arbId === arbActiveId));
@@ -24546,8 +24580,14 @@ function _renderArbFeed() {
       _arbLastConn = live;
       _arbRenderCards(live, false);
       if (flipped) _arbLoadCharts(live);   // legs swapped → reload the two charts for the new pair
+      else if (live._arcus) {
+        if (live.fresh && live.event && !_arbArcusLoadedEvent && !_arbArcusLoadingEvent && !_arbArcusRetry)
+          _arbLoadArcusCharts(live, 0);
+        else _arbArcusLiveUpdate(live);
+      }
     } else {
       // No conn anywhere in arbState for this canon → truly converged/closed.
+      if (_arbLastConn && _arbLastConn._arcus) _arbArcusClose(false);
       _arbRenderCards(_arbLastConn || null, _arbLastConn ? true : false);
     }
   } else if (list.length) {
@@ -24556,7 +24596,8 @@ function _renderArbFeed() {
     let restore = null;
     try {
       const saved = localStorage.getItem('crypto_arb_sel');
-      if (saved) restore = list.find(c => c.symbol === saved) || [...arbState.values()].find(c => c.symbol === saved) || null;
+      if (saved) restore = list.find(c => c.symbol === saved) ||
+        [...arbState.values(), ...arcusArbState.values()].find(c => c.symbol === saved) || null;
     } catch (e) {}
     _arbSelect(restore || list[0]);
   } else {
@@ -24657,6 +24698,69 @@ function _arbSelect(conn) {
   _arbLoadCharts(conn);
 }
 
+function _arbArcusConn(row) {
+  return {
+    _arcus:true, id:'arcus:' + row.coin, coin:row.coin, symbol:row.arcusSymbol,
+    arcusSymbol:row.arcusSymbol, okxInstId:row.okxInstId,
+    cheap_exchange:'arcus', rich_exchange:'okx',
+    cheap_price:row.mark, rich_price:row.reference,
+    differencePercent:row.differencePercent, fresh:!!row.fresh,
+    phase:row.phase, event:row.event,
+    first_ts:row.started || 0, markTime:row.markTime, referenceTime:row.referenceTime,
+    simulated:row.simulated,
+  };
+}
+window.addEventListener('arcus-snapshot', event => {
+  const snap = event.detail;
+  if (!snap || !Array.isArray(snap.markets)) return;
+  if (snap.status === 'off') {
+    arcusArbState.clear();
+    if (_arbLastConn && _arbLastConn._arcus) _arbArcusClose(true);
+    _scheduleArbRender();
+    return;
+  }
+  const seen = new Set();
+  for (const row of snap.markets) {
+    if (!row || !row.coin) continue;
+    seen.add(row.coin);
+    if (row.event && (row.phase === 'lag' || row.phase === 'recovery'))
+      arcusArbState.set(row.coin, _arbArcusConn(row));
+    else if (row.fresh) {
+      arcusArbState.delete(row.coin); // authoritative terminal state
+      if (_arbLastConn && _arbLastConn._arcus && _arbLastConn.coin === row.coin)
+        _arbArcusClose(false);
+    }
+    else if (arcusArbState.has(row.coin)) {
+      const old = arcusArbState.get(row.coin);
+      arcusArbState.set(row.coin, {...old, fresh:false, cheap_price:null,
+        rich_price:null, differencePercent:null});
+    }
+  }
+  // A partial batch omission is not a completed event.
+  for (const [coin, old] of arcusArbState) if (!seen.has(coin))
+    arcusArbState.set(coin, {...old, fresh:false, cheap_price:null,
+      rich_price:null, differencePercent:null});
+  if (_arbLastConn && _arbLastConn._arcus) {
+    const current = arcusArbState.get(_arbLastConn.coin);
+    if (!current || !current.fresh) _arbArcusStatus(false);
+    else {
+      const changed = _arbLastConn.event !== current.event;
+      _arbLastConn = current;
+      if (changed || (!_arbArcusLoadedEvent && !_arbArcusLoadingEvent && !_arbArcusRetry))
+        _arbLoadArcusCharts(current, 0);
+      else _arbArcusLiveUpdate(current);
+    }
+  }
+  _scheduleArbRender();
+});
+window.addEventListener('arcus-unavailable', () => {
+  for (const [coin, old] of arcusArbState)
+    arcusArbState.set(coin, {...old, fresh:false, cheap_price:null,
+      rich_price:null, differencePercent:null});
+  if (_arbLastConn && _arbLastConn._arcus) _arbArcusStatus(false);
+  _scheduleArbRender();
+});
+
 // ════ Per-coin "all связки" view: up to 5 coin chips + picker (Phase B) ════════
 // Picking a coin fetches ALL its cross-exchange pairs (GET /api/arb/coin/<sym>) and
 // shows them in the SAME table; chips act as tabs. No chips → the live sticky feed.
@@ -24694,22 +24798,24 @@ async function _arbFetchCoin(idx) {
 
 function _renderArbCoinFeed() {
   const feed = document.getElementById('arb-feed');
-  if (!feed) return;
+  if (!feed) return [];
   _arbBindFeedDelegation();
   const chip = arbCoinChips[arbActiveChipIdx];
   feed.innerHTML = '';
-  if (!chip) return;
+  if (!chip) return [];
   if (chip.loading && !(chip.conns && chip.conns.length)) {
-    feed.innerHTML = '<div class="arb-coin-status">' + t('arb_loading_pairs') + '</div>'; return;
+    feed.innerHTML = '<div class="arb-coin-status">' + t('arb_loading_pairs') + '</div>'; return [];
   }
   let list = (chip.conns || []).slice().filter(c =>
     arbExchActive[c.cheap_exchange] !== false && arbExchActive[c.rich_exchange] !== false &&
     !arbBlacklist[c.cheap_exchange] && !arbBlacklist[c.rich_exchange]);
+  list.push(...[...arcusArbState.values()].filter(c => c.coin === _arbBaseOf(chip.sym)));
   list.sort((a, b) => { const d = _arbSortVal(b, arbSortKey) - _arbSortVal(a, arbSortKey); return arbSortDir === 'asc' ? -d : d; });
   if (!list.length) {
-    feed.innerHTML = '<div class="arb-coin-status">' + (chip.err ? t('arb_load_error') : (t('arb_no_pairs_for') + chip.sym)) + '</div>'; return;
+    feed.innerHTML = '<div class="arb-coin-status">' + (chip.err ? t('arb_load_error') : (t('arb_no_pairs_for') + chip.sym)) + '</div>'; return [];
   }
   list.forEach(conn => feed.appendChild(_buildArbRow(conn)));
+  return list;
 }
 
 function _arbRenderChips() {
@@ -24984,8 +25090,32 @@ function _arbRenderCards(conn, stale) {
   if (!wrap) return;
   if (!conn) {
     wrap.innerHTML = `<div class="arb-cards-empty">${t('arb_no_active')}</div>`;
+    _arbRenderCalc(null);
     return;
   }
+  if (conn._arcus) {
+    const spread = conn.fresh && Number.isFinite(conn.differencePercent)
+      ? _arbSigned(conn.differencePercent, 3, '%', true) : '—';
+    const mark = conn.fresh && Number(conn.cheap_price) > 0 ? _arbFmtPrice(conn.cheap_price) : '—';
+    const reference = conn.fresh && Number(conn.rich_price) > 0 ? _arbFmtPrice(conn.rich_price) : '—';
+    const note = _arbArcusText('Modeled mark / OKX reference mark · not executable profit',
+      'Цена модели / референс OKX · не исполнимая прибыль');
+    wrap.innerHTML = `
+      <div class="arb-tcard arb-tcard-sum">
+        <div class="arb-tcard-head"><span class="arb-tcard-sym">${conn.arcusSymbol}</span><span class="arb-model-badge">MODEL</span></div>
+        <div class="arb-tstat"><span class="l">Arcus / OKX</span><span class="v">${spread}</span></div>
+        <div class="arb-tstat"><span class="l">${_arbArcusText('Phase','Фаза')}</span><span class="v">${conn.phase || '—'}</span></div>
+      </div>
+      <div class="arb-tcard arb-tcard-buy"><div class="arb-tcard-head"><span class="arb-tcard-ttl">Arcus</span><span class="arb-model-badge">MODEL</span></div>
+        <div class="arb-tstat"><span class="l">mark</span><span class="v">${mark}</span></div></div>
+      <div class="arb-tcard arb-tcard-sell"><div class="arb-tcard-head"><span class="arb-tcard-ttl">${exchIcon('okx')} OKX</span><span class="arb-tcard-exch">${conn.okxInstId}</span></div>
+        <div class="arb-tstat"><span class="l">reference mark</span><span class="v">${reference}</span></div></div>`;
+    wrap.title = note;
+    _arbMobileReflow();
+    _arbRenderCalc(conn);
+    return;
+  }
+  wrap.title = '';
   const { base, quote } = symParts(conn.symbol || '');
   const net = netSpread(conn);
   const gross = Number(conn.gross_pct) || 0;
@@ -25046,6 +25176,19 @@ function _arbRenderCalc(conn) {
   const outEl = document.getElementById('arb-calc-out');
   const coinsEl = document.getElementById('arb-calc-coins');
   if (!outEl || !coinsEl) return;
+  const calc = document.getElementById('arb-calc');
+  if (calc) calc.classList.toggle('arb-calc-model', !!(conn && conn._arcus));
+  const noteEl = document.getElementById('arb-calc-note');
+  if (conn && conn._arcus) {
+    outEl.textContent = _arbArcusText(
+      'This is a modeled price deviation, not an executable or guaranteed return.',
+      'Это моделируемое отклонение цены, не исполнимая и не гарантированная прибыль.');
+    coinsEl.textContent = '';
+    if (noteEl) noteEl.textContent = _arbArcusText('Arcus mark vs exact OKX reference mark',
+      'Цена Arcus против точной референсной цены OKX');
+    return;
+  }
+  if (noteEl) noteEl.textContent = t('arb_calc_note');
   const amt = _arbCalcAmt;
   if (!conn || !(amt > 0)) {
     outEl.innerHTML = '<span style="color:var(--muted2)">' + t('arb_pick_pair') + '</span>';
@@ -25264,6 +25407,7 @@ function _arbMakeSpreadChart(containerId) {
 // an older-history load on BOTH legs (the spread is their intersection), then recompute
 // keeping the view. Mirrors the per-leg _arbMaybeLoadOlder but drives both legs together.
 function _arbSpreadMaybeLoadOlder() {
+  if (_arbLastConn && _arbLastConn._arcus) return;
   const sh = _arbSpreadChart;
   if (!sh || !sh.chart || sh._loadingOlder) return;
   if (!sh.bars || sh.bars.length < 2) return;
@@ -25585,7 +25729,7 @@ function _arbSendChartSub(exch, sym, tf) {
 // from the live handles — independent of arbState (the on-connect arb_sync replay may
 // not be processed yet when ws.onopen fires).
 function _arbResubscribe() {
-  [_arbCheapChart, _arbRichChart].forEach(h => {
+  if (!(_arbLastConn && _arbLastConn._arcus)) [_arbCheapChart, _arbRichChart].forEach(h => {
     if (h && h.exch && h.sym && h.tf) _arbSendChartSub(h.exch, h.sym, h.tf);
   });
   if (window._liveChartHandles) window._liveChartHandles.forEach(h => {
@@ -25710,6 +25854,7 @@ function _arbSetTf(tf) {
   arbChartTf = tf;
   try { localStorage.setItem('crypto_arb_tf', tf); } catch (e) {}
   _arbUpdateTfLabel(); _arbBuildTfMenu();
+  if (_arbLastConn && _arbLastConn._arcus) { _arbLoadCharts(_arbLastConn); return; }
   _arbResetSpread(_arbLastConn);   // clear stale-TF spread; legs' reload repopulates
   [[_arbCheapChart, 'arb-chart-cheap-empty'], [_arbRichChart, 'arb-chart-rich-empty']].forEach(([h, emptyId]) => {
     if (h && h.exch && h.sym) _arbChartLoad(h, h.exch, h.sym, arbChartTf, emptyId);
@@ -25833,7 +25978,7 @@ function _arbApplyKlinesData(handle, msg) {
 window._liveChartHandles = window._liveChartHandles || new Set();
 // WS dispatch hook (added in the message router): feed both arb charts + any extra handles.
 window._arbOnKlineUpdate = function(msg) {
-  if (activeSection === 'arbitrage') {
+  if (activeSection === 'arbitrage' && !(_arbLastConn && _arbLastConn._arcus)) {
     _arbApplyKline(_arbCheapChart, msg);
     _arbApplyKline(_arbRichChart, msg);
     _arbSpreadLiveUpdate();
@@ -25841,7 +25986,7 @@ window._arbOnKlineUpdate = function(msg) {
   window._liveChartHandles.forEach(h => _arbApplyKline(h, msg));
 };
 window._arbOnKlinesData = function(msg) {
-  if (activeSection === 'arbitrage') {
+  if (activeSection === 'arbitrage' && !(_arbLastConn && _arbLastConn._arcus)) {
     _arbApplyKlinesData(_arbCheapChart, msg);
     _arbApplyKlinesData(_arbRichChart, msg);
     _arbRecomputeSpread(false);
@@ -25864,8 +26009,210 @@ function _arbChartHdr(side, conn) {
   if (pxEl) pxEl.textContent = isFinite(px) && px > 0 ? _arbFmtPrice(px) : '';
 }
 
+let _arbArcusGeneration = 0;
+let _arbArcusAbort = null;
+let _arbArcusRetry = null;
+let _arbArcusLoadedEvent = '';
+let _arbArcusLoadingEvent = '';
+let _arbArcusRefreshPending = false;
+function _arbArcusReset() {
+  _arbArcusGeneration++;
+  if (_arbArcusAbort) { _arbArcusAbort.abort(); _arbArcusAbort = null; }
+  if (_arbArcusRetry) { clearTimeout(_arbArcusRetry); _arbArcusRetry = null; }
+  _arbArcusLoadedEvent = '';
+  _arbArcusLoadingEvent = '';
+}
+function _arbArcusClose(off) {
+  if (!_arbLastConn || !_arbLastConn._arcus) return;
+  _arbArcusReset();
+  _arbLastConn = {..._arbLastConn, fresh:false, event:'', phase:null,
+    cheap_price:null, rich_price:null, differencePercent:null};
+  _arbArcusStatus(off);
+  _arbRenderCards(_arbLastConn, true);
+}
+function _arbArcusStatus(off) {
+  const message = off
+    ? _arbArcusText('Arcus modeled feed is off', 'Моделируемый поток Arcus выключен')
+    : _arbArcusText('Arcus data temporarily unavailable', 'Данные Arcus временно недоступны');
+  for (const id of ['arb-chart-spread-empty','arb-chart-cheap-empty','arb-chart-rich-empty']) {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = message; el.style.display = 'flex'; }
+  }
+  for (const id of ['arb-chart-cheap-px','arb-chart-rich-px']) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  }
+  _arbSpreadHdrVal(null);
+  if (off) {
+    for (const handle of [_arbSpreadChart, _arbCheapChart, _arbRichChart]) {
+      if (!handle) continue;
+      handle.bars = []; handle.lastTs = 0;
+      try { handle.series.setData([]); } catch (_) {}
+    }
+  }
+}
+function _arbArcusCandles(raw) {
+  if (!Array.isArray(raw)) return [];
+  const unique = new Map();
+  for (const k of raw) {
+    if (!Array.isArray(k) || k.length < 5) continue;
+    const time = Math.floor(Number(k[0]) / 1000);
+    const [open, high, low, close] = k.slice(1, 5).map(Number);
+    if (time > 0 && [open, high, low, close].every(v => Number.isFinite(v) && v > 0) &&
+        high >= Math.max(open, close) && low <= Math.min(open, close))
+      unique.set(time, {time, open, high, low, close, arcusModeled:k[6] === true});
+  }
+  return [...unique.values()].sort((a, b) => a.time - b.time);
+}
+function _arbArcusHistory(points) {
+  const unique = new Map();
+  for (const p of points || []) {
+    const time = Math.floor(Number(p.time) / 1000), value = Number(p.differencePercent);
+    if (time > 0 && Number.isFinite(value)) unique.set(time, value);
+  }
+  const result = [];
+  let previous = 0;
+  for (const [time, value] of [...unique].sort((a, b) => a[0] - b[0])) {
+    if (previous && time - previous > 2) result.push({time:previous + 1});
+    result.push({time, value});
+    previous = time;
+  }
+  return result;
+}
+function _arbArcusLiveUpdate(conn) {
+  if (!_arbLastConn || !_arbLastConn._arcus || _arbLastConn.id !== conn.id ||
+      _arbArcusLoadedEvent !== conn.event || arcusArbState.get(conn.coin) !== conn) return;
+  if (!conn.fresh || !Number.isFinite(conn.differencePercent)) {
+    _arbArcusStatus(false);
+    return;
+  }
+  const sh = _arbSpreadChart;
+  if (sh && sh.series) {
+    const time = Math.floor(Math.max(conn.markTime, conn.referenceTime) / 1000);
+    if (time >= sh.lastTs && time > 0) {
+      if (sh.lastTs && time - sh.lastTs > 3) {
+        const gap = {time:sh.lastTs + 1};
+        try { sh.series.update(gap); sh.bars.push(gap); } catch (_) {}
+      }
+      const point = {time, value:conn.differencePercent};
+      try { sh.series.update(point); } catch (_) { return; }
+      if (time === sh.lastTs && sh.bars.length) sh.bars[sh.bars.length - 1] = point;
+      else { sh.bars.push(point); sh.lastTs = time; }
+      if (sh._priceLine) {
+        sh._priceLine.setColor(point.value >= 0 ? '#0A9D61' : '#DA2647');
+        sh._priceLine.setPosition(point.time, point.value);
+      }
+    }
+  }
+  _arbSpreadHdrVal(conn.differencePercent);
+  const cheap = document.getElementById('arb-chart-cheap-px');
+  const rich = document.getElementById('arb-chart-rich-px');
+  if (cheap) cheap.textContent = _arbFmtPrice(conn.cheap_price);
+  if (rich) rich.textContent = _arbFmtPrice(conn.rich_price);
+  for (const id of ['arb-chart-spread-empty','arb-chart-cheap-empty','arb-chart-rich-empty']) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  }
+}
+async function _arbLoadArcusCharts(conn, attempt) {
+  if (!conn || !conn._arcus) return;
+  if (!window.LightweightCharts) {
+    if (await _arbEnsureLW() && _arbLastConn && _arbLastConn.id === conn.id)
+      _arbLoadArcusCharts(conn, attempt || 0);
+    return;
+  }
+  if (!_arbCheapChart) _arbCheapChart = _arbMakeChart('arb-chart-cheap');
+  if (!_arbRichChart) _arbRichChart = _arbMakeChart('arb-chart-rich');
+  if (!_arbSpreadChart) _arbSpreadChart = _arbMakeSpreadChart('arb-chart-spread');
+  _arbArcusReset();
+  const generation = _arbArcusGeneration;
+  const handles = [_arbSpreadChart, _arbCheapChart, _arbRichChart];
+  if (handles.some(h => !h)) return;
+  for (const h of handles) {
+    h.key = 'arcus:' + conn.coin + ':' + conn.event;
+    h.exch = ''; h.sym = ''; h.tf = arbChartTf;
+    h._noMore = true; h.bars = []; h.lastTs = 0;
+    try { h.series.setData([]); } catch (_) {}
+  }
+  _arbSpreadHdrVal(null);
+  const spreadName = document.getElementById('arb-chart-spread-name');
+  if (spreadName) spreadName.innerHTML = `${exchIcon('arcus')} ↔ ${exchIcon('okx')} <span class="arb-model-badge">MODEL</span> ${conn.arcusSymbol}`;
+  const tagCheap = document.getElementById('arb-chart-cheap-tag');
+  const tagRich = document.getElementById('arb-chart-rich-tag');
+  if (tagCheap) tagCheap.textContent = 'Arcus';
+  if (tagRich) tagRich.textContent = 'OKX';
+  const cheapName = document.getElementById('arb-chart-cheap-name');
+  const richName = document.getElementById('arb-chart-rich-name');
+  if (cheapName) cheapName.innerHTML = `${exchIcon('arcus')} ${conn.arcusSymbol} <span class="arb-model-badge">MODEL</span>`;
+  if (richName) richName.innerHTML = `${exchIcon('okx')} ${conn.okxInstId} · reference`;
+  for (const id of ['arb-chart-spread-empty','arb-chart-cheap-empty','arb-chart-rich-empty']) {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = t('arb_loading'); el.style.display = 'flex'; }
+  }
+  if (!conn.fresh || !conn.event) { _arbArcusStatus(false); return; }
+  const controller = new AbortController();
+  _arbArcusAbort = controller;
+  _arbArcusLoadingEvent = conn.event;
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  const query = `symbol=${encodeURIComponent(conn.arcusSymbol)}&interval=${encodeURIComponent(arbChartTf)}&limit=500`;
+  try {
+    const replies = await Promise.all([
+      fetch('/api/arcus/event?coin=' + encodeURIComponent(conn.coin), {signal:controller.signal}),
+      fetch('/api/charts/klines?' + query + '&exchange=arcus_futures', {signal:controller.signal}),
+      fetch('/api/arcus/reference_klines?' + query, {signal:controller.signal}),
+    ]);
+    if (replies.some(r => !r.ok)) throw Error('Arcus chart data');
+    const [event, arcusRaw, okxRaw] = await Promise.all(replies.map(r => r.json()));
+    const current = arcusArbState.get(conn.coin);
+    if (generation !== _arbArcusGeneration || !_arbLastConn || !_arbLastConn._arcus ||
+        _arbLastConn.id !== conn.id || _arbLastConn.event !== conn.event ||
+        !current || !current.fresh || current.event !== conn.event ||
+        handles[0] !== _arbSpreadChart || handles[1] !== _arbCheapChart || handles[2] !== _arbRichChart) return;
+    if (!event.active || event.event !== conn.event || event.okxInstId !== conn.okxInstId)
+      throw Error('Arcus event changed');
+    const points = _arbArcusHistory(event.points);
+    const arcusBars = _arbArcusCandles(arcusRaw), okxBars = _arbArcusCandles(okxRaw);
+    if (!points.length || !arcusBars.length || !okxBars.length) throw Error('Arcus chart empty');
+    for (const [handle, bars] of [[_arbCheapChart, arcusBars], [_arbRichChart, okxBars]]) {
+      handle.bars = bars; handle.lastTs = bars[bars.length - 1].time;
+      handle._arcusProvenance = new Map(bars.map(b => [b.time, b.arcusModeled]));
+      handle.series.setData(bars);
+      _arbFitChart(handle);
+      _arbUpdatePriceLine(handle, bars[bars.length - 1]);
+    }
+    _arbSpreadChart.bars = points;
+    _arbSpreadChart.lastTs = points[points.length - 1].time;
+    _arbSpreadChart.series.setData(points);
+    _arbFitChart(_arbSpreadChart);
+    _arbArcusLoadedEvent = conn.event;
+    _arbArcusLiveUpdate(current);
+  } catch (_) {
+    if (generation === _arbArcusGeneration && _arbLastConn && _arbLastConn.id === conn.id &&
+        arcusArbState.get(conn.coin)?.event === conn.event) {
+      _arbArcusStatus(false);
+      const delay = Math.min(2000 * Math.pow(2, Math.min(attempt || 0, 4)), 30000);
+      _arbArcusRetry = setTimeout(() => {
+        _arbArcusRetry = null;
+        const current = arcusArbState.get(conn.coin);
+        if (current && current.fresh && _arbLastConn && _arbLastConn.id === conn.id)
+          _arbLoadArcusCharts(current, (attempt || 0) + 1);
+      }, delay);
+    }
+  } finally {
+    clearTimeout(timeout);
+    if (_arbArcusAbort === controller) _arbArcusAbort = null;
+    if (generation === _arbArcusGeneration) _arbArcusLoadingEvent = '';
+  }
+}
+
 function _arbLoadCharts(conn) {
   if (!conn) return;
+  if (conn._arcus) { _arbLoadArcusCharts(conn, 0); return; }
+  _arbArcusReset();
+  const tagCheap = document.getElementById('arb-chart-cheap-tag');
+  const tagRich = document.getElementById('arb-chart-rich-tag');
+  if (tagCheap) tagCheap.textContent = t('arb_tag_buy');
+  if (tagRich) tagRich.textContent = t('arb_tag_sell');
   if (!window.LightweightCharts) {
     // Lib not loaded yet (arb opened before Charts) — load it, then retry. This is
     // what makes charts open on the FIRST click without the "visit Charts first" dance.
@@ -25889,6 +26236,43 @@ function _arbLoadCharts(conn) {
   _arbLoadFundHist(conn);   // per-pair funding history → accurate spread-chart funding marks
   _arbFitSoon();
 }
+setInterval(async () => {
+  if (_arbArcusRefreshPending || document.hidden || activeSection !== 'arbitrage' ||
+      !_arbLastConn || !_arbLastConn._arcus || !_arbArcusLoadedEvent) return;
+  const conn = arcusArbState.get(_arbLastConn.coin);
+  if (!conn || !conn.fresh || conn.event !== _arbArcusLoadedEvent) return;
+  const generation = _arbArcusGeneration;
+  const handles = [_arbCheapChart, _arbRichChart];
+  if (handles.some(h => !h)) return;
+  _arbArcusRefreshPending = true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6000);
+  const query = `symbol=${encodeURIComponent(conn.arcusSymbol)}&interval=${encodeURIComponent(arbChartTf)}&limit=3`;
+  try {
+    const replies = await Promise.all([
+      fetch('/api/charts/klines?' + query + '&exchange=arcus_futures', {signal:controller.signal}),
+      fetch('/api/arcus/reference_klines?' + query, {signal:controller.signal}),
+    ]);
+    if (replies.some(r => !r.ok)) return;
+    const raw = await Promise.all(replies.map(r => r.json()));
+    if (generation !== _arbArcusGeneration || !_arbLastConn || _arbLastConn.id !== conn.id ||
+        _arbLastConn.event !== conn.event || handles[0] !== _arbCheapChart ||
+        handles[1] !== _arbRichChart) return;
+    for (const [handle, barsRaw] of [[_arbCheapChart, raw[0]], [_arbRichChart, raw[1]]]) {
+      for (const bar of _arbArcusCandles(barsRaw)) {
+        if (bar.time < handle.lastTs) continue;
+        handle.series.update(bar);
+        if (bar.time === handle.lastTs && handle.bars.length) handle.bars[handle.bars.length - 1] = bar;
+        else { handle.bars.push(bar); handle.lastTs = bar.time; }
+        handle._arcusProvenance.set(bar.time, bar.arcusModeled);
+        _arbUpdatePriceLine(handle, bar);
+      }
+    }
+  } catch (_) {} finally {
+    clearTimeout(timeout);
+    _arbArcusRefreshPending = false;
+  }
+}, 3000);
 // FIX: robustly size the arb charts once the flex layout resolves. On the FIRST
 // entry to the section the chart containers can read 0-height for several frames
 // (display:none→flex not flushed yet) and the ResizeObserver may not fire on the
@@ -29267,7 +29651,10 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
   // Ordered list of active {m, tf} metric columns (panel order, then TF order).
   function _activeMetricCols() {
     const out = [];
-    _METRIC_KEYS.forEach(m => { _metricSel[m].forEach(tf => out.push({ m, tf })); });
+    _METRIC_KEYS.forEach(m => {
+      if (chExch === 'arcus_futures' && (m === 'volume' || m === 'vol_spike')) return;
+      _metricSel[m].forEach(tf => out.push({ m, tf }));
+    });
     return out;
   }
   function _metricVal(sym, m, tf) {
@@ -34828,7 +35215,6 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
   const SCR_CODE_TF   = { '1':'1m', '5':'5m', '15':'15m', '60':'1h', '240':'4h', 'D':'1d' };  // candle-TF code → label
   function _scrPLabel(p) {
     if (!p) return '';
-    if (chExch === 'arcus_futures' && p.key === 'natr') return 'OKX NATR (reference)';
     return t(p.tkey);
   }
 
@@ -34927,7 +35313,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
       grp.appendChild(hd);
       const tfs = document.createElement('div');
       tfs.className = 'ch-scr-tfs';
-      p.tfs.filter(tf => chExch !== 'arcus_futures' || tf === '1m').forEach(tf => {
+      _scrParamTfs(p.key).forEach(tf => {
         const sk = p.sortKey(tf);
         const locked = (window.PLAN && !PLAN.canSort(sk));
         const chip = document.createElement('button');
@@ -35049,7 +35435,7 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
   }
   function _scrParamAvailable(key) {
     if (key === 'pchg') return true;
-    if (chExch === 'arcus_futures') return key === 'natr';
+    if (chExch === 'arcus_futures' && key === 'vol_spike') return false;
     // Never derive the menu shape from a partially warmed live snapshot.
     // Capability follows the selected market type; spot has no OI family.
     if (/_spot$/.test(chExch || '') && (key === 'oi' || key === 'oi_chg' || key === 'oi_spike')) return false;
@@ -35065,10 +35451,10 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
   function _scrFixSortForExch() {
     if (_scrFixingSort) return;
     const d = _scrDecodeSort();
-    if (!d.paramKey || _scrParamAvailable(d.paramKey)) return;
+    if (!d.paramKey || (_scrParamAvailable(d.paramKey) && _scrParamTfs(d.paramKey).includes(d.tf))) return;
     _scrFixingSort = true;
-    const tf = chExch === 'arcus_futures' ? '1m' : ((_METRIC_TFS.indexOf(d.tf) >= 0) ? d.tf : '5m');
-    chSortKey = chExch === 'arcus_futures' ? 'natr__1m' : (_scrParamAvailable('volume') ? ('volume__' + tf) : ('chg_' + tf));
+    const tf = (_METRIC_TFS.indexOf(d.tf) >= 0) ? d.tf : '5m';
+    chSortKey = chExch === 'arcus_futures' ? 'volume__1d' : (_scrParamAvailable('volume') ? ('volume__' + tf) : ('chg_' + tf));
     chSortAsc = false;
     try { localStorage.setItem('crypto_scr_sort', chSortKey); localStorage.setItem('crypto_scr_sortasc', '0'); } catch (e) {}
     _scrUpdateSortLabel(); _scrUpdateDirBtn(); _scrSyncHdrIndicators(); _scrSyncFeeds(); renderCoinList();
@@ -35176,7 +35562,12 @@ Vest|vest_exchange`.trim().split('\n').map(v=>{const [name,slug]=v.split('|');re
     return lang === 'ru' ? ru : (lang === 'uk' ? uk : (lang === 'es' ? es : en));
   }
   function _scrParamLabel(key) { return _scrPLabel(SCR_PARAMS.find(x => x.key === key)); }
-  function _scrParamTfs(key) { const p = SCR_PARAMS.find(x => x.key === key); return chExch === 'arcus_futures' ? ['1m'] : (p ? p.tfs : _METRIC_TFS); }
+  function _scrParamTfs(key) {
+    const p = SCR_PARAMS.find(x => x.key === key);
+    if (chExch === 'arcus_futures' && key === 'volume') return ['1d'];
+    if (chExch === 'arcus_futures' && key === 'vol_spike') return [];
+    return p ? p.tfs : _METRIC_TFS;
+  }
   function _scrNum(v) { v = (v || '').trim().replace(',', '.'); if (v === '') return null; const n = parseFloat(v); return isFinite(n) ? n : null; }
   function _scrFmtNum(n) { return n == null ? '' : String(n); }
 
@@ -41201,33 +41592,16 @@ body.crypto-free.sec-formations #formations-main .fm-card-body{
   }
 }
 /* Support bot UI removed from the public site. */
-.ch-arcus-note { display:none; align-items:center; white-space:nowrap; color:#ad9af5; font:600 10px/1.2 Inter,sans-serif; }
+.ch-arcus-note { display:none; align-items:center; justify-content:center; color:#ad9af5; font:700 13px/1 Inter,sans-serif; cursor:help; }
 body.arcus-market .ch-arcus-note { display:inline-flex; }
-#arcus-arb[hidden] { display:none!important; }
-body.crypto-free.sec-arbitrage #arcus-arb {
-  flex:0 0 auto; min-height:0; max-height:128px; padding:8px 12px;
-  border:1px solid #44336c; border-radius:7px; background:#181425;
-  color:#e4dcff; overflow:hidden; font:11px/1.4 Inter,sans-serif;
-}
-.arcus-arb-head { display:flex; align-items:center; gap:14px; margin-bottom:6px; }
-.arcus-arb-head span { color:#a79ab9; font-size:10px; }
-.arcus-arb-list { display:flex; gap:8px; overflow:auto; scrollbar-width:thin; }
-.arcus-arb-item { display:flex; flex:0 0 auto; align-items:center; gap:10px; padding:6px 8px; border:1px solid #413558; border-radius:6px; background:#11121b; }
-.arcus-arb-item { cursor:pointer; }
-.arcus-arb-item.arcus-selected { border-color:#8b6cff; background:#242039; }
-.arcus-arb-item span { color:#a79ab9; }
-.arcus-arb-positive { color:#46d5a7; }
-.arcus-arb-negative { color:#ff7289; }
-#arcus-detail[hidden] { display:none!important; }
-body.arcus-arb-selected.sec-arbitrage #arb-charts { display:none!important; }
-body.sec-arbitrage #arcus-detail { width:100%; height:100%; min-height:0; display:grid; grid-template-rows:minmax(0,1.65fr) minmax(0,1fr); gap:10px; position:relative; }
-#arcus-price-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; min-height:0; }
-.arcus-chart-box { display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; border:1px solid #333049; border-radius:7px; background:#0d1119; }
-.arcus-chart-title { flex:0 0 auto; padding:8px 10px; color:#cdbdff; font:600 11px/1.2 Inter,sans-serif; border-bottom:1px solid #292638; }
-.arcus-chart-canvas { flex:1 1 auto; min-height:0; width:100%; }
-#arcus-detail-status { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; background:rgba(10,13,19,.74); color:#cdbdff; font:600 13px Inter,sans-serif; }
-#arcus-detail-status[hidden] { display:none!important; }
-@media(max-width:700px) { .arcus-arb-head { display:block; } .arcus-arb-item { gap:6px; } }
+body.arcus-market .ch-pp-item[data-param="vol_spike"],
+body.arcus-market .ch-pp-item[data-param="volume"] + .ch-metric-sub .ch-pchg-row:not([data-tf="1d"]) { display:none!important; }
+.arb-model-badge { margin-left:5px; color:#b49fff; font:700 9px/1 Inter,sans-serif; letter-spacing:.02em; }
+#arb-calc.arb-calc-model #arb-calc-range,
+#arb-calc.arb-calc-model .arb-calc-mid,
+#arb-calc.arb-calc-model .arb-calc-sub { display:none!important; }
+#arb-calc.arb-calc-model #arb-calc-out { font-size:11px; line-height:1.5; color:#b4a7ce; }
+body.crypto-free.sec-arbitrage #arb-center { min-width:0; }
 </style>
 
 

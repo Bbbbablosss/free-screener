@@ -28,6 +28,105 @@ def _positive(value):
     return number if math.isfinite(number) and number > 0 else None
 
 
+def _finite(value):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _nonnegative(value):
+    number = _finite(value)
+    return number if number is not None and number >= 0 else None
+
+
+def okx_symbol(row):
+    """Use the explicit OKX instrument id, never guess from an Arcus USDC label."""
+    inst_id = str(row.get("okxInstId") or "")
+    coin = str(row.get("coin") or "")
+    if inst_id != f"{coin}-USDT-SWAP":
+        return None
+    return f"{coin}USDT"
+
+
+def reference_tickers(snapshot, okx_pairs):
+    result = []
+    for row in (snapshot or {}).get("markets", []):
+        if not row["fresh"]:
+            continue
+        ref_sym = okx_symbol(row)
+        reference = okx_pairs.get(ref_sym, {}) if ref_sym else {}
+        volume = _nonnegative(reference.get("volume_usd"))
+        change = _finite(reference.get("change_pct"))
+        result.append({"sym": row["arcusSymbol"], "price": row["mark"],
+                       "chg": change, "vol": volume, "fresh": True,
+                       "simulated": row["simulated"], "metricsSource": "okx_futures",
+                       "referenceSymbol": ref_sym})
+    result.sort(key=lambda item: item["vol"] if item["vol"] is not None else -1, reverse=True)
+    return result
+
+
+def reference_metrics(snapshot, okx_metrics, okx_pairs, now_ms=None):
+    """Map only existing OKX values; mixed-unit interval volume is unavailable.
+
+    The OKX 24h ticker turnover is separately sourced and safe to expose as the
+    1d volume column. Historical interval volume/vol_spike cannot be copied:
+    the existing OKX DB mixes contract counts and quote turnover in one field.
+    """
+    now_ms = int(now_ms if now_ms is not None else time.time() * 1000)
+    result = {}
+    for row in (snapshot or {}).get("markets", []):
+        if not row["fresh"]:
+            continue
+        ref_sym = okx_symbol(row)
+        if not ref_sym:
+            continue
+        source = okx_metrics.get(ref_sym) or {}
+        item = {"metrics_source": "okx_futures", "reference_symbol": ref_sym,
+                "source_quality": {"volume": "ticker_24h_only",
+                                   "vol_spike": "unavailable_mixed_units",
+                                   "timestamps": "natr_1m_only"}}
+        for family in ("natr", "trades", "trade_spike", "oi", "oi_chg", "oi_spike"):
+            raw = source.get(family)
+            if isinstance(raw, dict):
+                values = {tf: value for tf, field in raw.items()
+                          if (value := _finite(field)) is not None}
+                if values:
+                    item[family] = values
+        natr_time = (source.get("natr_time") or {}).get("1m")
+        natr_time = _milliseconds(natr_time)
+        if natr_time and 0 <= now_ms - natr_time <= 180000:
+            item["natr_time"] = {"1m": natr_time}
+        else:
+            # A source timestamp is required before presenting the 1m NATR as live.
+            if "natr" in item:
+                item["natr"].pop("1m", None)
+            if row["referenceNatr1m"] is not None and 0 <= now_ms - row["referenceNatrTime"] <= 180000:
+                item.setdefault("natr", {})["1m"] = row["referenceNatr1m"]
+                item["natr_time"] = {"1m": row["referenceNatrTime"]}
+        volume = _nonnegative((okx_pairs.get(ref_sym) or {}).get("volume_usd"))
+        if volume is not None:
+            item["volume"] = {"1d": volume}
+        result[row["arcusSymbol"]] = item
+    return result
+
+
+def reference_changes(snapshot, okx_changes):
+    result = {}
+    for row in (snapshot or {}).get("markets", []):
+        if not row["fresh"]:
+            continue
+        ref_sym = okx_symbol(row)
+        source = okx_changes.get(ref_sym) or {} if ref_sym else {}
+        values = {tf: value for tf, field in source.items()
+                  if tf in _AGES and (value := _finite(field)) is not None}
+        if values:
+            values["_source"] = "okx_futures"
+            result[row["arcusSymbol"]] = values
+    return result
+
+
 def _milliseconds(value):
     try:
         number = int(value)

@@ -44,7 +44,8 @@ from .listings.delistings_service import delistings_service
 from .listings.util import local_day_bounds_utc
 from .charts.service import klines_cache
 from .charts.constants import CHART_EXCH_MAP
-from .charts.arcus_feed import ARCUS_EXCHANGE, arcus_feed
+from .charts.arcus_feed import (ARCUS_EXCHANGE, arcus_feed, reference_tickers,
+                                reference_metrics, reference_changes)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -817,7 +818,11 @@ async def charts_price_changes(exchange: str = Query("okx_futures")):
     """
     _require_exchange(exchange)
     if exchange == ARCUS_EXCHANGE:
-        return JSONResponse(await arcus_feed.price_changes())
+        snapshot = await arcus_feed.get()
+        if not snapshot:
+            return JSONResponse({})
+        okx_response = await charts_price_changes("okx_futures")
+        return JSONResponse(reference_changes(snapshot, json.loads(okx_response.body)))
     _now = _time.monotonic()
     _c = _pchg_cache.get(exchange)
     if _c and _now - _c[0] < _CHARTS_CACHE_TTL:
@@ -897,7 +902,19 @@ async def charts_metrics(exchange: str = Query("okx_futures")):
     closed-candle stream keeps them fresh thereafter."""
     _require_exchange(exchange)
     if exchange == ARCUS_EXCHANGE:
-        return JSONResponse(await arcus_feed.metrics())
+        snapshot = await arcus_feed.get()
+        if not snapshot:
+            return JSONResponse({})
+        # Reuse the public OKX metrics path, including its in-RAM fallback when
+        # the short-lived Go snapshot is absent. This never calls an exchange.
+        try:
+            okx_response = await charts_metrics("okx_futures")
+            okx_metrics = json.loads(okx_response.body)
+        except Exception as exc:
+            logger.warning("[arcus] OKX metrics unavailable: %s", exc)
+            okx_metrics = {}
+        okx_pairs = market_data.get_exchange_pairs("okx") or {}
+        return JSONResponse(reference_metrics(snapshot, okx_metrics, okx_pairs))
     _now = _time.monotonic()
     _c = _metrics_cache.get(exchange)
     if _c and _now - _c[0] < _CHARTS_CACHE_TTL:
@@ -1036,7 +1053,8 @@ async def charts_tickers(exchange: str = Query("okx_futures")):
     """Symbol list for the given exchange with that exchange's own volume/change data."""
     _require_exchange(exchange)
     if exchange == ARCUS_EXCHANGE:
-        return JSONResponse(await arcus_feed.tickers())
+        snapshot = await arcus_feed.get()
+        return JSONResponse(reference_tickers(snapshot, market_data.get_exchange_pairs("okx") or {}))
     from .charts.symbols import list_symbols
     slug, market = CHART_EXCH_MAP.get(exchange, ("okx", "perp"))
 
