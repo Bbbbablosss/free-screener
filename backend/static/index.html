@@ -12553,7 +12553,7 @@ if(localStorage.getItem('crypto_ch_draw_collapsed')==='1')document.body.classLis
             </button>
             <div id="ch-scr-exch-menu" class="ch-scr-menu ch-scr-exch-menu"></div>
           </div>
-          <span class="ch-arcus-note" id="ch-scr-arcus-note" aria-label="Arcus and OKX data sources">ⓘ</span>
+          <span class="ch-arcus-note" id="ch-scr-arcus-note" aria-label="Arcus and OKX data sources"><img src="https://www.google.com/s2/favicons?domain=okx.com&amp;sz=32" alt="" width="15" height="15" onerror="this.style.display='none'">ⓘ</span>
           <!-- Sort parameter -->
           <div id="ch-scr-sort-wrap" class="ch-scr-ctl">
             <button type="button" id="ch-scr-sort-btn" class="ch-scr-btn" title="Sort parameter">
@@ -12685,7 +12685,7 @@ if(localStorage.getItem('crypto_ch_draw_collapsed')==='1')document.body.classLis
           </button>
           <div id="ch-exch-menu"></div>
         </div>
-        <span class="ch-arcus-note" id="ch-chart-arcus-note" aria-label="Arcus and OKX data sources">ⓘ</span>
+        <span class="ch-arcus-note" id="ch-chart-arcus-note" aria-label="Arcus and OKX data sources"><img src="https://www.google.com/s2/favicons?domain=okx.com&amp;sz=32" alt="" width="15" height="15" onerror="this.style.display='none'">ⓘ</span>
         <div class="ch-wl-top-search">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
           <input id="ch-wl-list-search" type="text" placeholder="Search…" autocomplete="off" spellcheck="false">
@@ -41597,7 +41597,8 @@ body.crypto-free.sec-formations #formations-main .fm-card-body{
   }
 }
 /* Support bot UI removed from the public site. */
-.ch-arcus-note { display:none; align-items:center; justify-content:center; color:#ad9af5; font:700 13px/1 Inter,sans-serif; cursor:help; }
+.ch-arcus-note { display:none; align-items:center; justify-content:center; gap:4px; color:#ad9af5; font:700 13px/1 Inter,sans-serif; cursor:help; }
+.ch-arcus-note img { display:block; flex:none; border-radius:2px; object-fit:contain; }
 body.arcus-market .ch-arcus-note { display:inline-flex; }
 body.arcus-market .ch-pp-item[data-param="vol_spike"],
 body.arcus-market .ch-pp-item[data-param="volume"] + .ch-metric-sub .ch-pchg-row:not([data-tf="1d"]) { display:none!important; }

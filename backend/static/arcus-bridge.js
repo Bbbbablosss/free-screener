@@ -19,7 +19,10 @@
     const lang = (document.documentElement.lang || 'en').slice(0, 2);
     for (const id of ['ch-chart-arcus-note', 'ch-scr-arcus-note']) {
       const el = document.getElementById(id);
-      if (el) el.title = notes[lang] || notes.en;
+      if (el) {
+        el.title = notes[lang] || notes.en;
+        el.setAttribute('aria-label', el.title);
+      }
     }
   }
   function unavailable() {
